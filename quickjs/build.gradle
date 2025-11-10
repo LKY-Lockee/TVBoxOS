@@ -3,22 +3,24 @@ plugins {
 }
 
 android {
-    compileSdkVersion 33
+    namespace 'com.whl.quickjs.android'
+    
+    compileSdkVersion 36
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 28
+        minSdkVersion 26
+        targetSdkVersion 36
         externalNativeBuild {
             cmake {
-                abiFilters 'armeabi-v7a'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             }
         }
     }
 
     buildTypes {
-        all {
+        configureEach {
             ndk {
-                abiFilters 'armeabi-v7a'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             }
         }
         release {
@@ -29,15 +31,10 @@ android {
         debug {
         }
     }
+    
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
-    }
-    externalNativeBuild {
-        /*cmake {
-            path file('src/main/cpp/CMakeLists.txt')
-            version "3.10.2"
-        }*/
     }
 }
 

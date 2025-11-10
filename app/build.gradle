@@ -1,15 +1,19 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 33
+    namespace 'com.github.tvbox.osc'
+    
+    compileSdkVersion 36
 
     defaultConfig {
         applicationId 'com.github.tvbox.osc'
-        targetSdkVersion 28
+        
+        minSdkVersion 26
+        targetSdkVersion 36
         versionCode 1
         versionName '1.0.0'
         multiDexEnabled true
-        //设置room的Schema的位置
+        
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
@@ -25,13 +29,13 @@ android {
     productFlavors {
         normal {
             dimension "mode"
-            minSdkVersion 16
+            minSdkVersion 26
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        
         python {
             dimension "mode"
-            // 配置Python打包特有的设置（如有需要）
-            minSdkVersion 19
+            minSdkVersion 26
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-python.pro'
         }
     }
@@ -41,31 +45,27 @@ android {
             minifyEnabled false
 
             ndk {
-                //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             }
         }
         release {
             minifyEnabled true
 
             ndk {
-                //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             }
         }
     }
 
-    // 禁用 ABI 分割
     splits {
         abi {
-            enable false // 禁用 ABI 分割
+            enable false
         }
     }
 
     applicationVariants.configureEach { variant ->
         variant.outputs.configureEach { output ->
             def flavorNames = variant.productFlavors.collect { it.name == "normal" ? "java" : it.name }.join('-')
-            // 构建自定义文件名
             def fileName = "TVBox_${variant.buildType.name}-${flavorNames}.apk"
             outputFileName = fileName
         }
@@ -80,19 +80,13 @@ android {
         checkReleaseBuilds false
         abortOnError false
     }
-//    dexOptions {
-//        javaMaxHeapSize "4g"
-//        additionalParameters += '--multi-dex'
-//        additionalParameters += '--set-max-idx-number=48000'
-//        additionalParameters += '--minimal-main-dex'
-//    }
 }
 
 repositories {
 
 }
 dependencies {
-    api fileTree(dir: "libs", include: ["*.jar","*.aar"])
+    api fileTree(dir: "libs", include: ["*.jar", "*.aar"])
 
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     implementation 'com.google.zxing:core:3.3.0'
@@ -100,10 +94,6 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
-//    implementation files('libs/thunder.jar')
-//    implementation files('libs/commons-lang3-3.12.0.jar')
-
-
     implementation 'com.squareup.okhttp3:okhttp:3.12.11'
     annotationProcessor 'androidx.room:room-compiler:2.3.0'
     implementation 'androidx.room:room-runtime:2.3.0'
@@ -119,24 +109,17 @@ dependencies {
     }
     implementation 'org.greenrobot:eventbus:3.2.0'
     implementation 'com.orhanobut:hawk:2.0.1'
-
     implementation project(":player")
     implementation project(":quickjs")
     pythonImplementation project(":pyramid")
-
-
     implementation 'com.lzy.net:okgo:3.0.4'
-    // implementation 'com.tencent.bugly:crashreport_upgrade:latest.release'
     implementation 'com.owen:tv-recyclerview:3.0.0'
-
     implementation 'com.github.getActivity:XXPermissions:13.6'
     implementation 'org.jsoup:jsoup:1.14.1'
     implementation 'com.github.hedzr:android-file-chooser:v1.2.0-final'
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'com.googlecode.juniversalchardet:juniversalchardet:1.0.3'
-    //支持http3
     implementation ('com.google.net.cronet:cronet-okhttp:0.1.0')
-//    implementation 'com.google.android.gms:play-services-cronet:18.0.1'
     implementation ('org.chromium.net:cronet-embedded:101.4951.41')
     implementation 'org.brotli:dec:0.1.2'
 }

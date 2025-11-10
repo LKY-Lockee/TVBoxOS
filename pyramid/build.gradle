@@ -4,18 +4,20 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    namespace 'com.undcover.freedom.pyramid'
+    
+    compileSdkVersion 36
 
     defaultConfig {
-        minSdkVersion 19
-        targetSdkVersion 28
+        minSdkVersion 26
+        targetSdkVersion 36
+
         ndk {
-            //abiFilters 'arm64-v8a'
-            //noinspection ChromeOsAbiSupport
-            abiFilters "armeabi-v7a"
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
+
         python {
-            buildPython("D:/Programs/Python/Python38/python.exe")
+            buildPython("C:/Program Files/Python/Python385/python.exe")
             pip {
                 install "lxml"
                 install "ujson"
@@ -30,33 +32,30 @@ android {
     }
 
     buildTypes {
-        all {
+        configureEach {
             ndk {
-                //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a'
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             }
         }
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
     sourceSets {
-        main{
-            // Android代码模块
+        main {
             setRoot "src/main"
-            // Python代码模块，也就是你的Python源码所在项目中的文件夹
             python.srcDirs = ["src/python"]
         }
     }
-    buildToolsVersion '30.0.3'
 }
 
 dependencies {
-
 }
