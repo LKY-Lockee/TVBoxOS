@@ -13,9 +13,9 @@ import com.github.tvbox.osc.subtitle.model.TimedTextObject;
 import com.github.tvbox.osc.subtitle.runtime.AppTaskExecutor;
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.UnicodeReader;
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.commons.io.input.ReaderInputStream;
 import com.lzy.okgo.OkGo;
 
-import org.apache.commons.io.input.ReaderInputStream;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import java.io.ByteArrayInputStream;

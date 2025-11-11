@@ -5,19 +5,15 @@ import androidx.annotation.NonNull;
 
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.js.rsa.RSAEncrypt;
-import com.whl.quickjs.wrapper.ContextSetter;
-import com.whl.quickjs.wrapper.Function;
 import com.whl.quickjs.wrapper.JSArray;
 import com.whl.quickjs.wrapper.JSFunction;
 import com.whl.quickjs.wrapper.JSObject;
-import com.whl.quickjs.wrapper.JSUtils;
 import com.whl.quickjs.wrapper.QuickJSContext;
 
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URLEncoder;
-
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -45,7 +41,7 @@ public class Global {
     @Keep
     @Function
     public String js2Proxy(Boolean dynamic, Integer siteType, String siteKey, String url, JSObject headers) {
-        return getProxy(true) + "&from=catvod" + "&siteType=" + siteType + "&siteKey=" + siteKey + "&header=" + URLEncoder.encode(headers.toJsonString()) + "&url=" + URLEncoder.encode(url);
+        return getProxy(true) + "&from=catvod" + "&siteType=" + siteType + "&siteKey=" + siteKey + "&header=" + URLEncoder.encode(headers.stringify()) + "&url=" + URLEncoder.encode(url);
     }
 
     @Keep
@@ -118,8 +114,9 @@ public class Global {
     @Keep
     @Function
     public String rsaEncrypt(String data, String key) {
-        return  rsaEncrypt(data, key, null);
+        return rsaEncrypt(data, key, null);
     }
+
     /**
      * RSA 加密
      *
@@ -141,7 +138,7 @@ public class Global {
         boolean mBlock = true;
         String mConfig = null;
         if (options != null) {
-            JSONObject op = options.toJsonObject();
+            JSONObject op = JSUtils.toJsonObject(options);
             if (op.has("config")) {
                 try {
                     mConfig = (String) op.get("config");
@@ -196,7 +193,7 @@ public class Global {
     @Keep
     @Function
     public String rsaDecrypt(String encryptBase64Data, String key) {
-        return  rsaDecrypt(encryptBase64Data, key, null);
+        return rsaDecrypt(encryptBase64Data, key, null);
     }
 
     /**
@@ -219,7 +216,7 @@ public class Global {
         boolean mBlock = true;
         String mConfig = null;
         if (options != null) {
-            JSONObject op = options.toJsonObject();
+            JSONObject op = JSUtils.toJsonObject(options);
             if (op.has("config")) {
                 try {
                     mConfig = (String) op.get("config");
@@ -273,7 +270,7 @@ public class Global {
 
     private JSObject req(String url, JSObject options) {
         try {
-            Req req = Req.objectFrom(options.toJsonObject().toString());
+            Req req = Req.objectFrom(JSUtils.toJsonObject(options).toString());
             Response res = Connect.to(url, req).execute();
             return Connect.success(runtime, req, res);
         } catch (Exception e) {
@@ -286,7 +283,7 @@ public class Global {
     public JSObject _http(String url, JSObject options) {
         JSFunction complete = options.getJSFunction("complete");
         if (complete == null) return req(url, options);
-        Req req = Req.objectFrom(options.toJsonObject().toString());
+        Req req = Req.objectFrom(JSUtils.toJsonObject(options).toString());
         Connect.to(url, req).enqueue(getCallback(complete, req));
         return null;
     }
@@ -298,7 +295,9 @@ public class Global {
         timer.schedule(new TimerTask() {
             @Override
             public void run() {
-                if (!executor.isShutdown()) executor.submit(() -> {func.call();});
+                if (!executor.isShutdown()) executor.submit(() -> {
+                    func.call();
+                });
             }
         }, delay);
     }
@@ -320,6 +319,7 @@ public class Global {
             }
         };
     }
+
     @Keep
     // 声明用于依赖注入的 QuickJSContext
     @ContextSetter

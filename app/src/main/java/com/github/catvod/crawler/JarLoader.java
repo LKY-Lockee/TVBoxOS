@@ -3,7 +3,6 @@ package com.github.catvod.crawler;
 import android.content.Context;
 import android.util.Log;
 
-
 import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.MD5;
@@ -51,7 +50,7 @@ public class JarLoader {
         jarUrl = urls[0];
         String jarKey = MD5.string2MD5(jarUrl);
         String jarMd5 = urls.length > 1 ? urls[1].trim() : "";
-        loadJarInternal(jarUrl,jarMd5,jarKey);
+        loadJarInternal(jarUrl, jarMd5, jarKey);
     }
 
     public void clear() {
@@ -61,7 +60,7 @@ public class JarLoader {
     }
 
     private boolean loadClassLoader(String jar, String key) {
-        if (classLoaders.containsKey(key)){
+        if (classLoaders.containsKey(key)) {
             Log.i("JarLoader", "echo-loadClassLoader jar缓存: " + key);
             return true;
         }
@@ -70,6 +69,11 @@ public class JarLoader {
             File cacheDir = new File(App.getInstance().getCacheDir().getAbsolutePath() + "/catvod_csp");
             if (!cacheDir.exists())
                 cacheDir.mkdirs();
+
+            File jarFile = new File(jar);
+            jarFile.setReadable(true, false);
+            jarFile.setWritable(false, false);
+
             final DexClassLoader classLoader = new DexClassLoader(jar, cacheDir.getAbsolutePath(), null, App.getInstance().getClassLoader());
             int count = 0;
             do {
@@ -119,22 +123,22 @@ public class JarLoader {
     }
 
     private DexClassLoader loadJarInternal(String jar, String md5, String key) {
-        if (classLoaders.containsKey(key)){
+        if (classLoaders.containsKey(key)) {
             Log.i("JarLoader", "echo-loadJarInternal jar缓存: " + key);
             return classLoaders.get(key);
         }
         File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/csp/" + key + ".jar");
         if (!md5.isEmpty()) {
             if (cache.exists() && MD5.getFileMd5(cache).equalsIgnoreCase(md5)) {
-                if(loadClassLoader(cache.getAbsolutePath(), key)){
+                if (loadClassLoader(cache.getAbsolutePath(), key)) {
                     return classLoaders.get(key);
-                }else {
+                } else {
                     return null;
                 }
             }
-        }else {
+        } else {
             if (cache.exists() && !FileUtils.isWeekAgo(cache)) {
-                if(loadClassLoader(cache.getAbsolutePath(), key)){
+                if (loadClassLoader(cache.getAbsolutePath(), key)) {
                     return classLoaders.get(key);
                 }
             }
@@ -185,7 +189,7 @@ public class JarLoader {
         }
         recentJarKey = jarKey;
         assert jarKey != null;
-        DexClassLoader classLoader = jarKey.equals("main")? classLoaders.get("main"):loadJarInternal(jarUrl, jarMd5, jarKey);
+        DexClassLoader classLoader = jarKey.equals("main") ? classLoaders.get("main") : loadJarInternal(jarUrl, jarMd5, jarKey);
         if (classLoader == null) return new SpiderNull();
         try {
             Log.i("JarLoader", "echo-getSpider 加载spider: " + key);
@@ -232,7 +236,7 @@ public class JarLoader {
         return null;
     }
 
-    public Object[] proxyInvoke(Map<String,String> params) {
+    public Object[] proxyInvoke(Map<String, String> params) {
         try {
             Method proxyFun = proxyMethods.get(recentJarKey);
             if (proxyFun != null) {

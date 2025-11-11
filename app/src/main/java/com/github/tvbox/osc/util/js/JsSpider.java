@@ -3,19 +3,14 @@ package com.github.tvbox.osc.util.js;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Base64;
+
 import com.github.catvod.crawler.Spider;
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.MD5;
-
-import com.whl.quickjs.wrapper.Function;
 import com.whl.quickjs.wrapper.JSArray;
-
-import com.whl.quickjs.wrapper.JSCallFunction;
 import com.whl.quickjs.wrapper.JSObject;
-import com.whl.quickjs.wrapper.JSUtils;
 import com.whl.quickjs.wrapper.QuickJSContext;
-import com.whl.quickjs.wrapper.UriUtil;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -52,6 +47,7 @@ public class JsSpider extends Spider {
         this.dex = cls;
         initializeJS();
     }
+
     public void cancelByTag() {
         Connect.cancelByTag("js_okhttp_tag");
     }
@@ -69,17 +65,17 @@ public class JsSpider extends Spider {
         try {
             return submit(() -> Async.run(jsObject, func, args).get()).get();  // 等待 executor 线程完成 JS 调用
         } catch (InterruptedException | ExecutionException e) {
-            LOG.i("Executor 提交或等待失败"+ e);
+            LOG.i("Executor 提交或等待失败" + e);
             return null;
         }
     }
 
     private JSObject cfg(String ext) {
-        JSObject cfg = ctx.createJSObject();
-        cfg.set("stype", 3);
-        cfg.set("skey", key);
-        if (Json.invalid(ext)) cfg.set("ext", ext);
-        else cfg.set("ext", (JSObject) ctx.parse(ext));
+        JSObject cfg = ctx.createNewJSObject();
+        cfg.setProperty("stype", 3);
+        cfg.setProperty("skey", key);
+        if (Json.invalid(ext)) cfg.setProperty("ext", ext);
+        else ctx.setProperty(cfg, "ext", ctx.parse(ext));
         return cfg;
     }
 
@@ -88,7 +84,7 @@ public class JsSpider extends Spider {
         try {
             if (cat) call("init", submit(() -> cfg(extend)).get());
             else call("init", Json.valid(extend) ? ctx.parse(extend) : extend);
-        }catch (Exception e){
+        } catch (Exception e) {
 
         }
     }
@@ -97,8 +93,8 @@ public class JsSpider extends Spider {
     public String homeContent(boolean filter) {
         try {
             return (String) call("home", filter);
-        }catch (Exception e){
-           return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -106,35 +102,35 @@ public class JsSpider extends Spider {
     public String homeVideoContent() {
         try {
             return (String) call("homeVod");
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
 
     @Override
-    public String categoryContent(String tid, String pg, boolean filter, HashMap<String, String> extend)  {
+    public String categoryContent(String tid, String pg, boolean filter, HashMap<String, String> extend) {
         try {
             JSObject obj = submit(() -> new JSUtils<String>().toObj(ctx, extend)).get();
             return (String) call("category", tid, pg, filter, obj);
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
 
     @Override
-    public String detailContent(List<String> ids)  {
+    public String detailContent(List<String> ids) {
         try {
             return (String) call("detail", ids.get(0));
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
 
     @Override
-    public String searchContent(String key, boolean quick)  {
+    public String searchContent(String key, boolean quick) {
         try {
             return (String) call("search", key, quick);
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
@@ -145,16 +141,16 @@ public class JsSpider extends Spider {
         try {
             JSArray array = submit(() -> new JSUtils<String>().toArray(ctx, vipFlags)).get();
             return (String) call("play", flag, id, array);
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
 
     @Override
-    public boolean manualVideoCheck()  {
+    public boolean manualVideoCheck() {
         try {
             return (Boolean) call("sniffer");
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
     }
@@ -163,18 +159,18 @@ public class JsSpider extends Spider {
     public boolean isVideoFormat(String url) {
         try {
             return (Boolean) call("isVideo", url);
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
     }
 
     @Override
-    public Object[] proxyLocal(Map<String, String> params)  {
+    public Object[] proxyLocal(Map<String, String> params) {
         try {
             if ("catvod".equals(params.get("from"))) return proxy2(params);
             else return submit(() -> proxy1(params)).get();
 
-        }catch (Exception E){
+        } catch (Exception E) {
             return new Object[0];
         }
     }
@@ -197,18 +193,21 @@ public class JsSpider extends Spider {
             "        globalThis.__JS_SPIDER__ = typeof spider.default === 'function' ? spider.default() : spider.default\n" +
             "    }\n" +
             "}";
+
     private void initializeJS() throws Exception {
         submit(() -> {
             if (ctx == null) createCtx();
             if (dex != null) createDex();
 
-            String content = FileUtils.loadModule(api);            
-            if (TextUtils.isEmpty(content)) {return null;}
-            
-            if(content.startsWith("//bb")){
+            String content = FileUtils.loadModule(api);
+            if (TextUtils.isEmpty(content)) {
+                return null;
+            }
+
+            if (content.startsWith("//bb")) {
                 cat = true;
-                byte[] b = Base64.decode(content.replace("//bb",""), 0);
-                ctx.execute(byteFF(b), key + ".js");
+                byte[] b = Base64.decode(content.replace("//bb", ""), 0);
+                ctx.execute(byteFF(b));
                 ctx.evaluateModule(String.format(SPIDER_STRING_CODE, key + ".js") + "globalThis." + key + " = __JS_SPIDER__;", "tv_box_root.js");
                 //ctx.execute(byteFF(b), key + ".js","__jsEvalReturn");
                 //ctx.evaluate("globalThis." + key + " = __JS_SPIDER__;");
@@ -226,7 +225,7 @@ public class JsSpider extends Spider {
                 //ctx.evaluateModule(content, api, moduleExtName);
                 //ctx.evaluate("globalThis." + key + " = __JS_SPIDER__;");                
             }
-            jsObject = (JSObject) ctx.get(ctx.getGlobalObject(), key);
+            jsObject = (JSObject) ctx.getGlobalObject().getProperty(key);
             return null;
         }).get();
     }
@@ -245,13 +244,13 @@ public class JsSpider extends Spider {
             public byte[] getModuleBytecode(String moduleName) {
                 String ss = FileUtils.loadModule(moduleName);
                 if (TextUtils.isEmpty(ss)) {
-                    LOG.i("echo-getModuleBytecode empty :"+ moduleName);
+                    LOG.i("echo-getModuleBytecode empty :" + moduleName);
                     return ctx.compileModule("", moduleName);
                 }
-                if(ss.startsWith("//DRPY")){
-                    return Base64.decode(ss.replace("//DRPY",""), Base64.URL_SAFE);
-                } else if(ss.startsWith("//bb")){
-                    byte[] b = Base64.decode(ss.replace("//bb",""), 0);
+                if (ss.startsWith("//DRPY")) {
+                    return Base64.decode(ss.replace("//DRPY", ""), Base64.URL_SAFE);
+                } else if (ss.startsWith("//bb")) {
+                    byte[] b = Base64.decode(ss.replace("//bb", ""), 0);
                     return byteFF(b);
                 } else {
                     if (moduleName.contains("cheerio.min.js")) {
@@ -264,32 +263,47 @@ public class JsSpider extends Spider {
             }
 
             @Override
-            public String moduleNormalizeName(String moduleBaseName, String moduleName) {
-                return UriUtil.resolve(moduleBaseName, moduleName);
+            public String moduleNormalizeName(String baseModuleName, String moduleName) {
+                return UriUtil.resolve(baseModuleName, moduleName);
             }
         });
         ctx.setConsole(new QuickJSContext.Console() {
             @Override
-            public void log(String s) {
-                LOG.i("QuJs"+s);
+            public void log(String info) {
+                LOG.i("QuJs" + info);
+            }
+
+            @Override
+            public void info(String info) {
+                LOG.i("QuJs" + info);
+            }
+
+            @Override
+            public void warn(String info) {
+                LOG.i("QuJs" + info);
+            }
+
+            @Override
+            public void error(String info) {
+                LOG.e("QuJs" + info);
             }
         });
 
-        ctx.getGlobalObject().bind(new Global(executor));
+        QuickJSBinder.bind(ctx.getGlobalObject(), new Global(executor));
 
-        JSObject local = ctx.createJSObject();
-        ctx.getGlobalObject().set("local", local);
-        local.bind(new local());
+        JSObject local = ctx.createNewJSObject();
+        ctx.getGlobalObject().setProperty("local", local);
+        QuickJSBinder.bind(local, new local());
 
         ctx.getGlobalObject().getContext().evaluate(FileUtils.loadModule("net.js"));
     }
 
     private void createDex() {
         try {
-            JSObject obj = ctx.createJSObject();
+            JSObject obj = ctx.createNewJSObject();
             Class<?> clz = dex;
             Class<?>[] classes = clz.getDeclaredClasses();
-            ctx.getGlobalObject().set("jsapi", obj);
+            ctx.getGlobalObject().setProperty("jsapi", obj);
             if (classes.length == 0) invokeSingle(clz, obj);
             if (classes.length >= 1) invokeMultiple(clz, obj);
         } catch (Throwable e) {
@@ -304,9 +318,9 @@ public class JsSpider extends Spider {
     private void invokeMultiple(Class<?> clz, JSObject jsObj) throws Throwable {
         for (Class<?> subClz : clz.getDeclaredClasses()) {
             Object javaObj = subClz.getDeclaredConstructor(clz).newInstance(clz.getDeclaredConstructor(QuickJSContext.class).newInstance(ctx));
-            JSObject subObj = ctx.createJSObject();
+            JSObject subObj = ctx.createNewJSArray();
             invoke(subClz, subObj, javaObj);
-            jsObj.set(subClz.getSimpleName(), subObj);
+            jsObj.setProperty(subClz.getSimpleName(), subObj);
         }
     }
 
@@ -318,14 +332,11 @@ public class JsSpider extends Spider {
     }
 
     private void invoke(JSObject jsObj, Method method, Object javaObj) {
-        jsObj.set(method.getName(), new JSCallFunction() {
-            @Override
-            public Object call(Object... objects) {
-                try {
-                    return method.invoke(javaObj, objects);
-                } catch (Throwable e) {
-                    return null;
-                }
+        jsObj.setProperty(method.getName(), objects -> {
+            try {
+                return method.invoke(javaObj, objects);
+            } catch (Throwable e) {
+                return null;
             }
         });
     }
@@ -333,7 +344,9 @@ public class JsSpider extends Spider {
     private String getContent() {
         String global = "globalThis." + key;
         String content = FileUtils.loadModule(api);
-        if (TextUtils.isEmpty(content)) {return null;}
+        if (TextUtils.isEmpty(content)) {
+            return null;
+        }
         if (content.contains("__jsEvalReturn")) {
             ctx.evaluate("req = http");
             return content.concat(global).concat(" = __jsEvalReturn()");
@@ -346,7 +359,7 @@ public class JsSpider extends Spider {
 
     private Object[] proxy1(Map<String, String> params) {
         JSObject object = new JSUtils<String>().toObj(ctx, params);
-        JSONArray array = ((JSArray) jsObject.getJSFunction("proxy").call(object)).toJsonArray();
+        JSONArray array = JSUtils.toJsonArray((JSArray) jsObject.getJSFunction("proxy").call(object));
         boolean headerAvailable = array.length() > 3 && array.opt(3) != null;
         Object[] result = new Object[4];
         result[0] = array.opt(0);
@@ -355,7 +368,7 @@ public class JsSpider extends Spider {
         result[3] = headerAvailable ? getHeader(array.opt(3)) : null;
         if (array.length() > 4) {
             try {
-                if ( array.optInt(4) == 1) {
+                if (array.optInt(4) == 1) {
                     String content = array.optString(2);
                     if (content.contains("base64,")) content = content.substring(content.indexOf("base64,") + 7);
                     result[2] = new ByteArrayInputStream(Base64.decode(content, Base64.DEFAULT));
@@ -385,7 +398,7 @@ public class JsSpider extends Spider {
                     headers.put(key, json.optString(key));
                 }
             } catch (JSONException e) {
-                LOG.i("getHeader: 无法解析 String 为 JSON"+ e);
+                LOG.i("getHeader: 无法解析 String 为 JSON" + e);
             }
         } else if (headerRaw instanceof Map) {
             //noinspection unchecked
@@ -395,7 +408,7 @@ public class JsSpider extends Spider {
         }
         return headers;
     }
-    
+
     private Object[] proxy2(Map<String, String> params) throws Exception {
         String url = params.get("url");
         String header = params.get("header");
@@ -415,6 +428,7 @@ public class JsSpider extends Spider {
         }
         return result;
     }
+
     private ByteArrayInputStream getStream(Object o) {
         if (o instanceof JSONArray) {
             JSONArray a = (JSONArray) o;

@@ -2,14 +2,12 @@ package com.github.tvbox.osc.util.js;
 
 import android.util.Base64;
 
-import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.OkGoHelper;
 import com.github.tvbox.osc.util.urlhttp.OkHttpUtil;
 import com.google.common.net.HttpHeaders;
 import com.lzy.okgo.OkGo;
 import com.whl.quickjs.wrapper.JSArray;
 import com.whl.quickjs.wrapper.JSObject;
-import com.whl.quickjs.wrapper.JSUtils;
 import com.whl.quickjs.wrapper.QuickJSContext;
 
 import java.util.List;
@@ -28,25 +26,28 @@ import okhttp3.Response;
 
 public class Connect {
     static OkHttpClient client;
-    
+
     public static Call to(String url, Req req) {
         client = OkGoHelper.getDefaultClient();
         return client.newCall(getRequest(url, req, Headers.of(req.getHeader())));
-    }    
+    }
 
     public static JSObject success(QuickJSContext ctx, Req req, Response res) {
         try {
-            JSObject jsObject = ctx.createJSObject();
-            JSObject jsHeader = ctx.createJSObject();
+            JSObject jsObject = ctx.createNewJSObject();
+            JSObject jsHeader = ctx.createNewJSObject();
             setHeader(ctx, res, jsHeader);
-            jsObject.set("headers", jsHeader);
-            if (req.getBuffer() == 0) jsObject.set("content", new String(res.body().bytes(), req.getCharset()));
+            jsObject.setProperty("headers", jsHeader);
+            if (req.getBuffer() == 0) jsObject.setProperty("content", new String(res.body().bytes(), req.getCharset()));
             if (req.getBuffer() == 1) {
-                JSArray array = ctx.createJSArray();
-                for (byte aByte : res.body().bytes()) array.push((int) aByte);
-                jsObject.set("content", array);
+                JSArray array = ctx.createNewJSArray();
+                byte[] bytes = res.body().bytes();
+                for (int i = 0; i < bytes.length; i++) {
+                    array.set((int) bytes[i], i);
+                }
+                jsObject.setProperty("content", array);
             }
-            if (req.getBuffer() == 2) jsObject.set("content", Base64.encodeToString(res.body().bytes(), Base64.DEFAULT | Base64.NO_WRAP));
+            if (req.getBuffer() == 2) jsObject.setProperty("content", Base64.encodeToString(res.body().bytes(), Base64.DEFAULT | Base64.NO_WRAP));
             return jsObject;
         } catch (Exception e) {
             return error(ctx);
@@ -54,10 +55,10 @@ public class Connect {
     }
 
     public static JSObject error(QuickJSContext ctx) {
-        JSObject jsObject = ctx.createJSObject();
-        JSObject jsHeader = ctx.createJSObject();
-        jsObject.set("headers", jsHeader);
-        jsObject.set("content", "");
+        JSObject jsObject = ctx.createNewJSObject();
+        JSObject jsHeader = ctx.createNewJSObject();
+        jsObject.setProperty("headers", jsHeader);
+        jsObject.setProperty("content", "");
         return jsObject;
     }
 
@@ -91,7 +92,7 @@ public class Connect {
     }
 
     private static RequestBody getFormDataBody(Req req) {
-        String boundary = "--dio-boundary-" + new Random().nextInt(42949) + "" + new Random().nextInt(67296);
+        String boundary = "--dio-boundary-" + new Random().nextInt(42949) + new Random().nextInt(67296);
         MultipartBody.Builder builder = new MultipartBody.Builder(boundary).setType(MultipartBody.FORM);
         Map<String, String> params = Json.toMap(req.getData());
         for (String key : params.keySet()) builder.addFormDataPart(key, params.get(key));
@@ -100,10 +101,11 @@ public class Connect {
 
     private static void setHeader(QuickJSContext ctx, Response res, JSObject object) {
         for (Map.Entry<String, List<String>> entry : res.headers().toMultimap().entrySet()) {
-            if (entry.getValue().size() == 1) object.set(entry.getKey(), entry.getValue().get(0));
-            if (entry.getValue().size() >= 2) object.set(entry.getKey(), new JSUtils<String>().toArray(ctx, entry.getValue()));
+            if (entry.getValue().size() == 1) object.setProperty(entry.getKey(), entry.getValue().get(0));
+            if (entry.getValue().size() >= 2) object.setProperty(entry.getKey(), new JSUtils<String>().toArray(ctx, entry.getValue()));
         }
     }
+
     public static void cancelByTag(Object tag) {
         try {
             if (client != null) {
