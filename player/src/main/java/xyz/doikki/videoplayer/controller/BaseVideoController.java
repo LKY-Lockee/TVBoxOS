@@ -16,7 +16,6 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -41,41 +40,47 @@ public abstract class BaseVideoController extends FrameLayout
         implements IVideoController,
         OrientationHelper.OnOrientationChangeListener {
 
+    //保存了所有的控制组件
+    protected final LinkedHashMap<IControlComponent, Boolean> mControlComponents = new LinkedHashMap<>();
     //播放器包装类，集合了MediaPlayerControl的api和IVideoController的api
     protected ControlWrapper mControlWrapper;
-
     @Nullable
     protected Activity mActivity;
-
     //控制器是否处于显示状态
     protected boolean mShowing;
-
     //是否处于锁定状态
     protected boolean mIsLocked;
-
     //播放视图隐藏超时
     protected int mDefaultTimeout = 4000;
-
-    //是否开启根据屏幕方向进入/退出全屏
-    private boolean mEnableOrientation;
     //屏幕方向监听辅助类
     protected OrientationHelper mOrientationHelper;
-
+    //是否开启根据屏幕方向进入/退出全屏
+    private boolean mEnableOrientation;
     //用户设置是否适配刘海屏
     private boolean mAdaptCutout;
     //是否有刘海
     private Boolean mHasCutout;
     //刘海的高度
     private int mCutoutHeight;
-
     //是否开始刷新进度
     private boolean mIsStartProgress;
-
-    //保存了所有的控制组件
-    protected LinkedHashMap<IControlComponent, Boolean> mControlComponents = new LinkedHashMap<>();
-
+    /**
+     * 刷新进度Runnable
+     */
+    protected final Runnable mShowProgress = new Runnable() {
+        @Override
+        public void run() {
+            int pos = setProgress();
+            if (mControlWrapper.isPlaying()) {
+                postDelayed(this, (long) ((1000 - pos % 1000) / mControlWrapper.getSpeed()));
+            } else {
+                mIsStartProgress = false;
+            }
+        }
+    };
     private Animation mShowAnim;
     private Animation mHideAnim;
+    private int mOrientation = 0;
 
     public BaseVideoController(@NonNull Context context) {
         this(context, null);
@@ -186,13 +191,7 @@ public abstract class BaseVideoController extends FrameLayout
      * 关于游离控制组件的定义请看 {@link #addControlComponent(IControlComponent, boolean)} 关于 isDissociate 的解释
      */
     public void removeAllDissociateComponents() {
-        Iterator<Map.Entry<IControlComponent, Boolean>> it = mControlComponents.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry<IControlComponent, Boolean> next = it.next();
-            if (next.getValue()) {
-                it.remove();
-            }
-        }
+        mControlComponents.entrySet().removeIf(Map.Entry::getValue);
     }
 
     /**
@@ -267,25 +266,20 @@ public abstract class BaseVideoController extends FrameLayout
         removeCallbacks(mFadeOut);
     }
 
+    @Override
+    public boolean isLocked() {
+        return mIsLocked;
+    }
+
     /**
      * 隐藏播放视图Runnable
      */
-    protected final Runnable mFadeOut = new Runnable() {
-        @Override
-        public void run() {
-            hide();
-        }
-    };
+    protected final Runnable mFadeOut = this::hide;
 
     @Override
     public void setLocked(boolean locked) {
         mIsLocked = locked;
         handleLockStateChanged(locked);
-    }
-
-    @Override
-    public boolean isLocked() {
-        return mIsLocked;
     }
 
     /**
@@ -307,21 +301,6 @@ public abstract class BaseVideoController extends FrameLayout
         removeCallbacks(mShowProgress);
         mIsStartProgress = false;
     }
-
-    /**
-     * 刷新进度Runnable
-     */
-    protected Runnable mShowProgress = new Runnable() {
-        @Override
-        public void run() {
-            int pos = setProgress();
-            if (mControlWrapper.isPlaying()) {
-                postDelayed(this, (long) ((1000 - pos % 1000) / mControlWrapper.getSpeed()));
-            } else {
-                mIsStartProgress = false;
-            }
-        }
-    };
 
     private int setProgress() {
         int position = (int) mControlWrapper.getCurrentPosition();
@@ -436,12 +415,7 @@ public abstract class BaseVideoController extends FrameLayout
         if (mControlWrapper.isPlaying()
                 && (mEnableOrientation || mControlWrapper.isFullScreen())) {
             if (hasWindowFocus) {
-                postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        mOrientationHelper.enable();
-                    }
-                }, 800);
+                postDelayed(() -> mOrientationHelper.enable(), 800);
             } else {
                 mOrientationHelper.disable();
             }
@@ -454,8 +428,6 @@ public abstract class BaseVideoController extends FrameLayout
     public void setEnableOrientation(boolean enableOrientation) {
         mEnableOrientation = enableOrientation;
     }
-
-    private int mOrientation = 0;
 
     @CallSuper
     @Override
@@ -537,8 +509,6 @@ public abstract class BaseVideoController extends FrameLayout
         }
     }
 
-    //------------------------ start handle event change ------------------------//
-
     private void handleVisibilityChanged(boolean isVisible, Animation anim) {
         if (!mIsLocked) { //没锁住时才向ControlComponent下发此事件
             for (Map.Entry<IControlComponent, Boolean> next
@@ -568,6 +538,8 @@ public abstract class BaseVideoController extends FrameLayout
         }
         onPlayStateChanged(playState);
     }
+
+    //------------------------ start handle event change ------------------------//
 
     /**
      * 子类重写此方法并在其中更新控制器在不同播放状态下的ui
@@ -666,6 +638,7 @@ public abstract class BaseVideoController extends FrameLayout
     protected void onLockStateChanged(boolean isLocked) {
 
     }
+
 
     //------------------------ end handle event change ------------------------//
 }

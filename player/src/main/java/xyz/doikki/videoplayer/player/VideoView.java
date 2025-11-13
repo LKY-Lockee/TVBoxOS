@@ -8,14 +8,12 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Parcelable;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -46,39 +44,12 @@ import xyz.doikki.videoplayer.util.PlayerUtils;
 public class VideoView<P extends AbstractPlayer> extends FrameLayout
         implements MediaPlayerControl, AbstractPlayer.PlayerEventListener {
 
-    protected P mMediaPlayer;//播放器
-    protected PlayerFactory<P> mPlayerFactory;//工厂类，用于实例化播放核心
-    @Nullable
-    protected BaseVideoController mVideoController;//控制器
-
-    /**
-     * 真正承载播放器视图的容器
-     */
-    protected FrameLayout mPlayerContainer;
-
-    protected IRenderView mRenderView;
-    protected RenderViewFactory mRenderViewFactory;
-
     public static final int SCREEN_SCALE_DEFAULT = 0;
     public static final int SCREEN_SCALE_16_9 = 1;
     public static final int SCREEN_SCALE_4_3 = 2;
     public static final int SCREEN_SCALE_MATCH_PARENT = 3;
     public static final int SCREEN_SCALE_ORIGINAL = 4;
     public static final int SCREEN_SCALE_CENTER_CROP = 5;
-    protected int mCurrentScreenScaleType;
-
-    protected int[] mVideoSize = {0, 0};
-
-    protected boolean mIsMute;//是否静音
-
-    //--------- data sources ---------//
-    protected String mUrl;//当前播放视频的地址
-    protected String mProgressKey = null;
-    protected Map<String, String> mHeaders;//当前视频地址的请求头
-    protected AssetFileDescriptor mAssetFileDescriptor;//assets文件
-
-    protected long mCurrentPosition;//当前正在播放视频的位置
-
     //播放器的各种状态
     public static final int STATE_ERROR = -1;
     public static final int STATE_IDLE = 0;
@@ -90,11 +61,29 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
     public static final int STATE_BUFFERING = 6;
     public static final int STATE_BUFFERED = 7;
     public static final int STATE_START_ABORT = 8;//开始播放中止
-    protected int mCurrentPlayState = STATE_IDLE;//当前播放器的状态
-
     public static final int PLAYER_NORMAL = 10;        // 普通播放器
     public static final int PLAYER_FULL_SCREEN = 11;   // 全屏播放器
     public static final int PLAYER_TINY_SCREEN = 12;   // 小屏播放器
+    protected P mMediaPlayer;//播放器
+    protected PlayerFactory<P> mPlayerFactory;//工厂类，用于实例化播放核心
+    @Nullable
+    protected BaseVideoController mVideoController;//控制器
+    /**
+     * 真正承载播放器视图的容器
+     */
+    protected FrameLayout mPlayerContainer;
+    protected IRenderView mRenderView;
+    protected RenderViewFactory mRenderViewFactory;
+    protected int mCurrentScreenScaleType;
+    protected final int[] mVideoSize = {0, 0};
+    protected boolean mIsMute;//是否静音
+    //--------- data sources ---------//
+    protected String mUrl;//当前播放视频的地址
+    protected String mProgressKey = null;
+    protected Map<String, String> mHeaders;//当前视频地址的请求头
+    protected AssetFileDescriptor mAssetFileDescriptor;//assets文件
+    protected long mCurrentPosition;//当前正在播放视频的位置
+    protected int mCurrentPlayState = STATE_IDLE;//当前播放器的状态
     protected int mCurrentPlayerState = PLAYER_NORMAL;
 
     protected boolean mIsFullScreen;//是否处于全屏状态
@@ -128,7 +117,7 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
     /**
      * {@link #mPlayerContainer}背景色，默认黑色
      */
-    private int mPlayerBackgroundColor;
+    private final int mPlayerBackgroundColor;
 
     public VideoView(@NonNull Context context) {
         this(context, null);
@@ -138,6 +127,7 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         this(context, attrs, 0);
     }
 
+    @SuppressWarnings("unchecked")
     public VideoView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
 
@@ -145,7 +135,7 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         VideoViewConfig config = VideoViewManager.getConfig();
         mEnableAudioFocus = config.mEnableAudioFocus;
         mProgressManager = config.mProgressManager;
-        mPlayerFactory = config.mPlayerFactory;
+        mPlayerFactory = (PlayerFactory<P>) config.mPlayerFactory;
         mCurrentScreenScaleType = config.mScreenScaleType;
         mRenderViewFactory = config.mRenderViewFactory;
 
@@ -361,7 +351,7 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
                 } else {
                     holder.addCallback(new SurfaceHolder.Callback() {
                         @Override
-                        public void surfaceCreated(SurfaceHolder holder) {
+                        public void surfaceCreated(@NonNull SurfaceHolder holder) {
                             addDisplay();
                             if (mRenderView != null) {
                                 mRenderView.setScaleType(mCurrentScreenScaleType);
@@ -374,11 +364,11 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
                         }
 
                         @Override
-                        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                        public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
                         }
 
                         @Override
-                        public void surfaceDestroyed(SurfaceHolder holder) {
+                        public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
                         }
                     });
                 }
@@ -397,7 +387,7 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         }
     }
 
-    private void resumePlay(){
+    private void resumePlay() {
         mMediaPlayer.start();
         setPlayState(STATE_PLAYING);
         if (mAudioFocusHelper != null && !isMute()) {
@@ -405,6 +395,7 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         }
         mPlayerContainer.setKeepScreenOn(true);
     }
+
     /**
      * 释放播放器
      */
@@ -545,6 +536,14 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
     }
 
     /**
+     * 是否处于静音状态
+     */
+    @Override
+    public boolean isMute() {
+        return mIsMute;
+    }
+
+    /**
      * 设置静音
      */
     @Override
@@ -554,14 +553,6 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
             float volume = isMute ? 0.0f : 1.0f;
             mMediaPlayer.setVolume(volume, volume);
         }
-    }
-
-    /**
-     * 是否处于静音状态
-     */
-    @Override
-    public boolean isMute() {
-        return mIsMute;
     }
 
     /**
@@ -645,6 +636,14 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         return mMediaPlayer != null ? mMediaPlayer.getTcpSpeed() : 0;
     }
 
+    @Override
+    public float getSpeed() {
+        if (isInPlaybackState()) {
+            return mMediaPlayer.getSpeed();
+        }
+        return 1f;
+    }
+
     /**
      * 设置播放速度
      */
@@ -653,14 +652,6 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         if (isInPlaybackState()) {
             mMediaPlayer.setSpeed(speed);
         }
-    }
-
-    @Override
-    public float getSpeed() {
-        if (isInPlaybackState()) {
-            return mMediaPlayer.getSpeed();
-        }
-        return 1f;
     }
 
     /**
@@ -785,12 +776,8 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
 
     private void hideSysBar(ViewGroup decorView) {
         int uiOptions = decorView.getSystemUiVisibility();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            uiOptions |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            uiOptions |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-        }
+        uiOptions |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+        uiOptions |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
         decorView.setSystemUiVisibility(uiOptions);
         getActivity().getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -832,12 +819,8 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
 
     private void showSysBar(ViewGroup decorView) {
         int uiOptions = decorView.getSystemUiVisibility();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            uiOptions &= ~View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            uiOptions &= ~View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-        }
+        uiOptions &= ~View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+        uiOptions &= ~View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
         decorView.setSystemUiVisibility(uiOptions);
         getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
@@ -1053,28 +1036,6 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
     }
 
     /**
-     * 播放状态改变监听器
-     */
-    public interface OnStateChangeListener {
-        void onPlayerStateChanged(int playerState);
-
-        void onPlayStateChanged(int playState);
-    }
-
-    /**
-     * OnStateChangeListener的空实现。用的时候只需要重写需要的方法
-     */
-    public static class SimpleOnStateChangeListener implements OnStateChangeListener {
-        @Override
-        public void onPlayerStateChanged(int playerState) {
-        }
-
-        @Override
-        public void onPlayStateChanged(int playState) {
-        }
-    }
-
-    /**
      * 添加一个播放状态监听器，播放状态发生变化时将会调用。
      */
     public void addOnStateChangeListener(@NonNull OnStateChangeListener listener) {
@@ -1128,5 +1089,27 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
         //activity切到后台后可能被系统回收，故在此处进行进度保存
         saveProgress();
         return super.onSaveInstanceState();
+    }
+
+    /**
+     * 播放状态改变监听器
+     */
+    public interface OnStateChangeListener {
+        void onPlayerStateChanged(int playerState);
+
+        void onPlayStateChanged(int playState);
+    }
+
+    /**
+     * OnStateChangeListener的空实现。用的时候只需要重写需要的方法
+     */
+    public static class SimpleOnStateChangeListener implements OnStateChangeListener {
+        @Override
+        public void onPlayerStateChanged(int playerState) {
+        }
+
+        @Override
+        public void onPlayStateChanged(int playState) {
+        }
     }
 }

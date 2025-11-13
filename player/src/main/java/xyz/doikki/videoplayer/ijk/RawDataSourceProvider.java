@@ -20,6 +20,16 @@ public class RawDataSourceProvider implements IMediaDataSource {
         this.mDescriptor = descriptor;
     }
 
+    public static RawDataSourceProvider create(Context context, Uri uri) {
+        try {
+            AssetFileDescriptor fileDescriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
+            return new RawDataSourceProvider(fileDescriptor);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     @Override
     public int readAt(long position, byte[] buffer, int offset, int size) {
         if (position + 1 >= mMediaBytes.length) {
@@ -74,16 +84,5 @@ public class RawDataSourceProvider implements IMediaDataSource {
         }
 
         return byteBuffer.toByteArray();
-    }
-
-    public static RawDataSourceProvider create(Context context, Uri uri) {
-        try {
-            AssetFileDescriptor fileDescriptor = context.getContentResolver().openAssetFileDescriptor(uri, "r");
-            return new RawDataSourceProvider(fileDescriptor);
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 }

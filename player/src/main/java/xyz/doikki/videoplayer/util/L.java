@@ -11,13 +11,11 @@ import xyz.doikki.videoplayer.player.VideoViewManager;
 
 public final class L {
 
-    private L() {
-    }
-
     private static final String TAG = "DKPlayer";
-
     private static boolean isDebug = VideoViewManager.getConfig().mIsEnableLog;
 
+    private L() {
+    }
 
     public static void d(String msg) {
         if (isDebug) {

@@ -6,6 +6,7 @@ import android.text.TextUtils;
 
 import androidx.media3.common.C;
 import androidx.media3.common.MediaItem;
+import androidx.media3.common.util.UnstableApi;
 import androidx.media3.common.util.Util;
 import androidx.media3.database.StandaloneDatabaseProvider;
 import androidx.media3.datasource.DataSource;
@@ -36,6 +37,7 @@ public final class ExoMediaSourceHelper {
     private final Context mAppContext;
     private OkHttpDataSource.Factory mHttpDataSourceFactory;
     private OkHttpClient mOkClient = null;
+    @UnstableApi
     private Cache mCache;
 
     private ExoMediaSourceHelper(Context context) {
@@ -58,18 +60,22 @@ public final class ExoMediaSourceHelper {
         mOkClient = client;
     }
 
+    @UnstableApi
     public MediaSource getMediaSource(String uri) {
         return getMediaSource(uri, null, false);
     }
 
+    @UnstableApi
     public MediaSource getMediaSource(String uri, Map<String, String> headers) {
         return getMediaSource(uri, headers, false);
     }
 
+    @UnstableApi
     public MediaSource getMediaSource(String uri, boolean isCache) {
         return getMediaSource(uri, null, isCache);
     }
 
+    @UnstableApi
     public MediaSource getMediaSource(String uri, Map<String, String> headers, boolean isCache) {
         Uri contentUri = Uri.parse(uri);
         if ("rtmp".equals(contentUri.getScheme())) {
@@ -110,6 +116,7 @@ public final class ExoMediaSourceHelper {
         }
     }
 
+    @UnstableApi
     private DataSource.Factory getCacheDataSourceFactory() {
         if (mCache == null) {
             mCache = newCache();
@@ -120,6 +127,7 @@ public final class ExoMediaSourceHelper {
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
     }
 
+    @UnstableApi
     private Cache newCache() {
         return new SimpleCache(
                 new File(externalCacheDir(), "exo-video-cache"),//缓存目录
@@ -157,6 +165,7 @@ public final class ExoMediaSourceHelper {
         return mHttpDataSourceFactory;
     }
 
+    @UnstableApi
     private void setHeaders(Map<String, String> headers) {
         if (headers != null && !headers.isEmpty()) {
             //如果发现用户通过header传递了UA，则强行将HttpDataSourceFactory里面的userAgent字段替换成用户的
@@ -181,6 +190,7 @@ public final class ExoMediaSourceHelper {
         }
     }
 
+    @UnstableApi
     public void setCache(Cache cache) {
         this.mCache = cache;
     }

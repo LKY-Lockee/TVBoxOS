@@ -26,12 +26,11 @@ public class OrientationHelper extends OrientationEventListener {
         mLastTime = currentTime;
     }
 
+    public void setOnOrientationChangeListener(OnOrientationChangeListener onOrientationChangeListener) {
+        mOnOrientationChangeListener = onOrientationChangeListener;
+    }
 
     public interface OnOrientationChangeListener {
         void onOrientationChanged(int orientation);
-    }
-
-    public void setOnOrientationChangeListener(OnOrientationChangeListener onOrientationChangeListener) {
-        mOnOrientationChangeListener = onOrientationChangeListener;
     }
 }

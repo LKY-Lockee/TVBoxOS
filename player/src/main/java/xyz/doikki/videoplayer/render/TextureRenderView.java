@@ -15,20 +15,20 @@ import xyz.doikki.videoplayer.player.AbstractPlayer;
 
 @SuppressLint("ViewConstructor")
 public class TextureRenderView extends TextureView implements IRenderView, TextureView.SurfaceTextureListener {
-    private MeasureHelper mMeasureHelper;
+    private final MeasureHelper mMeasureHelper;
     private SurfaceTexture mSurfaceTexture;
 
     @Nullable
     private AbstractPlayer mMediaPlayer;
     private Surface mSurface;
 
-    public TextureRenderView(Context context) {
-        super(context);
-    }
-
     {
         mMeasureHelper = new MeasureHelper();
         setSurfaceTextureListener(this);
+    }
+
+    public TextureRenderView(Context context) {
+        super(context);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class TextureRenderView extends TextureView implements IRenderView, Textu
     }
 
     @Override
-    public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
+    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int width, int height) {
         if (mSurfaceTexture != null) {
             setSurfaceTexture(mSurfaceTexture);
         } else {
@@ -95,17 +95,17 @@ public class TextureRenderView extends TextureView implements IRenderView, Textu
     }
 
     @Override
-    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+    public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
 
     }
 
     @Override
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+    public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
         return false;
     }
 
     @Override
-    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+    public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
 
     }
 }

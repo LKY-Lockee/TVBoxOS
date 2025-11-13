@@ -2,9 +2,9 @@ package xyz.doikki.videoplayer.player;
 
 import android.app.Application;
 
-import xyz.doikki.videoplayer.util.L;
-
 import java.util.LinkedHashMap;
+
+import xyz.doikki.videoplayer.util.L;
 
 /**
  * 视频播放器管理器，管理当前正在播放的VideoView，以及播放器配置
@@ -14,27 +14,32 @@ import java.util.LinkedHashMap;
 public class VideoViewManager {
 
     /**
+     * VideoViewManager实例
+     */
+    private static volatile VideoViewManager sInstance;
+    /**
+     * VideoViewConfig实例
+     */
+    private static volatile VideoViewConfig sConfig;
+    /**
      * 保存VideoView的容器
      */
-    private LinkedHashMap<String, VideoView> mVideoViews = new LinkedHashMap<>();
-
+    private final LinkedHashMap<String, VideoView<?>> mVideoViews = new LinkedHashMap<>();
     /**
      * 是否在移动网络下直接播放视频
      */
     private boolean mPlayOnMobileNetwork;
 
-    /**
-     * VideoViewManager实例
-     */
-    private static VideoViewManager sInstance;
-
-    /**
-     * VideoViewConfig实例
-     */
-    private static VideoViewConfig sConfig;
-
     private VideoViewManager() {
         mPlayOnMobileNetwork = getConfig().mPlayOnMobileNetwork;
+    }
+
+    /**
+     * 获取VideoViewConfig
+     */
+    public static VideoViewConfig getConfig() {
+        setConfig(null);
+        return sConfig;
     }
 
     /**
@@ -50,12 +55,15 @@ public class VideoViewManager {
         }
     }
 
-    /**
-     * 获取VideoViewConfig
-     */
-    public static VideoViewConfig getConfig() {
-        setConfig(null);
-        return sConfig;
+    public static VideoViewManager instance() {
+        if (sInstance == null) {
+            synchronized (VideoViewManager.class) {
+                if (sInstance == null) {
+                    sInstance = new VideoViewManager();
+                }
+            }
+        }
+        return sInstance;
     }
 
     /**
@@ -72,27 +80,17 @@ public class VideoViewManager {
         mPlayOnMobileNetwork = playOnMobileNetwork;
     }
 
-    public static VideoViewManager instance() {
-        if (sInstance == null) {
-            synchronized (VideoViewManager.class) {
-                if (sInstance == null) {
-                    sInstance = new VideoViewManager();
-                }
-            }
-        }
-        return sInstance;
-    }
-
     /**
      * 添加VideoView
+     *
      * @param tag 相同tag的VideoView只会保存一个，如果tag相同则会release并移除前一个
      */
-    public void add(VideoView videoView, String tag) {
+    public void add(VideoView<?> videoView, String tag) {
         if (!(videoView.getContext() instanceof Application)) {
             L.w("The Context of this VideoView is not an Application Context," +
                     "you must remove it after release,or it will lead to memory leek.");
         }
-        VideoView old = get(tag);
+        VideoView<?> old = get(tag);
         if (old != null) {
             old.release();
             remove(tag);
@@ -100,7 +98,7 @@ public class VideoViewManager {
         mVideoViews.put(tag, videoView);
     }
 
-    public VideoView get(String tag) {
+    public VideoView<?> get(String tag) {
         return mVideoViews.get(tag);
     }
 
@@ -120,7 +118,7 @@ public class VideoViewManager {
     }
 
     public void releaseByTag(String tag, boolean isRemove) {
-        VideoView videoView = get(tag);
+        VideoView<?> videoView = get(tag);
         if (videoView != null) {
             videoView.release();
             if (isRemove) {
@@ -130,7 +128,7 @@ public class VideoViewManager {
     }
 
     public boolean onBackPress(String tag) {
-        VideoView videoView = get(tag);
+        VideoView<?> videoView = get(tag);
         if (videoView == null) return false;
         return videoView.onBackPressed();
     }

@@ -12,8 +12,8 @@ import androidx.annotation.NonNull;
  */
 public class ControlWrapper implements MediaPlayerControl, IVideoController {
 
-    private MediaPlayerControl mPlayerControl;
-    private IVideoController mController;
+    private final MediaPlayerControl mPlayerControl;
+    private final IVideoController mController;
 
     public ControlWrapper(@NonNull MediaPlayerControl playerControl, @NonNull IVideoController controller) {
         mPlayerControl = playerControl;
@@ -71,13 +71,13 @@ public class ControlWrapper implements MediaPlayerControl, IVideoController {
     }
 
     @Override
-    public void setMute(boolean isMute) {
-        mPlayerControl.setMute(isMute);
+    public boolean isMute() {
+        return mPlayerControl.isMute();
     }
 
     @Override
-    public boolean isMute() {
-        return mPlayerControl.isMute();
+    public void setMute(boolean isMute) {
+        mPlayerControl.setMute(isMute);
     }
 
     @Override
@@ -86,13 +86,13 @@ public class ControlWrapper implements MediaPlayerControl, IVideoController {
     }
 
     @Override
-    public void setSpeed(float speed) {
-        mPlayerControl.setSpeed(speed);
+    public float getSpeed() {
+        return mPlayerControl.getSpeed();
     }
 
     @Override
-    public float getSpeed() {
-        return mPlayerControl.getSpeed();
+    public void setSpeed(float speed) {
+        mPlayerControl.setSpeed(speed);
     }
 
     @Override
@@ -215,13 +215,13 @@ public class ControlWrapper implements MediaPlayerControl, IVideoController {
     }
 
     @Override
-    public void setLocked(boolean locked) {
-        mController.setLocked(locked);
+    public boolean isLocked() {
+        return mController.isLocked();
     }
 
     @Override
-    public boolean isLocked() {
-        return mController.isLocked();
+    public void setLocked(boolean locked) {
+        mController.setLocked(locked);
     }
 
     @Override

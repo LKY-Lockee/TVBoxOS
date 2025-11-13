@@ -1,6 +1,8 @@
 package xyz.doikki.videoplayer.player;
 
 import android.content.Context;
+import android.media.AudioAttributes;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -12,19 +14,20 @@ import java.lang.ref.WeakReference;
 /**
  * 音频焦点改变监听
  */
-final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener {
+public final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener {
 
-    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
-    private WeakReference<VideoView> mWeakVideoView;
+    private final WeakReference<VideoView<?>> mWeakVideoView;
 
-    private AudioManager mAudioManager;
+    private final AudioManager mAudioManager;
+    private AudioFocusRequest mAudioFocusRequest;
 
     private boolean mStartRequested = false;
     private boolean mPausedForLoss = false;
     private int mCurrentFocus = 0;
 
-    AudioFocusHelper(@NonNull VideoView videoView) {
+    AudioFocusHelper(@NonNull VideoView<?> videoView) {
         mWeakVideoView = new WeakReference<>(videoView);
         mAudioManager = (AudioManager) videoView.getContext().getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
     }
@@ -37,18 +40,13 @@ final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener 
 
         //由于onAudioFocusChange有可能在子线程调用，
         //故通过此方式切换到主线程去执行
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                handleAudioFocusChange(focusChange);
-            }
-        });
+        mHandler.post(() -> handleAudioFocusChange(focusChange));
 
         mCurrentFocus = focusChange;
     }
 
     private void handleAudioFocusChange(int focusChange) {
-        final VideoView videoView = mWeakVideoView.get();
+        final VideoView<?> videoView = mWeakVideoView.get();
         if (videoView == null) {
             return;
         }
@@ -90,7 +88,19 @@ final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener 
             return;
         }
 
-        int status = mAudioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        int status;
+        if (mAudioFocusRequest == null) {
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build();
+            mAudioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(audioAttributes)
+                    .setOnAudioFocusChangeListener(this, mHandler)
+                    .build();
+        }
+        status = mAudioManager.requestAudioFocus(mAudioFocusRequest);
+
         if (AudioManager.AUDIOFOCUS_REQUEST_GRANTED == status) {
             mCurrentFocus = AudioManager.AUDIOFOCUS_GAIN;
             return;
@@ -109,6 +119,6 @@ final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener 
         }
 
         mStartRequested = false;
-        mAudioManager.abandonAudioFocus(this);
+        mAudioManager.abandonAudioFocusRequest(mAudioFocusRequest);
     }
 }

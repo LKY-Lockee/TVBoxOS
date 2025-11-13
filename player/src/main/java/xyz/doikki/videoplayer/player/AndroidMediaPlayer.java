@@ -2,10 +2,9 @@ package xyz.doikki.videoplayer.player;
 
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
-import android.media.AudioManager;
+import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Build;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 
@@ -21,9 +20,9 @@ public class AndroidMediaPlayer extends AbstractPlayer implements MediaPlayer.On
         MediaPlayer.OnBufferingUpdateListener, MediaPlayer.OnPreparedListener,
         MediaPlayer.OnVideoSizeChangedListener {
 
+    private final Context mAppContext;
     protected MediaPlayer mMediaPlayer;
     private int mBufferedPercent;
-    private Context mAppContext;
     private boolean mIsPreparing;
 
     public AndroidMediaPlayer(Context context) {
@@ -34,7 +33,12 @@ public class AndroidMediaPlayer extends AbstractPlayer implements MediaPlayer.On
     public void initPlayer() {
         mMediaPlayer = new MediaPlayer();
         setOptions();
-        mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mMediaPlayer.setAudioAttributes(
+                new AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+        );
         mMediaPlayer.setOnErrorListener(this);
         mMediaPlayer.setOnCompletionListener(this);
         mMediaPlayer.setOnInfoListener(this);
@@ -132,16 +136,13 @@ public class AndroidMediaPlayer extends AbstractPlayer implements MediaPlayer.On
         stop();
         final MediaPlayer mediaPlayer = mMediaPlayer;
         mMediaPlayer = null;
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    mediaPlayer.release();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        new Thread(() -> {
+            try {
+                mediaPlayer.release();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }.start();
+        }).start();
     }
 
     @Override
@@ -192,33 +193,29 @@ public class AndroidMediaPlayer extends AbstractPlayer implements MediaPlayer.On
     }
 
     @Override
-    public void setSpeed(float speed) {
-        // only support above Android M
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                mMediaPlayer.setPlaybackParams(mMediaPlayer.getPlaybackParams().setSpeed(speed));
-            } catch (Exception e) {
-                mPlayerEventListener.onError();
-            }
-        }
-    }
-
-    @Override
     public float getSpeed() {
         // only support above Android M
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                return mMediaPlayer.getPlaybackParams().getSpeed();
-            } catch (Exception e) {
-                mPlayerEventListener.onError();
-            }
+        try {
+            return mMediaPlayer.getPlaybackParams().getSpeed();
+        } catch (Exception e) {
+            mPlayerEventListener.onError();
         }
         return 1f;
     }
 
     @Override
+    public void setSpeed(float speed) {
+        // only support above Android M
+        try {
+            mMediaPlayer.setPlaybackParams(mMediaPlayer.getPlaybackParams().setSpeed(speed));
+        } catch (Exception e) {
+            mPlayerEventListener.onError();
+        }
+    }
+
+    @Override
     public long getTcpSpeed() {
-        return PlayerUtils.getNetSpeed(mAppContext);        
+        return PlayerUtils.getNetSpeed(mAppContext);
     }
 
     @Override

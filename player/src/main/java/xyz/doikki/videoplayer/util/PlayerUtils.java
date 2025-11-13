@@ -8,16 +8,11 @@ import android.content.ContextWrapper;
 import android.content.res.Resources;
 import android.graphics.Point;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.net.NetworkCapabilities;
 import android.net.TrafficStats;
-import android.os.Build;
-import android.telephony.TelephonyManager;
 import android.util.TypedValue;
 import android.view.Display;
-import android.view.KeyCharacterMap;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
-import android.view.ViewConfiguration;
 import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
@@ -35,8 +30,15 @@ import java.util.Locale;
  */
 
 public final class PlayerUtils {
-	private static long lastTotalRxBytes;
+    public static final int NO_NETWORK = 0;
+    public static final int NETWORK_CLOSED = 1;
+    public static final int NETWORK_ETHERNET = 2;
+    public static final int NETWORK_WIFI = 3;
+    public static final int NETWORK_MOBILE = 4;
+    public static final int NETWORK_UNKNOWN = -1;
+    private static long lastTotalRxBytes;
     private static long lastTimeStamp;
+
     private PlayerUtils() {
     }
 
@@ -86,18 +88,12 @@ public final class PlayerUtils {
      * 是否存在NavigationBar
      */
     public static boolean hasNavigationBar(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            Display display = getWindowManager(context).getDefaultDisplay();
-            Point size = new Point();
-            Point realSize = new Point();
-            display.getSize(size);
-            display.getRealSize(realSize);
-            return realSize.x != size.x || realSize.y != size.y;
-        } else {
-            boolean menu = ViewConfiguration.get(context).hasPermanentMenuKey();
-            boolean back = KeyCharacterMap.deviceHasKey(KeyEvent.KEYCODE_BACK);
-            return !(menu || back);
-        }
+        Display display = getWindowManager(context).getDefaultDisplay();
+        Point size = new Point();
+        Point realSize = new Point();
+        display.getSize(size);
+        display.getRealSize(realSize);
+        return realSize.x != size.x || realSize.y != size.y;
     }
 
     /**
@@ -167,14 +163,6 @@ public final class PlayerUtils {
                 || e.getRawY() > getScreenHeight(context, true) - edgeSize;
     }
 
-
-    public static final int NO_NETWORK = 0;
-    public static final int NETWORK_CLOSED = 1;
-    public static final int NETWORK_ETHERNET = 2;
-    public static final int NETWORK_WIFI = 3;
-    public static final int NETWORK_MOBILE = 4;
-    public static final int NETWORK_UNKNOWN = -1;
-
     /**
      * 判断当前网络类型
      */
@@ -187,48 +175,28 @@ public final class PlayerUtils {
             return NO_NETWORK;
         }
 
-        NetworkInfo networkInfo = connectMgr.getActiveNetworkInfo();
-        if (networkInfo == null) {
-            // 没有任何网络
+        android.net.Network network = connectMgr.getActiveNetwork();
+        if (network == null) {
             return NO_NETWORK;
         }
-        if (!networkInfo.isConnected()) {
-            // 网络断开或关闭
+
+        NetworkCapabilities capabilities = connectMgr.getNetworkCapabilities(network);
+        if (capabilities == null) {
+            return NO_NETWORK;
+        }
+
+        if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+                !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
             return NETWORK_CLOSED;
         }
-        if (networkInfo.getType() == ConnectivityManager.TYPE_ETHERNET) {
-            // 以太网网络
+
+        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
             return NETWORK_ETHERNET;
-        } else if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
-            // wifi网络，当激活时，默认情况下，所有的数据流量将使用此连接
+        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
             return NETWORK_WIFI;
-        } else if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
-            // 移动数据连接,不能与连接共存,如果wifi打开，则自动关闭
-            switch (networkInfo.getSubtype()) {
-                // 2G
-                case TelephonyManager.NETWORK_TYPE_GPRS:
-                case TelephonyManager.NETWORK_TYPE_EDGE:
-                case TelephonyManager.NETWORK_TYPE_CDMA:
-                case TelephonyManager.NETWORK_TYPE_1xRTT:
-                case TelephonyManager.NETWORK_TYPE_IDEN:
-                    // 3G
-                case TelephonyManager.NETWORK_TYPE_UMTS:
-                case TelephonyManager.NETWORK_TYPE_EVDO_0:
-                case TelephonyManager.NETWORK_TYPE_EVDO_A:
-                case TelephonyManager.NETWORK_TYPE_HSDPA:
-                case TelephonyManager.NETWORK_TYPE_HSUPA:
-                case TelephonyManager.NETWORK_TYPE_HSPA:
-                case TelephonyManager.NETWORK_TYPE_EVDO_B:
-                case TelephonyManager.NETWORK_TYPE_EHRPD:
-                case TelephonyManager.NETWORK_TYPE_HSPAP:
-                    // 4G
-                case TelephonyManager.NETWORK_TYPE_LTE:
-                    // 5G
-                case TelephonyManager.NETWORK_TYPE_NR:
-                    return NETWORK_MOBILE;
-            }
+        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+            return NETWORK_MOBILE;
         }
-        // 未知网络
         return NETWORK_UNKNOWN;
     }
 
@@ -299,7 +267,7 @@ public final class PlayerUtils {
         }
         return result;
     }
-    
+
     public static long getNetSpeed(Context context) {
         //这里的context是获取getApplicationContext的
         if (context == null) {
@@ -324,5 +292,5 @@ public final class PlayerUtils {
         lastTotalRxBytes = nowTotalRxBytes;
         return speed;
     }
-    
+
 }

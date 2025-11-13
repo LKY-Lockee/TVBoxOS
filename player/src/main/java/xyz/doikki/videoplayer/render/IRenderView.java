@@ -16,19 +16,22 @@ public interface IRenderView {
 
     /**
      * 设置视频宽高
-     * @param videoWidth 宽
+     *
+     * @param videoWidth  宽
      * @param videoHeight 高
      */
     void setVideoSize(int videoWidth, int videoHeight);
 
     /**
      * 设置视频旋转角度
+     *
      * @param degree 角度值
      */
     void setVideoRotation(int degree);
 
     /**
      * 设置screen scale type
+     *
      * @param scaleType 类型
      */
     void setScaleType(int scaleType);

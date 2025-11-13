@@ -23,9 +23,9 @@ public class IjkPlayer extends AbstractPlayer implements IMediaPlayer.OnErrorLis
         IMediaPlayer.OnBufferingUpdateListener, IMediaPlayer.OnPreparedListener,
         IMediaPlayer.OnVideoSizeChangedListener, IjkMediaPlayer.OnNativeInvokeListener {
 
+    private final Context mAppContext;
     protected IjkMediaPlayer mMediaPlayer;
     private int mBufferedPercent;
-    private final Context mAppContext;
 
     public IjkPlayer(Context context) {
         mAppContext = context;
@@ -149,16 +149,13 @@ public class IjkPlayer extends AbstractPlayer implements IMediaPlayer.OnErrorLis
         mMediaPlayer.setOnBufferingUpdateListener(null);
         mMediaPlayer.setOnPreparedListener(null);
         mMediaPlayer.setOnVideoSizeChangedListener(null);
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    mMediaPlayer.release();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+        new Thread(() -> {
+            try {
+                mMediaPlayer.release();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }.start();
+        }).start();
     }
 
     @Override
@@ -197,13 +194,13 @@ public class IjkPlayer extends AbstractPlayer implements IMediaPlayer.OnErrorLis
     }
 
     @Override
-    public void setSpeed(float speed) {
-        mMediaPlayer.setSpeed(speed);
+    public float getSpeed() {
+        return mMediaPlayer.getSpeed(0);
     }
 
     @Override
-    public float getSpeed() {
-        return mMediaPlayer.getSpeed(0);
+    public void setSpeed(float speed) {
+        mMediaPlayer.setSpeed(speed);
     }
 
     @Override

@@ -24,15 +24,15 @@ public interface MediaPlayerControl {
 
     boolean isFullScreen();
 
-    void setMute(boolean isMute);
-
     boolean isMute();
+
+    void setMute(boolean isMute);
 
     void setScreenScaleType(int screenScaleType);
 
-    void setSpeed(float speed);
-
     float getSpeed();
+
+    void setSpeed(float speed);
 
     long getTcpSpeed();
 

@@ -18,15 +18,16 @@ public interface IVideoController {
     boolean isShowing();
 
     /**
-     * 设置锁定状态
-     * @param locked 是否锁定
-     */
-    void setLocked(boolean locked);
-
-    /**
      * 是否处于锁定状态
      */
     boolean isLocked();
+
+    /**
+     * 设置锁定状态
+     *
+     * @param locked 是否锁定
+     */
+    void setLocked(boolean locked);
 
     /**
      * 开始刷新进度
