@@ -40,7 +40,6 @@ import com.lzy.okgo.model.Response;
 import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
-import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -83,26 +82,12 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     @Override
     protected void onFragmentResume() {
         super.onFragmentResume();
-        if (Hawk.get(HawkConfig.HOME_REC_STYLE, false)) {
-            tvHotList.setVisibility(View.VISIBLE);
-            tvHotList.setHasFixedSize(true);
-            int spanCount = 5;
-            if (style != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) spanCount = ImgUtil.spanCountByStyle(style, spanCount);
-            tvHotList.setLayoutManager(new V7GridLayoutManager(this.mContext, spanCount));
-            int paddingLeft = getResources().getDimensionPixelSize(R.dimen.vs_15);
-            int paddingTop = getResources().getDimensionPixelSize(R.dimen.vs_10);
-            int paddingRight = getResources().getDimensionPixelSize(R.dimen.vs_15);
-            int paddingBottom = getResources().getDimensionPixelSize(R.dimen.vs_10);
-            tvHotList.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
-        } else {
-            tvHotList.setVisibility(View.VISIBLE);
-            tvHotList.setLayoutManager(new V7LinearLayoutManager(this.mContext, V7LinearLayoutManager.HORIZONTAL, false));
-            int paddingLeft = getResources().getDimensionPixelSize(R.dimen.vs_15);
-            int paddingTop = getResources().getDimensionPixelSize(R.dimen.vs_40);
-            int paddingRight = getResources().getDimensionPixelSize(R.dimen.vs_15);
-            int paddingBottom = getResources().getDimensionPixelSize(R.dimen.vs_40);
-            tvHotList.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
-        }
+
+        tvHotList.setHasFixedSize(true);
+        int spanCount = 5;
+        if (style != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) spanCount = ImgUtil.spanCountByStyle(style, spanCount);
+        tvHotList.setLayoutManager(new V7GridLayoutManager(this.mContext, spanCount));
+
         if (Hawk.get(HawkConfig.HOME_REC, 0) == 2) {
             List<VodInfo> allVodRecord = RoomDataManger.getAllVodRecord(20);
             List<Movie.Video> vodList = new ArrayList<>();
