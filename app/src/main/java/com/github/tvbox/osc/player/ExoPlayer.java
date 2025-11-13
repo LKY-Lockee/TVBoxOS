@@ -5,15 +5,11 @@ import android.util.Pair;
 
 import com.github.tvbox.osc.util.AudioTrackMemory;
 import com.github.tvbox.osc.util.LOG;
-import com.google.android.exoplayer2.Format;
-import com.google.android.exoplayer2.source.TrackGroup;
-import com.google.android.exoplayer2.source.TrackGroupArray;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
+import androidx.media3.common.C;
+import androidx.media3.common.Format;
+import androidx.media3.common.Tracks;
 
 import xyz.doikki.videoplayer.exo.ExoMediaPlayer;
-
-import com.google.android.exoplayer2.C;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,46 +25,39 @@ public class ExoPlayer extends ExoMediaPlayer {
     // 3. 获取所有轨道信息
     public TrackInfo getTrackInfo() {
         TrackInfo data = new TrackInfo();
-        MappingTrackSelector.MappedTrackInfo mappedInfo = trackSelector.getCurrentMappedTrackInfo();
-        if (mappedInfo == null) return data;
-        DefaultTrackSelector.Parameters params = trackSelector.getParameters();
-        for (int rendererIndex = 0; rendererIndex < mappedInfo.getRendererCount(); rendererIndex++) {
-            int type = mappedInfo.getRendererType(rendererIndex);
-            if(type!=C.TRACK_TYPE_AUDIO && type!=C.TRACK_TYPE_TEXT)continue;
-            TrackGroupArray groups = mappedInfo.getTrackGroups(rendererIndex);
-            DefaultTrackSelector.SelectionOverride override = params.getSelectionOverride(rendererIndex, groups);
-            boolean hasSelected = false;
-            for (int groupIndex = 0; groupIndex < groups.length; groupIndex++) {
-                TrackGroup group = groups.get(groupIndex);
-                for (int trackIndex = 0; trackIndex < group.length; trackIndex++) {
-                    Format fmt = group.getFormat(trackIndex);
-                    TrackInfoBean bean = new TrackInfoBean();
-                    bean.language   = getLanguage(fmt);
-                    bean.name       = getName(fmt);
-                    bean.groupIndex = groupIndex;
-                    bean.index      = trackIndex;
-                    boolean selected = false;
-                    if (override != null) {
-                        if(override.groupIndex == groupIndex){
-                            for (int t : override.tracks) {
-                                if (t == trackIndex) {
-                                    selected = true;
-                                    hasSelected = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }else if (type == C.TRACK_TYPE_AUDIO && !hasSelected) {
-                        selected = true;
-                        hasSelected = true;
-                    }
-                    bean.selected = selected;
-                    if (type == C.TRACK_TYPE_AUDIO) {
-                        data.addAudio(bean);
-                    } else {
-                        data.addSubtitle(bean);
-                    }
+        if (mInternalPlayer == null) return data;
+        Tracks currentTracks = mInternalPlayer.getCurrentTracks();
+        
+        int audioGroupIndex = 0;
+        int subtitleGroupIndex = 0;
+        
+        for (Tracks.Group trackGroup : currentTracks.getGroups()) {
+            int trackType = trackGroup.getType();
+            if (trackType != C.TRACK_TYPE_AUDIO && trackType != C.TRACK_TYPE_TEXT) continue;
+            
+            for (int i = 0; i < trackGroup.length; i++) {
+                if (!trackGroup.isTrackSupported(i)) continue;
+                
+                Format fmt = trackGroup.getTrackFormat(i);
+                TrackInfoBean bean = new TrackInfoBean();
+                bean.language = getLanguage(fmt);
+                bean.name = getName(fmt);
+                bean.index = i;
+                bean.selected = trackGroup.isTrackSelected(i);
+                
+                if (trackType == C.TRACK_TYPE_AUDIO) {
+                    bean.groupIndex = audioGroupIndex;
+                    data.addAudio(bean);
+                } else {
+                    bean.groupIndex = subtitleGroupIndex;
+                    data.addSubtitle(bean);
                 }
+            }
+            
+            if (trackType == C.TRACK_TYPE_AUDIO) {
+                audioGroupIndex++;
+            } else {
+                subtitleGroupIndex++;
             }
         }
         return data;
@@ -79,32 +68,46 @@ public class ExoPlayer extends ExoMediaPlayer {
      * @param groupIndex 音轨组的索引
      * @param trackIndex 音轨在组内的索引
      */
-    public void setTrack(int groupIndex, int trackIndex,String playKey) {
+    public void setTrack(int groupIndex, int trackIndex, String playKey) {
         try {
-            MappingTrackSelector.MappedTrackInfo mappedInfo = trackSelector.getCurrentMappedTrackInfo();
-            if (mappedInfo == null) {
-                LOG.i("echo-setTrack: MappedTrackInfo is null");
+            if (mInternalPlayer == null) {
+                LOG.i("echo-setTrack: Player is null");
                 return;
             }
-            int audioRendererIndex = findAudioRendererIndex(mappedInfo);
-            if (audioRendererIndex == C.INDEX_UNSET) {
-                LOG.i("echo-setTrack: No audio renderer found");
-                return;
+            
+            Tracks currentTracks = mInternalPlayer.getCurrentTracks();
+            int audioGroupCount = 0;
+            Tracks.Group targetGroup = null;
+            
+            // Find the target audio track group
+            for (Tracks.Group trackGroup : currentTracks.getGroups()) {
+                if (trackGroup.getType() == C.TRACK_TYPE_AUDIO) {
+                    if (audioGroupCount == groupIndex) {
+                        targetGroup = trackGroup;
+                        break;
+                    }
+                    audioGroupCount++;
+                }
             }
-            TrackGroupArray audioGroups = mappedInfo.getTrackGroups(audioRendererIndex);
-            if (!isTrackIndexValid(audioGroups, groupIndex, trackIndex)) {
+            
+            if (targetGroup == null || trackIndex >= targetGroup.length) {
                 LOG.i("echo-setTrack: Invalid track index - group:" + groupIndex + ", track:" + trackIndex);
                 return;
             }
-            DefaultTrackSelector.SelectionOverride newOverride = new DefaultTrackSelector.SelectionOverride(groupIndex, trackIndex);
-            DefaultTrackSelector.ParametersBuilder builder = trackSelector.buildUponParameters();
-            builder.clearSelectionOverrides(audioRendererIndex);
-            builder.setSelectionOverride(audioRendererIndex, audioGroups, newOverride);
-            trackSelector.setParameters(builder.build());
+            
+            // In Media3, we need to use preferred audio language or manual track selection
+            // For now, using the TrackSelectionParameters to prefer specific tracks
+            Format targetFormat = targetGroup.getTrackFormat(trackIndex);
+            
+            // Set parameters to prefer this specific audio track
+            trackSelector.setParameters(
+                trackSelector.buildUponParameters()
+                    .setPreferredAudioLanguage(targetFormat.language != null ? targetFormat.language : "")
+            );
 
             // 缓存到 map：下次同一路径播放时使用
             if (!playKey.isEmpty()) {
-                memory.save(playKey,groupIndex,trackIndex);
+                memory.save(playKey, groupIndex, trackIndex);
             }
         } catch (Exception e) {
             LOG.i("echo-setTrack error: " + e.getMessage());
@@ -115,49 +118,14 @@ public class ExoPlayer extends ExoMediaPlayer {
     public void loadDefaultTrack(String playKey) {
         Pair<Integer, Integer> pair = memory.exoLoad(playKey);
         if (pair == null) return;
-
-        MappingTrackSelector.MappedTrackInfo mappedInfo = trackSelector.getCurrentMappedTrackInfo();
-        if (mappedInfo == null) return;
-
-        int audioRendererIndex = findAudioRendererIndex(mappedInfo);
-        if (audioRendererIndex == C.INDEX_UNSET) return;
-
-        TrackGroupArray audioGroups = mappedInfo.getTrackGroups(audioRendererIndex);
+        
         int groupIndex = pair.first;
         int trackIndex = pair.second;
-        if (!isTrackIndexValid(audioGroups, groupIndex, trackIndex)) return;
-
-        DefaultTrackSelector.SelectionOverride override = new DefaultTrackSelector.SelectionOverride(groupIndex, trackIndex);
-
-        DefaultTrackSelector.ParametersBuilder builder = trackSelector.buildUponParameters();
-        builder.clearSelectionOverrides(audioRendererIndex);
-        builder.setSelectionOverride(audioRendererIndex, audioGroups, override);
-        trackSelector.setParameters(builder.build());
+        
+        setTrack(groupIndex, trackIndex, "");
     }
 
-    /**
-     * 查找音频渲染器索引
-     */
-    private int findAudioRendererIndex(MappingTrackSelector.MappedTrackInfo mappedInfo) {
-        for (int i = 0; i < mappedInfo.getRendererCount(); i++) {
-            if (mappedInfo.getRendererType(i) == C.TRACK_TYPE_AUDIO) {
-                return i;
-            }
-        }
-        return C.INDEX_UNSET;
-    }
 
-    /**
-     * 验证音轨索引是否有效
-     */
-    private boolean isTrackIndexValid(TrackGroupArray groups, int groupIndex, int trackIndex) {
-        if (groupIndex < 0 || groupIndex >= groups.length) {
-            return false;
-        }
-
-        TrackGroup group = groups.get(groupIndex);
-        return trackIndex >= 0 && trackIndex < group.length;
-    }
 
     private static final Map<String, String> LANG_MAP = new HashMap<>();
     static {

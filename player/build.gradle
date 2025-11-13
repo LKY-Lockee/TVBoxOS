@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'com.github.tvbox.osc.player'
-    
+
     compileSdkVersion 36
 
     defaultConfig {
@@ -18,7 +18,7 @@ android {
                 abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
             }
         }
-        
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -28,6 +28,7 @@ android {
         releaseSimon {
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -36,14 +37,14 @@ android {
 
 dependencies {
     api fileTree(dir: "libs", include: ["*.jar", "*.aar"])
-    
-    implementation "androidx.annotation:annotation:1.3.0"
-    api "com.google.android.exoplayer:exoplayer-core:2.14.2"
-    api "com.google.android.exoplayer:exoplayer-ui:2.14.2"
-    api "com.google.android.exoplayer:exoplayer-dash:2.14.2"
-    api "com.google.android.exoplayer:exoplayer-hls:2.14.2"
-    api "com.google.android.exoplayer:exoplayer-rtsp:2.14.2"
-    api "com.google.android.exoplayer:extension-rtmp:2.14.2"
-    api "com.google.android.exoplayer:extension-okhttp:2.14.2"
+
+    implementation "androidx.annotation:annotation:1.9.1"
+    api "androidx.media3:media3-exoplayer:1.8.0"
+    api "androidx.media3:media3-ui:1.8.0"
+    api "androidx.media3:media3-exoplayer-dash:1.8.0"
+    api "androidx.media3:media3-exoplayer-hls:1.8.0"
+    api "androidx.media3:media3-exoplayer-rtsp:1.8.0"
+    api "androidx.media3:media3-datasource-rtmp:1.8.0"
+    api "androidx.media3:media3-datasource-okhttp:1.8.0"
     api 'xyz.doikki.android.dkplayer:dkplayer-ui:3.3.5'
 }

@@ -7,33 +7,25 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.PlaybackParameters;
+import androidx.media3.common.Player;
+import androidx.media3.common.VideoSize;
+import androidx.media3.exoplayer.DefaultLoadControl;
+import androidx.media3.exoplayer.DefaultRenderersFactory;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.LoadControl;
+import androidx.media3.exoplayer.RenderersFactory;
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.exoplayer.source.MediaSource;
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
+import androidx.media3.exoplayer.trackselection.MappingTrackSelector;
+import androidx.media3.exoplayer.trackselection.TrackSelector;
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter;
+import androidx.media3.exoplayer.util.EventLogger;
 
-import com.google.android.exoplayer2.DefaultLoadControl;
-import com.google.android.exoplayer2.DefaultRenderersFactory;
-import com.google.android.exoplayer2.ExoPlaybackException;
-import com.google.android.exoplayer2.LoadControl;
-import com.google.android.exoplayer2.PlaybackParameters;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.RenderersFactory;
-import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.analytics.AnalyticsCollector;
-import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
-import com.google.android.exoplayer2.source.MediaSource;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.MappingTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelector;
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
-import com.google.android.exoplayer2.util.Clock;
-import com.google.android.exoplayer2.util.EventLogger;
-import com.google.android.exoplayer2.video.VideoSize;
-
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
 import java.util.Map;
 
-import okhttp3.Dns;
-import okhttp3.OkHttpClient;
 import xyz.doikki.videoplayer.player.AbstractPlayer;
 import xyz.doikki.videoplayer.player.VideoViewManager;
 import xyz.doikki.videoplayer.util.PlayerUtils;
@@ -41,7 +33,7 @@ import xyz.doikki.videoplayer.util.PlayerUtils;
 public class ExoMediaPlayer extends AbstractPlayer implements Player.Listener {
 
     protected Context mAppContext;
-    protected SimpleExoPlayer mInternalPlayer;
+    protected ExoPlayer mInternalPlayer;
     protected MediaSource mMediaSource;
     protected ExoMediaSourceHelper mMediaSourceHelper;
 
@@ -64,15 +56,13 @@ public class ExoMediaPlayer extends AbstractPlayer implements Player.Listener {
 
     @Override
     public void initPlayer() {
-        mInternalPlayer = new SimpleExoPlayer.Builder(
-                mAppContext,
-                mRenderersFactory == null ? mRenderersFactory = new DefaultRenderersFactory(mAppContext).setEnableDecoderFallback(true)  // 启用解码器回退，避免硬件加速问题
-                        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER) : mRenderersFactory,
-                mTrackSelector == null ? mTrackSelector = new DefaultTrackSelector(mAppContext) : mTrackSelector,
-                new DefaultMediaSourceFactory(mAppContext),
-                mLoadControl == null ? mLoadControl = new DefaultLoadControl() : mLoadControl,
-                DefaultBandwidthMeter.getSingletonInstance(mAppContext),
-                new AnalyticsCollector(Clock.DEFAULT))
+        mInternalPlayer = new ExoPlayer.Builder(mAppContext)
+                .setRenderersFactory(mRenderersFactory == null ? mRenderersFactory = new DefaultRenderersFactory(mAppContext).setEnableDecoderFallback(true)  // 启用解码器回退，避免硬件加速问题
+                        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER) : mRenderersFactory)
+                .setTrackSelector(mTrackSelector == null ? mTrackSelector = new DefaultTrackSelector(mAppContext) : mTrackSelector)
+                .setMediaSourceFactory(new DefaultMediaSourceFactory(mAppContext))
+                .setLoadControl(mLoadControl == null ? mLoadControl = new DefaultLoadControl.Builder().build() : mLoadControl)
+                .setBandwidthMeter(DefaultBandwidthMeter.getSingletonInstance(mAppContext))
                 .build();
         setOptions();
 
@@ -80,7 +70,7 @@ public class ExoMediaPlayer extends AbstractPlayer implements Player.Listener {
         if (VideoViewManager.getConfig().mIsEnableLog && mTrackSelector instanceof MappingTrackSelector) {
             mInternalPlayer.addAnalyticsListener(new EventLogger((MappingTrackSelector) mTrackSelector, "ExoPlayer"));
         }
-        if(trackSelector == null)trackSelector=(DefaultTrackSelector)mTrackSelector;
+        if (trackSelector == null) trackSelector = (DefaultTrackSelector) mTrackSelector;
         mInternalPlayer.addListener(this);
     }
 
@@ -98,7 +88,7 @@ public class ExoMediaPlayer extends AbstractPlayer implements Player.Listener {
 
     @Override
     public void setDataSource(String path, Map<String, String> headers) {
-        Log.i("Tvbox-runtime","echo-setDataSource:"+path);
+        Log.i("Tvbox-runtime", "echo-setDataSource:" + path);
         currentPlayPath = path;
         mMediaSource = mMediaSourceHelper.getMediaSource(path, headers);
     }
@@ -285,14 +275,14 @@ public class ExoMediaPlayer extends AbstractPlayer implements Player.Listener {
     }
 
     @Override
-    public void onPlayerError(ExoPlaybackException error) {
+    public void onPlayerError(@NonNull PlaybackException error) {
         if (mPlayerEventListener != null) {
             mPlayerEventListener.onError();
         }
     }
 
     @Override
-    public void onVideoSizeChanged(VideoSize videoSize) {
+    public void onVideoSizeChanged(@NonNull VideoSize videoSize) {
         if (mPlayerEventListener != null) {
             mPlayerEventListener.onVideoSizeChanged(videoSize.width, videoSize.height);
             if (videoSize.unappliedRotationDegrees > 0) {
