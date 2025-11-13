@@ -25,38 +25,37 @@ import me.jessyan.autosize.utils.AutoSizeUtils;
  * 如果不传 style 则保留旧的默认风格（XML 中 item_grid.xml 定义的尺寸）。
  */
 public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
-    private boolean mShowList ;
+    public final ImgUtil.Style style; // 动态风格，传入时调整图片宽高比
+    private boolean mShowList;
     private int defaultWidth;
-    public ImgUtil.Style style; // 动态风格，传入时调整图片宽高比
-
 
 
     /**
      * 如果 style 传 null，则采用 item_grid.xml 中的默认尺寸
      */
     public GridAdapter(boolean showList, ImgUtil.Style style) {
-        super( showList ? R.layout.item_list:R.layout.item_grid, new ArrayList<>());
+        super(showList ? R.layout.item_list : R.layout.item_grid, new ArrayList<>());
         this.mShowList = showList;
-        if(style!=null ){
-            if(style.type.equals("list"))this.mShowList=true;
-            this.defaultWidth=ImgUtil.getStyleDefaultWidth(style);
+        if (style != null) {
+            if (style.type.equals("list")) this.mShowList = true;
+            this.defaultWidth = ImgUtil.getStyleDefaultWidth(style);
         }
         this.style = style;
     }
 
     @Override
     protected void convert(BaseViewHolder helper, Movie.Video item) {
-        if(this.mShowList) {
+        if (this.mShowList) {
             helper.setText(R.id.tvNote, item.note);
             helper.setText(R.id.tvName, item.name);
             ImageView ivThumb = helper.getView(R.id.ivThumb);
             //由于部分电视机使用glide报错
             if (!TextUtils.isEmpty(item.pic)) {
-                item.pic=item.pic.trim();
-                if(ImgUtil.isBase64Image(item.pic)){
+                item.pic = item.pic.trim();
+                if (ImgUtil.isBase64Image(item.pic)) {
                     // 如果是 Base64 图片，解码并设置
                     ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(item.pic));
-                }else {
+                } else {
                     Picasso.get()
                             .load(DefaultConfig.checkReplaceProxy(item.pic))
                             .transform(new RoundTransformation(MD5.string2MD5(item.pic))
@@ -110,23 +109,23 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
 
         int newWidth = ImgUtil.defaultWidth;
         int newHeight = ImgUtil.defaultHeight;
-        if(style!=null){
+        if (style != null) {
             newWidth = defaultWidth;
-            newHeight = (int)(newWidth / style.ratio);
+            newHeight = (int) (newWidth / style.ratio);
         }
 
         //由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {
-            item.pic=item.pic.trim();
-            if(ImgUtil.isBase64Image(item.pic)){
+            item.pic = item.pic.trim();
+            if (ImgUtil.isBase64Image(item.pic)) {
                 // 如果是 Base64 图片，解码并设置
                 ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(item.pic));
-            }else {
+            } else {
                 Picasso.get()
                         .load(DefaultConfig.checkReplaceProxy(item.pic))
                         .transform(new RoundTransformation(MD5.string2MD5(item.pic))
                                 .centerCorp(true)
-                                .override(AutoSizeUtils.mm2px(mContext,newWidth), AutoSizeUtils.mm2px(mContext,newHeight))
+                                .override(AutoSizeUtils.mm2px(mContext, newWidth), AutoSizeUtils.mm2px(mContext, newHeight))
                                 .roundRadius(AutoSizeUtils.mm2px(mContext, 10), RoundTransformation.RoundType.ALL))
                         .placeholder(R.drawable.img_loading_placeholder)
                         .noFade()
@@ -143,7 +142,7 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
      * 根据传入的 style 动态设置 ImageView 的高度：高度 = 宽度 / ratio
      */
     private void applyStyleToImage(final ImageView ivThumb) {
-        if(style!=null){
+        if (style != null) {
             ViewGroup container = (ViewGroup) ivThumb.getParent();
             int width = defaultWidth;
             int height = (int) (width / style.ratio);

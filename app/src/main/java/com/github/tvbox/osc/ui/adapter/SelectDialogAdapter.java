@@ -22,20 +22,6 @@ import java.util.List;
 
 public class SelectDialogAdapter<T> extends ListAdapter<T, SelectDialogAdapter.SelectViewHolder> {
 
-    class SelectViewHolder extends RecyclerView.ViewHolder {
-
-        public SelectViewHolder(@NonNull @NotNull View itemView) {
-            super(itemView);
-        }
-    }
-
-    public interface SelectDialogInterface<T> {
-        void click(T value, int pos);
-
-        String getDisplay(T val);
-    }
-
-
     public static DiffUtil.ItemCallback<String> stringDiff = new DiffUtil.ItemCallback<String>() {
 
         @Override
@@ -48,13 +34,9 @@ public class SelectDialogAdapter<T> extends ListAdapter<T, SelectDialogAdapter.S
             return oldItem.equals(newItem);
         }
     };
-
-
-    private ArrayList<T> data = new ArrayList<>();
-
+    private final ArrayList<T> data = new ArrayList<>();
     private int select = 0;
-
-    private SelectDialogInterface dialogInterface;
+    private final SelectDialogInterface dialogInterface;
 
     public SelectDialogAdapter(SelectDialogInterface dialogInterface, DiffUtil.ItemCallback diffCallback) {
         super(diffCallback);
@@ -73,7 +55,6 @@ public class SelectDialogAdapter<T> extends ListAdapter<T, SelectDialogAdapter.S
         return data.size();
     }
 
-
     @Override
     public SelectDialogAdapter.SelectViewHolder onCreateViewHolder(@NonNull @NotNull ViewGroup parent, int viewType) {
         return new SelectDialogAdapter.SelectViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_dialog_select, parent, false));
@@ -86,22 +67,33 @@ public class SelectDialogAdapter<T> extends ListAdapter<T, SelectDialogAdapter.S
         TextView view = holder.itemView.findViewById(R.id.tvName);
         if (position == select) {
             view.setTextColor(0xff02f8e1);
-            view .setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
-        }else {
+            view.setTypeface(Typeface.defaultFromStyle(Typeface.BOLD));
+        } else {
             view.setTextColor(Color.WHITE);
-            view .setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
+            view.setTypeface(Typeface.defaultFromStyle(Typeface.NORMAL));
         }
         view.setText(name);
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (position == select)
-                    return;
-                notifyItemChanged(select);
-                select = position;
-                notifyItemChanged(select);
-                dialogInterface.click(value, position);
-            }
+        holder.itemView.setOnClickListener(v -> {
+            if (position == select)
+                return;
+            notifyItemChanged(select);
+            select = position;
+            notifyItemChanged(select);
+            dialogInterface.click(value, position);
         });
+    }
+
+
+    public interface SelectDialogInterface<T> {
+        void click(T value, int pos);
+
+        String getDisplay(T val);
+    }
+
+    public class SelectViewHolder extends RecyclerView.ViewHolder {
+
+        public SelectViewHolder(@NonNull @NotNull View itemView) {
+            super(itemView);
+        }
     }
 }

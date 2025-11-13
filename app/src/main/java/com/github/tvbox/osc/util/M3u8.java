@@ -36,10 +36,10 @@ public class M3u8 {
     public static String purify(String tsUrlPre, String m3u8content) {
         long start = System.currentTimeMillis();
         currentAdCount = 0;
-        if (null == m3u8content || m3u8content.length() == 0) return null;
+        if (null == m3u8content || m3u8content.isEmpty()) return null;
         if (!m3u8content.startsWith("#EXTM3U")) return null;
         String result = removeMinorityUrl(tsUrlPre, m3u8content);
-        if (result != null && currentAdCount>0) return result;
+        if (result != null && currentAdCount > 0) return result;
         result = get(tsUrlPre, m3u8content);
         long cost = System.currentTimeMillis() - start;
         LOG.i("echo-fixAdM3u8Ai 耗时：" + cost + "ms");
@@ -54,14 +54,9 @@ public class M3u8 {
             }
             totalTimes += entry.getValue();
         }
-        return  maxTimes*1.0 / (totalTimes*1.0);
+        return maxTimes * 1.0 / (totalTimes * 1.0);
     }
-    /**
-     * @author asdfgh
-     * <a href="https://github.com/asdfgh"> asdfgh </a>
-     */
 
-    private static int timesNoAd = 15;  //出现超过多少次的域名不认为是广告
     private static String removeMinorityUrl(String tsUrlPre, String m3u8content) {
         String linesplit = "\n";
         if (m3u8content.contains("\r\n"))
@@ -71,7 +66,7 @@ public class M3u8 {
         // 第一阶段：按去掉文件后缀后统计各前缀出现次数
         HashMap<String, Integer> preUrlMap = new HashMap<>();
         for (String line : lines) {
-            if (line.length() == 0 || line.charAt(0) == '#') {
+            if (line.isEmpty() || line.charAt(0) == '#') {
                 continue;
             }
             int ilast = line.lastIndexOf('.');
@@ -79,12 +74,7 @@ public class M3u8 {
                 continue;
             }
             String preUrl = line.substring(0, ilast - 4);
-            Integer cnt = preUrlMap.get(preUrl);
-            if (cnt != null) {
-                preUrlMap.put(preUrl, cnt + 1);
-            } else {
-                preUrlMap.put(preUrl, 1);
-            }
+            preUrlMap.merge(preUrl, 1, Integer::sum);
         }
         if (preUrlMap.size() <= 1) return null;
         boolean domainFiltering = false;
@@ -92,7 +82,7 @@ public class M3u8 {
             // 尝试判断域名，取同域名最多的链接，其它域名当作广告去除
             preUrlMap.clear();
             for (String line : lines) {
-                if (line.length() == 0 || line.charAt(0) == '#') {
+                if (line.isEmpty() || line.charAt(0) == '#') {
                     continue;
                 }
                 if (!line.startsWith("http://") && !line.startsWith("https://")) {
@@ -103,12 +93,7 @@ public class M3u8 {
                     continue;
                 }
                 String preUrl = line.substring(0, ifirst);
-                Integer cnt = preUrlMap.get(preUrl);
-                if (cnt != null) {
-                    preUrlMap.put(preUrl, cnt + 1);
-                } else {
-                    preUrlMap.put(preUrl, 1);
-                }
+                preUrlMap.merge(preUrl, 1, Integer::sum);
             }
             if (preUrlMap.size() <= 1) return null;
             if (maxPercent(preUrlMap) < 0.8) {
@@ -160,7 +145,7 @@ public class M3u8 {
                     dealedExtXKey = true;
                 }
             }
-            if (lines[i].length() == 0 || lines[i].charAt(0) == '#') {
+            if (lines[i].isEmpty() || lines[i].charAt(0) == '#') {
                 continue;
             }
             // 根据判断方式过滤
@@ -174,11 +159,11 @@ public class M3u8 {
                             lines[i] = tsUrlPre + lines[i];
                     }
                 } else {
-                    if (i > 0 && lines[i - 1].length() > 0 && lines[i - 1].charAt(0) == '#') {
+                    if (i > 0 && !lines[i - 1].isEmpty() && lines[i - 1].charAt(0) == '#') {
                         lines[i - 1] = "";
                     }
                     lines[i] = "";
-                    currentAdCount+=1;
+                    currentAdCount += 1;
                 }
             } else {
                 // 域名过滤模式：先转换为绝对 URL
@@ -196,14 +181,20 @@ public class M3u8 {
                 String domain = (ifirst > 0) ? absoluteUrl.substring(0, ifirst) : absoluteUrl;
                 // 保留条件：域名等于出现次数最多的，或者该域名出现次数超过timesNoAd次
                 Integer cnt = preUrlMap.get(domain);
+                /**
+                 * @author asdfgh
+                 * <a href="https://github.com/asdfgh"> asdfgh </a>
+                 */
+                //出现超过多少次的域名不认为是广告
+                int timesNoAd = 15;
                 if (domain.equals(maxTimesPreUrl) || (cnt != null && cnt > timesNoAd)) {
                     lines[i] = absoluteUrl;
                 } else {
-                    if (i > 0 && lines[i - 1].length() > 0 && lines[i - 1].charAt(0) == '#') {
+                    if (i > 0 && !lines[i - 1].isEmpty() && lines[i - 1].charAt(0) == '#') {
                         lines[i - 1] = "";
                     }
                     lines[i] = "";
-                    currentAdCount+=1;
+                    currentAdCount += 1;
                 }
             }
         }
@@ -234,13 +225,13 @@ public class M3u8 {
     private static String clean(String line, List<String> ads) {
         boolean scan = false;
         for (String ad : ads) {
-            if (ad.contains(TAG_DISCONTINUITY) || ad.contains(TAG_MEDIA_DURATION)) line = scanAd(line,ad);
+            if (ad.contains(TAG_DISCONTINUITY) || ad.contains(TAG_MEDIA_DURATION)) line = scanAd(line, ad);
             else if (isDouble(ad)) scan = true;
         }
         return scan ? scan(line, ads) : line;
     }
 
-    private static String scanAd(String line,String TAG_AD) {
+    private static String scanAd(String line, String TAG_AD) {
         Matcher m1 = getPattern(TAG_AD).matcher(line);
         List<String> needRemoveAd = new ArrayList<>();
         while (m1.find()) {
@@ -249,10 +240,10 @@ public class M3u8 {
             Matcher m2 = REGEX_MEDIA_DURATION.matcher(group);
             int tCount = 0;
             while (m2.find()) {
-                tCount+=1;
+                tCount += 1;
             }
             needRemoveAd.add(groupCleaned);
-            currentAdCount+=tCount;
+            currentAdCount += tCount;
         }
         for (String rem : needRemoveAd) {
             line = line.replace(rem, "");
@@ -267,30 +258,30 @@ public class M3u8 {
             String group = m1.group();
             String groupCleaned = group.replace(TAG_ENDLIST, "");
             Matcher m2 = REGEX_MEDIA_DURATION.matcher(group);
-            BigDecimal ft = BigDecimal.ZERO,lt = BigDecimal.ZERO,t = BigDecimal.ZERO;
+            BigDecimal ft = BigDecimal.ZERO, lt = BigDecimal.ZERO, t = BigDecimal.ZERO;
             int tCount = 0;
             while (m2.find()) {
-                if (ft.equals(BigDecimal.ZERO))ft = new BigDecimal(m2.group(1));
+                if (ft.equals(BigDecimal.ZERO)) ft = new BigDecimal(m2.group(1));
                 lt = new BigDecimal(m2.group(1));
                 t = t.add(lt);
-                tCount+=1;
+                tCount += 1;
             }
 
-            String ftStr = ft.toString(),ltStr = lt.toString(),tStr = t.toString();
+            String ftStr = ft.toString(), ltStr = lt.toString(), tStr = t.toString();
             for (String ad : ads) {
                 if (ad.startsWith("-")) {
                     String adClean = ad.substring(1);
                     //匹配最后一条切片
                     if (ltStr.startsWith(adClean)) {
                         needRemoveAd.add(groupCleaned);
-                        currentAdCount+=tCount;
+                        currentAdCount += tCount;
                         break;
                     }
                 } else {
                     //匹配第一条切片或广告切片总时长
                     if (ftStr.startsWith(ad) || tStr.startsWith(ad)) {
                         needRemoveAd.add(groupCleaned);
-                        currentAdCount+=tCount;
+                        currentAdCount += tCount;
                         break;
                     }
                 }

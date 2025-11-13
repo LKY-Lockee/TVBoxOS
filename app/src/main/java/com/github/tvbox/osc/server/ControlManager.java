@@ -8,16 +8,10 @@ import android.text.TextUtils;
 
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.receiver.SearchReceiver;
-import com.github.tvbox.osc.util.HawkConfig;
-import com.orhanobut.hawk.Hawk;
 
 import org.greenrobot.eventbus.EventBus;
 
 import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import tv.danmaku.ijk.media.player.IjkMediaPlayer;
 
 /**
  * @author pj567
@@ -25,9 +19,9 @@ import tv.danmaku.ijk.media.player.IjkMediaPlayer;
  * @description:
  */
 public class ControlManager {
-    private static ControlManager instance;
-    private RemoteServer mServer = null;
     public static Context mContext;
+    private static volatile ControlManager instance;
+    private RemoteServer mServer = null;
 
     private ControlManager() {
 

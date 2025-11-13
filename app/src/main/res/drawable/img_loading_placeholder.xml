@@ -8,8 +8,8 @@
     </item>
     <item>
         <bitmap
-            android:antialias="true"
-            android:gravity="center"
-            android:src="@drawable/icon_img_placeholder" />
+                android:antialias="true"
+                android:gravity="center"
+                android:src="@drawable/icon_img_placeholder" />
     </item>
 </layer-list>

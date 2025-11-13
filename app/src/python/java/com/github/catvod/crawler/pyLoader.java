@@ -13,6 +13,7 @@ import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.MD5;
 import com.undcover.freedom.pyramid.PythonLoader;
 import com.undcover.freedom.pyramid.PythonSpider;
+
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,6 +22,7 @@ public class pyLoader implements IPyLoader {
     private final PythonLoader pythonLoader;
     private final ConcurrentHashMap<String, Spider> spiders;
     private String lastConfig = null; // 记录上次的配置
+    private String recentPyApi;
 
     public pyLoader() {
         pythonLoader = PythonLoader.getInstance().setApplication(App.getInstance());
@@ -41,7 +43,6 @@ public class pyLoader implements IPyLoader {
         }
     }
 
-    private String recentPyApi;
     @Override
     public void setRecentPyKey(String pyApi) {
         recentPyApi = pyApi;
@@ -71,11 +72,11 @@ public class pyLoader implements IPyLoader {
     }
 
     @Override
-    public Object[] proxyInvoke(Map<String, String> params){
-        if(recentPyApi==null)return null;
+    public Object[] proxyInvoke(Map<String, String> params) {
+        if (recentPyApi == null) return null;
         LOG.i("echo-recentPyApi" + recentPyApi);
         try {
-            PythonSpider originalSpider = (PythonSpider) getSpider(MD5.string2MD5(recentPyApi), recentPyApi,"");
+            PythonSpider originalSpider = (PythonSpider) getSpider(MD5.string2MD5(recentPyApi), recentPyApi, "");
             return originalSpider.proxyLocal(params);
         } catch (Throwable th) {
             LOG.i("echo-proxyInvoke_Throwable:---" + th.getMessage());

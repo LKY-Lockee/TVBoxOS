@@ -22,7 +22,6 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import tv.danmaku.ijk.media.player.IjkLibLoader;
 import xyz.doikki.videoplayer.player.AndroidMediaPlayerFactory;
 import xyz.doikki.videoplayer.player.PlayerFactory;
 import xyz.doikki.videoplayer.player.VideoView;
@@ -30,10 +29,14 @@ import xyz.doikki.videoplayer.render.RenderViewFactory;
 import xyz.doikki.videoplayer.render.TextureRenderViewFactory;
 
 public class PlayerHelper {
-    public static void updateCfg(VideoView videoView, JSONObject playerCfg) {
-        updateCfg(videoView,playerCfg,-1);
+    private static HashMap<Integer, String> mPlayersInfo = null;
+    private static HashMap<Integer, Boolean> mPlayersExistInfo = null;
+
+    public static void updateCfg(VideoView<?> videoView, JSONObject playerCfg) {
+        updateCfg(videoView, playerCfg, -1);
     }
-    public static void updateCfg(VideoView videoView, JSONObject playerCfg,int forcePlayerType) {
+
+    public static void updateCfg(VideoView<?> videoView, JSONObject playerCfg, int forcePlayerType) {
         int playerType = Hawk.get(HawkConfig.PLAY_TYPE, 0);
         int renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0);
         String ijkCode = Hawk.get(HawkConfig.IJK_CODEC, "硬解码");
@@ -46,7 +49,7 @@ public class PlayerHelper {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        if(forcePlayerType>=0)playerType = forcePlayerType;
+        if (forcePlayerType >= 0) playerType = forcePlayerType;
         IJKCode codec = ApiConfig.get().getIJKCodec(ijkCode);
         PlayerFactory playerFactory;
         if (playerType == 1) {
@@ -57,14 +60,11 @@ public class PlayerHelper {
                 }
             };
             try {
-                tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(new IjkLibLoader() {
-                    @Override
-                    public void loadLibrary(String s) throws UnsatisfiedLinkError, SecurityException {
-                        try {
-                            System.loadLibrary(s);
-                        } catch (Throwable th) {
-                            th.printStackTrace();
-                        }
+                tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(s -> {
+                    try {
+                        System.loadLibrary(s);
+                    } catch (Throwable th) {
+                        th.printStackTrace();
                     }
                 });
             } catch (Throwable th) {
@@ -75,24 +75,24 @@ public class PlayerHelper {
         } else {
             playerFactory = AndroidMediaPlayerFactory.create();
         }
-        RenderViewFactory renderViewFactory = null;
+        RenderViewFactory renderViewFactory;
         switch (renderType) {
+            case 1:
+                renderViewFactory = SurfaceRenderViewFactory.create();
+                break;
             case 0:
             default:
                 renderViewFactory = TextureRenderViewFactory.create();
                 break;
-            case 1:
-                renderViewFactory = SurfaceRenderViewFactory.create();
-                break;
         }
-        if(videoView!=null){
+        if (videoView != null) {
             videoView.setPlayerFactory(playerFactory);
             videoView.setRenderViewFactory(renderViewFactory);
             videoView.setScreenScaleType(scale);
         }
     }
 
-    public static void updateCfg(VideoView videoView) {
+    public static void updateCfg(VideoView<?> videoView) {
         int playType = Hawk.get(HawkConfig.PLAY_TYPE, 0);
         PlayerFactory playerFactory;
         if (playType == 1) {
@@ -103,14 +103,11 @@ public class PlayerHelper {
                 }
             };
             try {
-                tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(new IjkLibLoader() {
-                    @Override
-                    public void loadLibrary(String s) throws UnsatisfiedLinkError, SecurityException {
-                        try {
-                            System.loadLibrary(s);
-                        } catch (Throwable th) {
-                            th.printStackTrace();
-                        }
+                tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(s -> {
+                    try {
+                        System.loadLibrary(s);
+                    } catch (Throwable th) {
+                        th.printStackTrace();
                     }
                 });
             } catch (Throwable th) {
@@ -122,31 +119,27 @@ public class PlayerHelper {
             playerFactory = AndroidMediaPlayerFactory.create();
         }
         int renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0);
-        RenderViewFactory renderViewFactory = null;
+        RenderViewFactory renderViewFactory;
         switch (renderType) {
+            case 1:
+                renderViewFactory = SurfaceRenderViewFactory.create();
+                break;
             case 0:
             default:
                 renderViewFactory = TextureRenderViewFactory.create();
-                break;
-            case 1:
-                renderViewFactory = SurfaceRenderViewFactory.create();
                 break;
         }
         videoView.setPlayerFactory(playerFactory);
         videoView.setRenderViewFactory(renderViewFactory);
     }
 
-
     public static void init() {
         try {
-            tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(new IjkLibLoader() {
-                @Override
-                public void loadLibrary(String s) throws UnsatisfiedLinkError, SecurityException {
-                    try {
-                        System.loadLibrary(s);
-                    } catch (Throwable th) {
-                        th.printStackTrace();
-                    }
+            tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(s -> {
+                try {
+                    System.loadLibrary(s);
+                } catch (Throwable th) {
+                    th.printStackTrace();
                 }
             });
         } catch (Throwable th) {
@@ -156,14 +149,9 @@ public class PlayerHelper {
 
     public static String getPlayerName(int playType) {
         HashMap<Integer, String> playersInfo = getPlayersInfo();
-        if (playersInfo.containsKey(playType)) {
-            return playersInfo.get(playType);
-        } else {
-            return "系统播放器";
-        }
+        return playersInfo.getOrDefault(playType, "系统播放器");
     }
 
-    private static HashMap<Integer, String> mPlayersInfo = null;
     public static HashMap<Integer, String> getPlayersInfo() {
         if (mPlayersInfo == null) {
             HashMap<Integer, String> playersInfo = new HashMap<>();
@@ -180,7 +168,6 @@ public class PlayerHelper {
         return mPlayersInfo;
     }
 
-    private static HashMap<Integer, Boolean> mPlayersExistInfo = null;
     public static HashMap<Integer, Boolean> getPlayersExistInfo() {
         if (mPlayersExistInfo == null) {
             HashMap<Integer, Boolean> playersExist = new HashMap<>();
@@ -199,17 +186,13 @@ public class PlayerHelper {
 
     public static Boolean getPlayerExist(int playType) {
         HashMap<Integer, Boolean> playersExistInfo = getPlayersExistInfo();
-        if (playersExistInfo.containsKey(playType)) {
-            return playersExistInfo.get(playType);
-        } else {
-            return false;
-        }
+        return playersExistInfo.getOrDefault(playType, false);
     }
 
     public static ArrayList<Integer> getExistPlayerTypes() {
         HashMap<Integer, Boolean> playersExistInfo = getPlayersExistInfo();
         ArrayList<Integer> existPlayers = new ArrayList<>();
-        for(Integer playerType : playersExistInfo.keySet()) {
+        for (Integer playerType : playersExistInfo.keySet()) {
             if (playersExistInfo.get(playerType)) {
                 existPlayers.add(playerType);
             }
@@ -281,14 +264,15 @@ public class PlayerHelper {
         return scaleText;
     }
 
-    public static String getDisplaySpeed(long speed,boolean show) {
-        if(speed > 1048576)
+    public static String getDisplaySpeed(long speed, boolean show) {
+        if (speed > 1048576)
             return new DecimalFormat("#.00").format(speed / 1048576d) + "Mb/s";
-        else if(speed > 1024)
+        else if (speed > 1024)
             return (speed / 1024) + "Kb/s";
         else
-            return speed > 0?speed + "B/s":(show?"0B/s":"");
+            return speed > 0 ? speed + "B/s" : (show ? "0B/s" : "");
     }
+
     public static String getDisplaySpeedBps(long speed, boolean show) {
         long bitSpeed = speed * 8; // 字节转比特
         if (bitSpeed >= 1_000_000_000) {
@@ -297,7 +281,7 @@ public class PlayerHelper {
             double mbps = bitSpeed / 1_000_000d;
             DecimalFormat df = mbps < 0.1 ? new DecimalFormat("0.00") : new DecimalFormat("0.0");
             return df.format(mbps) + "Mbps";
-        }else {
+        } else {
             return show ? "0bps" : "";
         }
     }

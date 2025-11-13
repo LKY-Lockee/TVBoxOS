@@ -47,14 +47,15 @@ public interface SubtitleEngine {
     void setSubtitlePath(String path);
 
     /**
-     *  字幕延时
+     * 字幕延时
+     *
      * @param milliseconds
      */
     void setSubtitleDelay(Integer milliseconds);
 
-    void setPlaySubtitleCacheKey(String cacheKey);
-
     String getPlaySubtitleCacheKey();
+
+    void setPlaySubtitleCacheKey(String cacheKey);
 
     /**
      * 开启字幕刷新任务

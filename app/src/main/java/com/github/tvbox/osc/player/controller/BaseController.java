@@ -28,6 +28,8 @@ import xyz.doikki.videoplayer.player.VideoView;
 import xyz.doikki.videoplayer.util.PlayerUtils;
 
 public abstract class BaseController extends BaseVideoController implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, View.OnTouchListener {
+    protected Handler mHandler;
+    protected HandlerCallback mHandlerCallback;
     private GestureDetector mGestureDetector;
     private AudioManager mAudioManager;
     private boolean mIsGestureEnabled = true;
@@ -42,43 +44,34 @@ public abstract class BaseController extends BaseVideoController implements Gest
     private boolean mEnableInNormal;
     private boolean mCanSlide;
     private int mCurPlayState;
-
-    protected Handler mHandler;
-
-    protected HandlerCallback mHandlerCallback;
-
-    protected interface HandlerCallback {
-        void callback(Message msg);
-    }
-
     private boolean mIsDoubleTapTogglePlayEnabled = true;
-
+    private TextView mSlideInfo;
+    private ProgressBar mLoading;
+    private ViewGroup mPauseRoot;
+    private TextView mPauseTime;
 
     public BaseController(@NonNull Context context) {
         super(context);
-        mHandler = new Handler(new Handler.Callback() {
-            @Override
-            public boolean handleMessage(@NonNull Message msg) {
-                int what = msg.what;
-                switch (what) {
-                    case 100: { // 亮度+音量调整
-                        mSlideInfo.setVisibility(VISIBLE);
-                        mSlideInfo.setText(msg.obj.toString());
-                        break;
-                    }
-
-                    case 101: { // 亮度+音量调整 关闭
-                        mSlideInfo.setVisibility(GONE);
-                        break;
-                    }
-                    default: {
-                        if (mHandlerCallback != null)
-                            mHandlerCallback.callback(msg);
-                        break;
-                    }
+        mHandler = new Handler(msg -> {
+            int what = msg.what;
+            switch (what) {
+                case 100: { // 亮度+音量调整
+                    mSlideInfo.setVisibility(VISIBLE);
+                    mSlideInfo.setText(msg.obj.toString());
+                    break;
                 }
-                return false;
+
+                case 101: { // 亮度+音量调整 关闭
+                    mSlideInfo.setVisibility(GONE);
+                    break;
+                }
+                default: {
+                    if (mHandlerCallback != null)
+                        mHandlerCallback.callback(msg);
+                    break;
+                }
             }
+            return false;
         });
     }
 
@@ -89,11 +82,6 @@ public abstract class BaseController extends BaseVideoController implements Gest
     public BaseController(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
-
-    private TextView mSlideInfo;
-    private ProgressBar mLoading;
-    private ViewGroup mPauseRoot;
-    private TextView mPauseTime;
 
     @Override
     protected void initView() {
@@ -118,6 +106,9 @@ public abstract class BaseController extends BaseVideoController implements Gest
         super.onPlayStateChanged(playState);
         switch (playState) {
             case VideoView.STATE_IDLE:
+            case VideoView.STATE_PREPARED:
+            case VideoView.STATE_ERROR:
+            case VideoView.STATE_BUFFERED:
                 mLoading.setVisibility(GONE);
                 break;
             case VideoView.STATE_PLAYING:
@@ -126,11 +117,6 @@ public abstract class BaseController extends BaseVideoController implements Gest
                 break;
             case VideoView.STATE_PAUSED:
                 mPauseRoot.setVisibility(VISIBLE);
-                mLoading.setVisibility(GONE);
-                break;
-            case VideoView.STATE_PREPARED:
-            case VideoView.STATE_ERROR:
-            case VideoView.STATE_BUFFERED:
                 mLoading.setVisibility(GONE);
                 break;
             case VideoView.STATE_PREPARING:
@@ -325,7 +311,7 @@ public abstract class BaseController extends BaseVideoController implements Gest
         WindowManager.LayoutParams attributes = window.getAttributes();
         int height = getMeasuredHeight();
         if (mBrightness == -1.0f) mBrightness = 0.5f;
-        float brightness = deltaY * 2 / height * 1.0f + mBrightness;
+        float brightness = deltaY * 2 / height + mBrightness;
         if (brightness < 0) {
             brightness = 0f;
         }
@@ -421,7 +407,6 @@ public abstract class BaseController extends BaseVideoController implements Gest
         return false;
     }
 
-
     @Override
     public boolean onSingleTapUp(MotionEvent e) {
         return false;
@@ -429,5 +414,9 @@ public abstract class BaseController extends BaseVideoController implements Gest
 
     public boolean onKeyEvent(KeyEvent event) {
         return false;
+    }
+
+    protected interface HandlerCallback {
+        void callback(Message msg);
     }
 }

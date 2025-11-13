@@ -14,20 +14,20 @@ public class SubtitleData {
         return isNew;
     }
 
-    public List<Subtitle> getSubtitleList() {
-        return subtitleList;
-    }
-
-    public Boolean getIsZip() {
-        return isZip;
-    }
-
     public void setIsNew(Boolean isNew) {
         this.isNew = isNew;
     }
 
+    public List<Subtitle> getSubtitleList() {
+        return subtitleList;
+    }
+
     public void setSubtitleList(List<Subtitle> subtitle) {
         this.subtitleList = subtitle;
+    }
+
+    public Boolean getIsZip() {
+        return isZip;
     }
 
     public void setIsZip(Boolean zip) {

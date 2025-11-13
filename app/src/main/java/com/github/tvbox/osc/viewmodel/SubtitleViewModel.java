@@ -1,6 +1,7 @@
 package com.github.tvbox.osc.viewmodel;
 
 import android.text.TextUtils;
+
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
@@ -31,7 +32,9 @@ import okhttp3.Response;
 
 public class SubtitleViewModel extends ViewModel {
 
-    public MutableLiveData<SubtitleData> searchResult;
+    public final MutableLiveData<SubtitleData> searchResult;
+    final Pattern regexShooterFileOnclick = Pattern.compile("onthefly\\(\"(\\d+)\",\"(\\d+)\",\"([\\s\\S]*)\"\\)");
+    private int pagesTotal = -1;
 
     public SubtitleViewModel() {
         searchResult = new MutableLiveData<>();
@@ -62,12 +65,10 @@ public class SubtitleViewModel extends ViewModel {
         }
     }
 
-    private int pagesTotal = -1;
-
     private void searchResultFromAssrt(String title, int page) {
         try {
             if (pagesTotal > 0 && page > pagesTotal) {
-                setSearchListData(new ArrayList<>(), page <= 1, true);
+                setSearchListData(new ArrayList<>(), false, true);
                 return;
             }
             if (page == 1) pagesTotal = -1;//第一页时 重置页大小
@@ -97,10 +98,10 @@ public class SubtitleViewModel extends ViewModel {
                                 }
                                 setSearchListData(data, page <= 1, true);
                                 Elements pages = doc.select(".pagelinkcard a");
-                                if (pages.size() > 0) {
+                                if (!pages.isEmpty()) {
                                     String[] ps = pages.last().text().split("/", 2);
                                     if (ps.length == 2 && !TextUtils.isEmpty(ps[1])) {
-                                        pagesTotal = Integer.valueOf(ps[1].trim());
+                                        pagesTotal = Integer.parseInt(ps[1].trim());
                                     }
                                 }
                             } catch (Throwable th) {
@@ -124,8 +125,6 @@ public class SubtitleViewModel extends ViewModel {
         }
     }
 
-    Pattern regexShooterFileOnclick = Pattern.compile("onthefly\\(\"(\\d+)\",\"(\\d+)\",\"([\\s\\S]*)\"\\)");
-
     private void getSearchResultSubtitleUrlsFromAssrt(Subtitle subtitle) {
         try {
             String url = subtitle.getUrl();
@@ -137,7 +136,7 @@ public class SubtitleViewModel extends ViewModel {
                         List<Subtitle> data = new ArrayList<>();
                         Document doc = Jsoup.parse(content);
                         Elements items = doc.select("#detail-filelist .waves-effect");
-                        if (items.size() > 0) {//压缩包里面的字幕
+                        if (!items.isEmpty()) {//压缩包里面的字幕
                             for (Element item : items) {
                                 String onclick = item.attr("onclick");
                                 if (TextUtils.isEmpty(onclick)) continue;
@@ -215,7 +214,7 @@ public class SubtitleViewModel extends ViewModel {
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(Call call, Response response) {
                 subtitle.setUrl(response.header("location"));
                 subtitleLoader.loadSubtitle(subtitle);
             }

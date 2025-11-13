@@ -39,6 +39,14 @@ public class PythonSpider extends Spider {
         this.name = name;
     }
 
+    public static byte[] decode(String s) {
+        return decode(s, Base64.DEFAULT | Base64.NO_WRAP);
+    }
+
+    public static byte[] decode(String s, int flags) {
+        return Base64.decode(s, flags);
+    }
+
     @Override
     public void init(Context context) {
         app.callAttr("init", pySpider);
@@ -51,7 +59,7 @@ public class PythonSpider extends Spider {
         String extInfo = uri.getQueryParameter("extend");
         if (null == extInfo) extInfo = "";
         String path = retValue.toString();
-        Log.i("PyLoader", "echo-init path: " +path);
+        Log.i("PyLoader", "echo-init path: " + path);
         File file = new File(path);
         if (file.exists()) {
             pySpider = app.callAttr("loadFromDisk", path);
@@ -59,10 +67,10 @@ public class PythonSpider extends Spider {
             List<PyObject> poList = app.callAttr("getDependence", pySpider).asList();
             for (PyObject po : poList) {
                 String api = po.toString();
-                Log.i("PyLoader", "echo-init api: " +api);
+                Log.i("PyLoader", "echo-init api: " + api);
                 String depUrl = PythonLoader.getInstance().getUrlByApi(api);
                 if (!depUrl.isEmpty()) {
-                    Log.i("PyLoader", "echo-init depUrl: " +depUrl);
+                    Log.i("PyLoader", "echo-init depUrl: " + depUrl);
                     String tmpPath = app.callAttr("downloadPlugin", cachePath, depUrl).toString();
                     if (!new File(tmpPath).exists()) {
                         PyToast.showCancelableToast(api + "加载失败!");
@@ -74,7 +82,7 @@ public class PythonSpider extends Spider {
             }
             app.callAttr("init", pySpider, extInfo);
             loadSuccess = true;
-            Log.i("PyLoader", "echo-init extInfo: " +url+ extInfo);
+            Log.i("PyLoader", "echo-init extInfo: " + url + extInfo);
             PyLog.d(name + ": 下載插件成功！");
         } else {
             PyToast.showCancelableToast(name + "下载插件失败");
@@ -138,8 +146,8 @@ public class PythonSpider extends Spider {
         return sb.toString();
     }
 
-    public Object[] proxyLocal(Map<String,String> params) {
-        Log.i("PyLoader","echo-proxyLocal:param"+params.toString());
+    public Object[] proxyLocal(Map<String, String> params) {
+        Log.i("PyLoader", "echo-proxyLocal:param" + params.toString());
         List<PyObject> list = app.callAttr("localProxy", pySpider, map2json(params).toString()).asList();
         boolean base64 = list.size() > 4 && list.get(4).toInt() == 1;
         boolean headerAvailable = list.size() > 3 && list.get(3) != null;
@@ -151,7 +159,6 @@ public class PythonSpider extends Spider {
 //        result[3] = null;
         return result;
     }
-
 
     private Map<String, String> getHeader(PyObject headerObj) {
         if (headerObj == null) {
@@ -270,11 +277,12 @@ public class PythonSpider extends Spider {
 
     /**
      * 直播列表数据
+     *
      * @return
      */
     public String liveContent(String url) {
         PyLog.nw("liveContent" + "-" + name, "");
-        PyObject po = app.callAttr("liveContent", pySpider,url);
+        PyObject po = app.callAttr("liveContent", pySpider, url);
         String rsp = po.toString();
         PyLog.nw("liveContent" + "-" + name, rsp);
         return rsp;
@@ -297,13 +305,5 @@ public class PythonSpider extends Spider {
      */
     public boolean manualVideoCheck() {
         return false;
-    }
-
-    public static byte[] decode(String s) {
-        return decode(s, Base64.DEFAULT | Base64.NO_WRAP);
-    }
-
-    public static byte[] decode(String s, int flags) {
-        return Base64.decode(s, flags);
     }
 }

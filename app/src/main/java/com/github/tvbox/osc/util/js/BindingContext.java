@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class BindingContext {
 
-    protected Map<String, Method> functionMap;
+    protected final Map<String, Method> functionMap;
 
     protected Method contextSetter;
 

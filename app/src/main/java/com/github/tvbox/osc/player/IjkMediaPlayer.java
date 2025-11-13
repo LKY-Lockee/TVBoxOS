@@ -16,7 +16,6 @@ import com.orhanobut.hawk.Hawk;
 import java.io.File;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -27,9 +26,17 @@ import xyz.doikki.videoplayer.ijk.IjkPlayer;
 
 public class IjkMediaPlayer extends IjkPlayer {
 
-    private IJKCode codec = null;
-    protected String currentPlayPath;
+    private static final String ITV_TARGET_DOMAIN = "gslbserv.itv.cmvideo.cn";
+    /**
+     * 解析 URL
+     */
+    private static final int RTSP_UDP_RTP = 1;
+    private static final int CACHE_VIDEO = 2;
+    private static final int M3U8 = 3;
+    private static final int OTHER = 0;
     private static AudioTrackMemory memory;
+    protected String currentPlayPath;
+    private final IJKCode codec;
 
     public IjkMediaPlayer(Context context, IJKCode codec) {
         super(context);
@@ -66,15 +73,15 @@ public class IjkMediaPlayer extends IjkPlayer {
         mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_PLAYER, "subtitle", 1);
         mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_FORMAT, "dns_cache_clear", 1);
         mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_FORMAT, "dns_cache_timeout", -1);
-        mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_FORMAT,"safe",0);
+        mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_FORMAT, "safe", 0);
 
-        if(Hawk.get(HawkConfig.PLAYER_IS_LIVE)){
+        if (Hawk.get(HawkConfig.PLAYER_IS_LIVE)) {
             LOG.i("echo-type-直播");
             mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_PLAYER, "max_cached_duration", 300);
             mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_FORMAT, "flush_packets", 1);
             mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_PLAYER, "min-frames", 1);
             mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_CODEC, "threads", "1");
-        }else{
+        } else {
             LOG.i("echo-type-点播");
             // 降低延迟
             mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_PLAYER, "max_cached_duration", 3000);
@@ -84,7 +91,6 @@ public class IjkMediaPlayer extends IjkPlayer {
 //        mMediaPlayer.setOption(tv.danmaku.ijk.media.player.IjkMediaPlayer.OPT_CATEGORY_PLAYER, "sync-av-start", 1);//强制音画同步
     }
 
-    private static final String ITV_TARGET_DOMAIN = "gslbserv.itv.cmvideo.cn";
     @Override
     public void setDataSource(String path, Map<String, String> headers) {
         try {
@@ -117,10 +123,10 @@ public class IjkMediaPlayer extends IjkPlayer {
 
                 case M3U8:
                     // 直播且是ijk的时候自动自动走代理解决DNS
-                    if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false) ) {
+                    if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false)) {
                         URI uri = new URI(path);
                         String host = uri.getHost();
-                        if(ITV_TARGET_DOMAIN.equalsIgnoreCase(host))path = ControlManager.get().getAddress(true) + "proxy?go=live&type=m3u8&url="+ URLEncoder.encode(path,"UTF-8");
+                        if (ITV_TARGET_DOMAIN.equalsIgnoreCase(host)) path = ControlManager.get().getAddress(true) + "proxy?go=live&type=m3u8&url=" + URLEncoder.encode(path, "UTF-8");
                     }
                     break;
 
@@ -135,14 +141,6 @@ public class IjkMediaPlayer extends IjkPlayer {
         currentPlayPath = path;
         super.setDataSource(path, null);
     }
-
-    /**
-     * 解析 URL
-     */
-    private static final int RTSP_UDP_RTP = 1;
-    private static final int CACHE_VIDEO = 2;
-    private static final int M3U8 = 3;
-    private static final int OTHER = 0;
 
     private int getStreamType(String path) {
         if (TextUtils.isEmpty(path)) {
@@ -171,7 +169,7 @@ public class IjkMediaPlayer extends IjkPlayer {
                 // 移除header中的User-Agent，防止重复
                 headers.remove("User-Agent");
             }
-            if (headers.size() > 0) {
+            if (!headers.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
                     String value = entry.getValue();
@@ -199,14 +197,13 @@ public class IjkMediaPlayer extends IjkPlayer {
                 TrackInfoBean a = new TrackInfoBean();
                 String name = processAudioName(info.getInfoInline());
                 a.language = info.getLanguage();
-                if(name.startsWith("aac"))a.language="中文";
+                if (name.startsWith("aac")) a.language = "中文";
                 a.name = name;
                 a.index = index;
                 a.selected = index == audioSelected;
                 // 如果需要，还可以检查轨道的描述或标题以获取更多信息
                 data.addAudio(a);
-            }
-            else if (info.getTrackType() == ITrackInfo.MEDIA_TRACK_TYPE_TIMEDTEXT) {//内置字幕
+            } else if (info.getTrackType() == ITrackInfo.MEDIA_TRACK_TYPE_TIMEDTEXT) {//内置字幕
                 TrackInfoBean t = new TrackInfoBean();
                 t.name = info.getInfoInline();
                 t.language = info.getLanguage();
@@ -218,6 +215,7 @@ public class IjkMediaPlayer extends IjkPlayer {
         }
         return data;
     }
+
     // 处理音轨名称格式
     private String processAudioName(String rawName) {
         return rawName.replace("AUDIO,", "")
@@ -228,13 +226,14 @@ public class IjkMediaPlayer extends IjkPlayer {
     public void setTrack(int trackIndex) {
         int audioSelected = mMediaPlayer.getSelectedTrack(ITrackInfo.MEDIA_TRACK_TYPE_AUDIO);
         int subtitleSelected = mMediaPlayer.getSelectedTrack(ITrackInfo.MEDIA_TRACK_TYPE_TIMEDTEXT);
-        if (trackIndex!=audioSelected && trackIndex!=subtitleSelected){
+        if (trackIndex != audioSelected && trackIndex != subtitleSelected) {
             mMediaPlayer.selectTrack(trackIndex);
         }
     }
-    public void setTrack(int trackIndex,String playKey) {
+
+    public void setTrack(int trackIndex, String playKey) {
         int audioSelected = mMediaPlayer.getSelectedTrack(ITrackInfo.MEDIA_TRACK_TYPE_AUDIO);
-        if (trackIndex!=audioSelected){
+        if (trackIndex != audioSelected) {
             if (!playKey.isEmpty()) {
                 memory.save(playKey, trackIndex);
             }
@@ -246,14 +245,14 @@ public class IjkMediaPlayer extends IjkPlayer {
         mMediaPlayer.setOnTimedTextListener(listener);
     }
 
-    public void loadDefaultTrack(TrackInfo trackInfo,String playKey) {
-        if(trackInfo!=null && trackInfo.getAudio().size()>1){
+    public void loadDefaultTrack(TrackInfo trackInfo, String playKey) {
+        if (trackInfo != null && trackInfo.getAudio().size() > 1) {
             Integer trackIndex = memory.ijkLoad(playKey);
             if (trackIndex == -1) {
-                int firsIndex=trackInfo.getAudio().get(0).index;
+                int firsIndex = trackInfo.getAudio().get(0).index;
                 setTrack(firsIndex);
                 return;
-            };
+            }
             setTrack(trackIndex);
         }
     }

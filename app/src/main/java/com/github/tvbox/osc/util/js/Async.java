@@ -8,13 +8,21 @@ import com.whl.quickjs.wrapper.JSObject;
 public class Async {
 
     private final SettableFuture<Object> future;
-
-    public static SettableFuture<Object> run(JSObject object, String name, Object[] args) {
-        return new Async().call(object, name, args);
-    }
+    private final JSCallFunction callback = new JSCallFunction() {
+        @Override
+        public Object call(Object... args) {
+            // args[0] holds the resolved value from the JS promise
+            future.set(args.length > 0 ? args[0] : null);
+            return null;
+        }
+    };
 
     private Async() {
         this.future = SettableFuture.create();
+    }
+
+    public static SettableFuture<Object> run(JSObject object, String name, Object[] args) {
+        return new Async().call(object, name, args);
     }
 
     private SettableFuture<Object> call(JSObject object, String name, Object[] args) {
@@ -46,13 +54,4 @@ public class Async {
             future.set(result);
         }
     }
-
-    private final JSCallFunction callback = new JSCallFunction() {
-        @Override
-        public Object call(Object... args) {
-            // args[0] holds the resolved value from the JS promise
-            future.set(args.length > 0 ? args[0] : null);
-            return null;
-        }
-    };
 }

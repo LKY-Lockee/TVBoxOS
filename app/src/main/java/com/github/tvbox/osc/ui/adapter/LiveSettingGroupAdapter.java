@@ -36,6 +36,10 @@ public class LiveSettingGroupAdapter extends BaseQuickAdapter<LiveSettingGroup, 
         }
     }
 
+    public int getSelectedGroupIndex() {
+        return selectedGroupIndex;
+    }
+
     public void setSelectedGroupIndex(int selectedGroupIndex) {
         int preSelectedGroupIndex = this.selectedGroupIndex;
         this.selectedGroupIndex = selectedGroupIndex;
@@ -43,10 +47,6 @@ public class LiveSettingGroupAdapter extends BaseQuickAdapter<LiveSettingGroup, 
             notifyItemChanged(preSelectedGroupIndex);
         if (this.selectedGroupIndex != -1)
             notifyItemChanged(this.selectedGroupIndex);
-    }
-
-    public int getSelectedGroupIndex() {
-        return selectedGroupIndex;
     }
 
     public void setFocusedGroupIndex(int focusedGroupIndex) {

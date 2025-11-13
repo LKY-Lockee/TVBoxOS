@@ -212,7 +212,7 @@ public final class UriUtil {
                     && uri.charAt(segmentStart + 1) == '.') {
                 // Given "abc/def/../ghi", remove "def/../" to get "abc/ghi".
                 int prevSegmentStart = uri.lastIndexOf("/", segmentStart - 2) + 1;
-                int removeFrom = prevSegmentStart > offset ? prevSegmentStart : offset;
+                int removeFrom = Math.max(prevSegmentStart, offset);
                 uri.delete(removeFrom, nextSegmentStart);
                 limit -= nextSegmentStart - removeFrom;
                 segmentStart = prevSegmentStart;

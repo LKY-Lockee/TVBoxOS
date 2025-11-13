@@ -23,9 +23,9 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 public class Global {
-    private QuickJSContext runtime;
-    public ExecutorService executor;
     private final Timer timer;
+    public final ExecutorService executor;
+    private QuickJSContext runtime;
 
     public Global(ExecutorService executor) {
         this.executor = executor;
@@ -98,17 +98,15 @@ public class Global {
     @Keep
     @Function
     public String aesX(String mode, boolean encrypt, String input, boolean inBase64, String key, String iv, boolean outBase64) {
-        String result = Crypto.aes(mode, encrypt, input, inBase64, key, iv, outBase64);
         //LOG.e("aesX",String.format("mode:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:%s\niv:%s\ninput:\n%s\nresult:\n%s", mode, encrypt, inBase64, outBase64, key, iv, input, result));
-        return result;
+        return Crypto.aes(mode, encrypt, input, inBase64, key, iv, outBase64);
     }
 
     @Keep
     @Function
     public String rsaX(String mode, boolean pub, boolean encrypt, String input, boolean inBase64, String key, boolean outBase64) {
-        String result = Crypto.rsa(pub, encrypt, input, inBase64, key, outBase64);
         //LOG.e("aesX",String.format("mode:%s\npub:%s\nencrypt:%s\ninBase64:%s\noutBase64:%s\nkey:\n%s\ninput:\n%s\nresult:\n%s", mode, pub, encrypt, inBase64, outBase64, key, input, result));
-        return result;
+        return Crypto.rsa(pub, encrypt, input, inBase64, key, outBase64);
     }
 
     @Keep

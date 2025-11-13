@@ -39,42 +39,6 @@ public class JSUtils<T> {
             throw new QuickJSException("The call threw an exception, the reference count of the current object has already reached zero.");
         }
     }
-    
-    public JSArray toArray(QuickJSContext ctx, List<T> items) {
-        JSArray array = ctx.createNewJSArray();
-        if (items == null || items.isEmpty()) return array;
-        for (int i = 0; i < items.size(); i++) {
-            array.set(items.get(i), i);
-        }
-        return array;
-    }
-
-    public JSArray toArray(QuickJSContext ctx, byte[] bytes) {
-        JSArray array = ctx.createNewJSArray();
-        if (bytes == null) return array;
-        for (int i = 0; i < bytes.length; i++) {
-            array.set((int) bytes[i], i);
-        }
-        return array;
-    }
-
-    public JSArray toArray(QuickJSContext ctx, T[] arrays) {
-        JSArray array = ctx.createNewJSArray();
-        if (arrays == null) return array;
-        for (int i = 0; i < arrays.length; i++) {
-            array.set(arrays[i], i);
-        }
-        return array;
-    }
-
-    public JSObject toObj(QuickJSContext ctx, Map<String, T> map) {
-        JSObject obj = ctx.createNewJSObject();
-        if (map == null || map.isEmpty()) return obj;
-        for (String s : map.keySet()) {
-            ctx.setProperty(obj, s, map.get(s));
-        }
-        return obj;
-    }
 
     public static JSONArray toJsonArray(JSArray arr) {
         JSONArray jsonArray = new JSONArray();
@@ -130,5 +94,41 @@ public class JSUtils<T> {
             }
         }
         return jsonObject;
+    }
+
+    public JSArray toArray(QuickJSContext ctx, List<T> items) {
+        JSArray array = ctx.createNewJSArray();
+        if (items == null || items.isEmpty()) return array;
+        for (int i = 0; i < items.size(); i++) {
+            array.set(items.get(i), i);
+        }
+        return array;
+    }
+
+    public JSArray toArray(QuickJSContext ctx, byte[] bytes) {
+        JSArray array = ctx.createNewJSArray();
+        if (bytes == null) return array;
+        for (int i = 0; i < bytes.length; i++) {
+            array.set((int) bytes[i], i);
+        }
+        return array;
+    }
+
+    public JSArray toArray(QuickJSContext ctx, T[] arrays) {
+        JSArray array = ctx.createNewJSArray();
+        if (arrays == null) return array;
+        for (int i = 0; i < arrays.length; i++) {
+            array.set(arrays[i], i);
+        }
+        return array;
+    }
+
+    public JSObject toObj(QuickJSContext ctx, Map<String, T> map) {
+        JSObject obj = ctx.createNewJSObject();
+        if (map == null || map.isEmpty()) return obj;
+        for (String s : map.keySet()) {
+            ctx.setProperty(obj, s, map.get(s));
+        }
+        return obj;
     }
 }

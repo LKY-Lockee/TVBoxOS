@@ -13,46 +13,66 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Created by fighting on 2017/4/7.
  */
 
 public abstract class CallBackUtil<T> {
-    static Handler mMainHandler = new Handler(Looper.getMainLooper());
+    static final Handler mMainHandler = new Handler(Looper.getMainLooper());
 
+    public static byte[] input2byte(InputStream inStream)
+            throws IOException {
+        ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
+        byte[] buff = new byte[100];
+        int rc;
+        while ((rc = inStream.read(buff, 0, 100)) > 0) {
+            swapStream.write(buff, 0, rc);
+        }
+        return swapStream.toByteArray();
+    }
 
-    public  void onProgress(float progress, long total ){}
+    private static String getRetString(InputStream is) {
+        String buf;
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            is.close();
+            buf = sb.toString();
+            return buf;
 
-    void onError(final RealResponse response){
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void onProgress(float progress, long total) {
+    }
+
+    void onError(final RealResponse response) {
 
         final String errorMessage;
-        if(response.inputStream != null){
+        if (response.inputStream != null) {
             errorMessage = getRetString(response.inputStream);
-        }else if(response.errorStream != null) {
+        } else if (response.errorStream != null) {
             errorMessage = getRetString(response.errorStream);
-        }else if(response.exception != null) {
+        } else if (response.exception != null) {
             errorMessage = response.exception.getMessage();
-        }else {
+        } else {
             errorMessage = "";
         }
-        mMainHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                onFailure(response.code,errorMessage);
-            }
-        });
-    }
-    void onSeccess(RealResponse response){
-        final T obj = onParseResponse(response);
-        mMainHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                onResponse(obj);
-            }
-        });
+        mMainHandler.post(() -> onFailure(response.code, errorMessage));
     }
 
+    void onSeccess(RealResponse response) {
+        final T obj = onParseResponse(response);
+        mMainHandler.post(() -> onResponse(obj));
+    }
 
     /**
      * 解析response，执行在子线程
@@ -62,15 +82,13 @@ public abstract class CallBackUtil<T> {
     /**
      * 访问网络失败后被调用，执行在UI线程
      */
-    public abstract void onFailure(int code,String errorMessage);
+    public abstract void onFailure(int code, String errorMessage);
 
     /**
      *
      * 访问网络成功后被调用，执行在UI线程
      */
     public abstract void onResponse(T response);
-
-
 
     public static abstract class CallBackDefault extends CallBackUtil<RealResponse> {
         @Override
@@ -90,31 +108,34 @@ public abstract class CallBackUtil<T> {
         }
     }
 
-
     public static abstract class CallBackBitmap extends CallBackUtil<Bitmap> {
         private int mTargetWidth;
         private int mTargetHeight;
 
-        public CallBackBitmap(){};
-        public CallBackBitmap(int targetWidth,int targetHeight){
+        public CallBackBitmap() {
+        }
+
+        public CallBackBitmap(int targetWidth, int targetHeight) {
             mTargetWidth = targetWidth;
             mTargetHeight = targetHeight;
-        };
-        public CallBackBitmap(ImageView imageView){
+        }
+
+        public CallBackBitmap(ImageView imageView) {
             int width = imageView.getWidth();
             int height = imageView.getHeight();
-            if(width <=0 || height <=0){
+            if (width <= 0 || height <= 0) {
                 throw new RuntimeException("无法获取ImageView的width或height");
             }
             mTargetWidth = width;
             mTargetHeight = height;
-        };
+        }
+
         @Override
         public Bitmap onParseResponse(RealResponse response) {
-            if(mTargetWidth ==0 || mTargetHeight == 0){
+            if (mTargetWidth == 0 || mTargetHeight == 0) {
                 return BitmapFactory.decodeStream(response.inputStream);
-            }else {
-                return getZoomBitmap( response.inputStream);
+            } else {
+                return getZoomBitmap(response.inputStream);
             }
         }
 
@@ -131,36 +152,24 @@ public abstract class CallBackUtil<T> {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
 
-            BitmapFactory.decodeByteArray(data,0,data.length,options);
+            BitmapFactory.decodeByteArray(data, 0, data.length, options);
             int picWidth = options.outWidth;
             int picHeight = options.outHeight;
             int sampleSize = 1;
             int heightRatio = (int) Math.floor((float) picWidth / (float) mTargetWidth);
             int widthRatio = (int) Math.floor((float) picHeight / (float) mTargetHeight);
-            if (heightRatio > 1 || widthRatio > 1){
-                sampleSize = Math.max(heightRatio,widthRatio);
+            if (heightRatio > 1 || widthRatio > 1) {
+                sampleSize = Math.max(heightRatio, widthRatio);
             }
             options.inSampleSize = sampleSize;
             options.inJustDecodeBounds = false;
-            Bitmap bitmap = BitmapFactory.decodeByteArray(data,0,data.length,options);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, options);
 
-            if(bitmap == null){
+            if (bitmap == null) {
                 throw new RuntimeException("Failed to decode stream.");
             }
             return bitmap;
         }
-    }
-
-    public static final byte[] input2byte(InputStream inStream)
-            throws IOException {
-        ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
-        byte[] buff = new byte[100];
-        int rc = 0;
-        while ((rc = inStream.read(buff, 0, 100)) > 0) {
-            swapStream.write(buff, 0, rc);
-        }
-        byte[] in2b = swapStream.toByteArray();
-        return in2b;
     }
 
     /**
@@ -176,39 +185,35 @@ public abstract class CallBackUtil<T> {
          * @param destFileDir:文件目录
          * @param destFileName：文件名
          */
-        public CallBackFile(String destFileDir, String destFileName){
+        public CallBackFile(String destFileDir, String destFileName) {
             mDestFileDir = destFileDir;
             mdestFileName = destFileName;
         }
+
         @Override
         public File onParseResponse(RealResponse response) {
 
             InputStream is = null;
-            byte[] buf = new byte[1024*8];
-            int len = 0;
+            byte[] buf = new byte[1024 * 8];
+            int len;
             FileOutputStream fos = null;
-            try{
+            try {
                 is = response.inputStream;
                 final long total = response.contentLength;
 
                 long sum = 0;
 
                 File dir = new File(mDestFileDir);
-                if (!dir.exists()){
+                if (!dir.exists()) {
                     dir.mkdirs();
                 }
                 File file = new File(dir, mdestFileName);
                 fos = new FileOutputStream(file);
-                while ((len = is.read(buf)) != -1){
+                while ((len = is.read(buf)) != -1) {
                     sum += len;
                     fos.write(buf, 0, len);
                     final long finalSum = sum;
-                    mMainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            onProgress(finalSum * 100.0f / total,total);
-                        }
-                    });
+                    mMainHandler.post(() -> onProgress(finalSum * 100.0f / total, total));
                 }
                 fos.flush();
 
@@ -216,37 +221,18 @@ public abstract class CallBackUtil<T> {
 
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally{
-                try{
+            } finally {
+                try {
                     fos.close();
                     if (is != null) is.close();
-                } catch (IOException e){
+                } catch (IOException ignored) {
                 }
-                try{
-                    if (fos != null) fos.close();
-                } catch (IOException e){
+                try {
+                    fos.close();
+                } catch (IOException ignored) {
                 }
 
             }
-            return null;
-        }
-    }
-
-
-    private static String getRetString(InputStream is) {
-        String buf;
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, "utf-8"));
-            StringBuilder sb = new StringBuilder();
-            String line = "";
-            while ((line = reader.readLine()) != null) {
-                sb.append(line + "\n");
-            }
-            is.close();
-            buf = sb.toString();
-            return buf;
-
-        } catch (Exception e) {
             return null;
         }
     }

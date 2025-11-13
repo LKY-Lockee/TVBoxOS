@@ -1,29 +1,30 @@
 package com.github.tvbox.osc.util;
 
 import com.orhanobut.hawk.Hawk;
+
 import java.util.ArrayList;
 
 public class HistoryHelper {
-    private static final Integer[] hisNumArray = {30,50,100};
+    private static final Integer[] hisNumArray = {30, 50, 100};
 
-    public static String getHistoryNumName(int index){
+    public static String getHistoryNumName(int index) {
         Integer value = getHisNum(index);
         return value + "条";
     }
 
-    public static int getHisNum(int index){
-        Integer value = null;
-        if(index>=0 && index < hisNumArray.length){
+    public static int getHisNum(int index) {
+        int value;
+        if (index >= 0 && index < hisNumArray.length) {
             value = hisNumArray[index];
-        }else{
+        } else {
             value = hisNumArray[0];
         }
         return value;
     }
 
-    public static void setSearchHistory(String title){
+    public static void setSearchHistory(String title) {
         // 读取历史记录
-        ArrayList<String> history = Hawk.get(HawkConfig.SEARCH_HISTORY, new ArrayList<String>());
+        ArrayList<String> history = Hawk.get(HawkConfig.SEARCH_HISTORY, new ArrayList<>());
         history.remove(title);
         history.add(0, title);
         // 保证最多只保留 15 条，超过的就删除最后一条
@@ -33,8 +34,8 @@ public class HistoryHelper {
         Hawk.put(HawkConfig.SEARCH_HISTORY, history);
     }
 
-    public static void setLiveApiHistory(String value){
-        ArrayList<String> history = Hawk.get(HawkConfig.LIVE_API_HISTORY, new ArrayList<String>());
+    public static void setLiveApiHistory(String value) {
+        ArrayList<String> history = Hawk.get(HawkConfig.LIVE_API_HISTORY, new ArrayList<>());
         if (!history.contains(value)) {
             history.add(0, value);
         }
@@ -44,8 +45,8 @@ public class HistoryHelper {
         Hawk.put(HawkConfig.LIVE_API_HISTORY, history);
     }
 
-    public static void setApiHistory(String value){
-        ArrayList<String> history = Hawk.get(HawkConfig.API_HISTORY, new ArrayList<String>());
+    public static void setApiHistory(String value) {
+        ArrayList<String> history = Hawk.get(HawkConfig.API_HISTORY, new ArrayList<>());
         if (!history.contains(value)) {
             history.add(0, value);
         }

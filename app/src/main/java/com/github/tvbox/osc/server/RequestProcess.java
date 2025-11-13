@@ -10,9 +10,9 @@ import fi.iki.elonen.NanoHTTPD;
  * @description:
  */
 public interface RequestProcess {
-    public static final int KEY_ACTION_PRESSED = 0;
-    public static final int KEY_ACTION_DOWN = 1;
-    public static final int KEY_ACTION_UP = 2;
+    int KEY_ACTION_PRESSED = 0;
+    int KEY_ACTION_DOWN = 1;
+    int KEY_ACTION_UP = 2;
 
     /**
      * isRequest

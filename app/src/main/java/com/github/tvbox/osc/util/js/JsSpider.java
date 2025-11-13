@@ -32,12 +32,22 @@ import java.util.concurrent.Future;
 
 public class JsSpider extends Spider {
 
+    private static final String SPIDER_STRING_CODE = "import * as spider from '%s'\n\n" +
+            "if (!globalThis.__JS_SPIDER__) {\n" +
+            "    if (spider.__jsEvalReturn) {\n" +
+            "        globalThis.req = http\n" +
+            "        globalThis.__JS_SPIDER__ = spider.__jsEvalReturn()\n" +
+            "        globalThis.__JS_SPIDER__.is_cat = true\n" +
+            "    } else if (spider.default) {\n" +
+            "        globalThis.__JS_SPIDER__ = typeof spider.default === 'function' ? spider.default() : spider.default\n" +
+            "    }\n" +
+            "}";
     private final ExecutorService executor;
     private final Class<?> dex;
-    private QuickJSContext ctx;
-    private JSObject jsObject;
     private final String key;
     private final String api;
+    private QuickJSContext ctx;
+    private JSObject jsObject;
     private boolean cat;
 
     public JsSpider(String key, String api, Class<?> cls) throws Exception {
@@ -46,6 +56,13 @@ public class JsSpider extends Spider {
         this.api = api;
         this.dex = cls;
         initializeJS();
+    }
+
+    public static byte[] byteFF(byte[] bytes) {
+        byte[] newBt = new byte[bytes.length - 4];
+        newBt[0] = 1;
+        System.arraycopy(bytes, 5, newBt, 1, bytes.length - 5);
+        return newBt;
     }
 
     public void cancelByTag() {
@@ -84,7 +101,7 @@ public class JsSpider extends Spider {
         try {
             if (cat) call("init", submit(() -> cfg(extend)).get());
             else call("init", Json.valid(extend) ? ctx.parse(extend) : extend);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
 
         }
     }
@@ -135,7 +152,6 @@ public class JsSpider extends Spider {
         }
     }
 
-
     @Override
     public String playerContent(String flag, String id, List<String> vipFlags) {
         try {
@@ -183,17 +199,6 @@ public class JsSpider extends Spider {
         });
     }
 
-    private static final String SPIDER_STRING_CODE = "import * as spider from '%s'\n\n" +
-            "if (!globalThis.__JS_SPIDER__) {\n" +
-            "    if (spider.__jsEvalReturn) {\n" +
-            "        globalThis.req = http\n" +
-            "        globalThis.__JS_SPIDER__ = spider.__jsEvalReturn()\n" +
-            "        globalThis.__JS_SPIDER__.is_cat = true\n" +
-            "    } else if (spider.default) {\n" +
-            "        globalThis.__JS_SPIDER__ = typeof spider.default === 'function' ? spider.default() : spider.default\n" +
-            "    }\n" +
-            "}";
-
     private void initializeJS() throws Exception {
         submit(() -> {
             if (ctx == null) createCtx();
@@ -217,7 +222,6 @@ public class JsSpider extends Spider {
                 }
                 String moduleExtName = "default";
                 if (content.contains("__jsEvalReturn") && !content.contains("export default")) {
-                    moduleExtName = "__jsEvalReturn";
                     cat = true;
                 }
                 ctx.evaluateModule(content, api);
@@ -228,13 +232,6 @@ public class JsSpider extends Spider {
             jsObject = (JSObject) ctx.getGlobalObject().getProperty(key);
             return null;
         }).get();
-    }
-
-    public static byte[] byteFF(byte[] bytes) {
-        byte[] newBt = new byte[bytes.length - 4];
-        newBt[0] = 1;
-        System.arraycopy(bytes, 5, newBt, 1, bytes.length - 5);
-        return newBt;
     }
 
     private void createCtx() {

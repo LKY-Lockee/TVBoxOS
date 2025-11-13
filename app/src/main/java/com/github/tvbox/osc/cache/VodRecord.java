@@ -13,8 +13,6 @@ import java.io.Serializable;
  */
 @Entity(tableName = "vodRecord")
 public class VodRecord implements Serializable {
-    @PrimaryKey(autoGenerate = true)
-    private int id;
     @ColumnInfo(name = "vodId")
     public String vodId;
     @ColumnInfo(name = "updateTime")
@@ -22,6 +20,8 @@ public class VodRecord implements Serializable {
     @ColumnInfo(name = "sourceKey")
     public String sourceKey;
     public String dataJson;
+    @PrimaryKey(autoGenerate = true)
+    private int id;
 
     public int getId() {
         return id;

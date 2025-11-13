@@ -15,8 +15,8 @@ import org.jetbrains.annotations.NotNull;
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
 public class RemoteDialog extends BaseDialog {
-    private ImageView ivQRCode;
-    private TextView tvAddress;
+    private final ImageView ivQRCode;
+    private final TextView tvAddress;
 
     public RemoteDialog(@NonNull @NotNull Context context) {
         super(context);

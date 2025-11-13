@@ -29,22 +29,22 @@ public class CollectAdapter extends BaseQuickAdapter<VodCollect, BaseViewHolder>
 
     @Override
     protected void convert(BaseViewHolder helper, VodCollect item) {
-    	// takagen99: Add Delete Mode
+        // takagen99: Add Delete Mode
         FrameLayout tvDel = helper.getView(R.id.delFrameLayout);
         if (HawkConfig.hotVodDelete) {
             tvDel.setVisibility(View.VISIBLE);
         } else {
             tvDel.setVisibility(View.GONE);
         }
-        
+
         helper.setVisible(R.id.tvLang, false);
         helper.setVisible(R.id.tvArea, false);
         helper.setVisible(R.id.tvNote, false);
         helper.setText(R.id.tvName, item.name);
         TextView tvYear = helper.getView(R.id.tvYear);
         SourceBean source = ApiConfig.get().getSource(item.sourceKey);
-        tvYear.setText(source!=null?source.getName():"");
-        
+        tvYear.setText(source != null ? source.getName() : "");
+
         ImageView ivThumb = helper.getView(R.id.ivThumb);
         //由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {

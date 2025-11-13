@@ -16,26 +16,24 @@ import java.util.concurrent.TimeUnit;
 
 public class IpScanning {
 
-    private List<IpScanningVo> ipScanningVos = new ArrayList<>();
-
     /**
      * 线程数
      */
 
-    int corePoolSize = 5;
-
+    final int corePoolSize = 5;
     /**
      * 最大线程数
      */
-    int maximumPoolSize = 10;
-
-    private ThreadPoolExecutor threadPool =
+    final int maximumPoolSize = 10;
+    private List<IpScanningVo> ipScanningVos = new ArrayList<>();
+    private final ThreadPoolExecutor threadPool =
             new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 3,
                     TimeUnit.NANOSECONDS, new LinkedBlockingQueue<>(10),
                     new ThreadPoolExecutor.CallerRunsPolicy());
 
     /**
      * 通过IP扫描对应网段中可以使用的网段
+     *
      * @param ips 输入的IP
      */
     public List<IpScanningVo> search(String ips, boolean all) {
@@ -46,7 +44,7 @@ public class IpScanning {
 
         String last = ips.substring(divisionIp + 1);
         int end = Integer.parseInt(last) + 30; //搜索范围不是全部，缩小范围
-        end = end > 255 ? 255 : end;
+        end = Math.min(end, 255);
         if (all) end = 255;
         int total = end;
 
@@ -58,14 +56,16 @@ public class IpScanning {
         }
         threadPool.shutdown();
         //判断当前线程是否全部执行完成,防止没有执行完返回结果
-        while (!threadPool.isTerminated()){}
+        //noinspection StatementWithEmptyBody
+        while (!threadPool.isTerminated()) {
+        }
         ipScanningVos = new ArrayList<>(queue);
         return ipScanningVos;
     }
 
     private static class PingIp implements Runnable {
-        private String ip;
-        private Queue<IpScanningVo> array;
+        private final String ip;
+        private final Queue<IpScanningVo> array;
 
         public PingIp(String ip, Queue<IpScanningVo> array) {
             this.array = array;
@@ -93,7 +93,7 @@ public class IpScanning {
             }
             if (status) {
                 IpScanningVo ipScanning = new IpScanningVo(addip.getHostName(), ip);
-                LOG.i("IP地址为:" + ip + "\t\t设备名称为: " + addip.getHostName() + "\t\t是否可用: " + (status ? "可用" : "不可用"));
+                LOG.i("IP地址为:" + ip + "\t\t设备名称为: " + addip.getHostName() + "\t\t是否可用: " + "可用");
                 array.add(ipScanning);
             }
         }

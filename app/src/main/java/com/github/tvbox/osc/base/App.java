@@ -1,8 +1,10 @@
 package com.github.tvbox.osc.base;
 
 import android.app.Activity;
+
 import androidx.multidex.MultiDexApplication;
 
+import com.github.catvod.crawler.JsLoader;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.callback.EmptyCallback;
 import com.github.tvbox.osc.callback.LoadingCallback;
@@ -19,7 +21,6 @@ import com.kingja.loadsir.core.LoadSir;
 import com.orhanobut.hawk.Hawk;
 import com.p2p.P2PClass;
 import com.whl.quickjs.android.QuickJSLoader;
-import com.github.catvod.crawler.JsLoader;
 
 import me.jessyan.autosize.AutoSizeConfig;
 import me.jessyan.autosize.unit.Subunits;
@@ -30,11 +31,27 @@ import me.jessyan.autosize.unit.Subunits;
  * @description:
  */
 public class App extends MultiDexApplication {
-    private static App instance;
-
-    private static P2PClass p;
     public static String burl;
+    private static App instance;
+    private static P2PClass p;
     private static String dashData;
+    private VodInfo vodInfo;
+
+    public static App getInstance() {
+        return instance;
+    }
+
+    public static P2PClass getp2p() {
+        try {
+            if (p == null) {
+                p = new P2PClass(FileUtils.getExternalCachePath());
+            }
+            return p;
+        } catch (Exception e) {
+            LOG.e(e.toString());
+            return null;
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -70,45 +87,29 @@ public class App extends MultiDexApplication {
         }
     }
 
-    public static App getInstance() {
-        return instance;
-    }
-
     @Override
     public void onTerminate() {
         super.onTerminate();
         JsLoader.destroy();
     }
 
-
-    private VodInfo vodInfo;
-    public void setVodInfo(VodInfo vodinfo){
-        this.vodInfo = vodinfo;
-    }
-    public VodInfo getVodInfo(){
+    public VodInfo getVodInfo() {
         return this.vodInfo;
     }
 
-    public static P2PClass getp2p() {
-        try {
-            if (p == null) {
-                p = new P2PClass(FileUtils.getExternalCachePath());
-            }
-            return p;
-        } catch (Exception e) {
-            LOG.e(e.toString());
-            return null;
-        }
+    public void setVodInfo(VodInfo vodinfo) {
+        this.vodInfo = vodinfo;
     }
 
     public Activity getCurrentActivity() {
         return AppManager.getInstance().currentActivity();
     }
 
-    public void setDashData(String data) {
-        dashData = data;
-    }
     public String getDashData() {
         return dashData;
+    }
+
+    public void setDashData(String data) {
+        dashData = data;
     }
 }

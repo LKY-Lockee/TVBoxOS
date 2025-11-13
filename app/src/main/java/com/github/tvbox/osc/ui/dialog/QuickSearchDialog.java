@@ -2,11 +2,9 @@ package com.github.tvbox.osc.ui.dialog;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.view.View;
 
 import androidx.annotation.NonNull;
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.event.RefreshEvent;
@@ -26,8 +24,6 @@ import java.util.List;
 public class QuickSearchDialog extends BaseDialog {
     private SearchWordAdapter searchWordAdapter;
     private QuickSearchAdapter searchAdapter;
-    private TvRecyclerView mGridView;
-    private TvRecyclerView mGridViewWord;
 
     public QuickSearchDialog(@NonNull @NotNull Context context) {
         super(context, R.style.CustomDialogStyleDim);
@@ -60,7 +56,7 @@ public class QuickSearchDialog extends BaseDialog {
                 EventBus.getDefault().unregister(this);
             }
         });
-        mGridView = findViewById(R.id.mGridView);
+        TvRecyclerView mGridView = findViewById(R.id.mGridView);
         searchAdapter = new QuickSearchAdapter();
         mGridView.setHasFixedSize(true);
         // lite
@@ -68,26 +64,20 @@ public class QuickSearchDialog extends BaseDialog {
         // with preview
         // mGridView.setLayoutManager(new V7GridLayoutManager(getContext(), 3));
         mGridView.setAdapter(searchAdapter);
-        searchAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                Movie.Video video = searchAdapter.getData().get(position);
-                EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_SELECT, video));
-                dismiss();
-            }
+        searchAdapter.setOnItemClickListener((adapter, view, position) -> {
+            Movie.Video video = searchAdapter.getData().get(position);
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_SELECT, video));
+            dismiss();
         });
         searchAdapter.setNewData(new ArrayList<>());
         searchWordAdapter = new SearchWordAdapter();
-        mGridViewWord = findViewById(R.id.mGridViewWord);
+        TvRecyclerView mGridViewWord = findViewById(R.id.mGridViewWord);
         mGridViewWord.setAdapter(searchWordAdapter);
         mGridViewWord.setLayoutManager(new V7LinearLayoutManager(context, 0, false));
-        searchWordAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                searchAdapter.getData().clear();
-                searchAdapter.notifyDataSetChanged();
-                EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD_CHANGE, searchWordAdapter.getData().get(position)));
-            }
+        searchWordAdapter.setOnItemClickListener((adapter, view, position) -> {
+            searchAdapter.getData().clear();
+            searchAdapter.notifyDataSetChanged();
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_QUICK_SEARCH_WORD_CHANGE, searchWordAdapter.getData().get(position)));
         });
         searchWordAdapter.setNewData(new ArrayList<>());
     }

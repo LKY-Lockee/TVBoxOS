@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.util.js;
 
-import com.whl.quickjs.wrapper.JSCallFunction;
 import com.whl.quickjs.wrapper.JSObject;
 import com.whl.quickjs.wrapper.QuickJSException;
 
@@ -50,14 +49,11 @@ public class QuickJSBinder {
                 String functionName = entry.getKey();
                 final Method functionMethod = entry.getValue();
                 try {
-                    jsObject.setProperty(functionName, new JSCallFunction() {
-                        @Override
-                        public Object call(Object... args) {
-                            try {
-                                return functionMethod.invoke(callbackReceiver, args);
-                            } catch (Exception e) {
-                                throw new QuickJSException(e.getMessage());
-                            }
+                    jsObject.setProperty(functionName, args -> {
+                        try {
+                            return functionMethod.invoke(callbackReceiver, args);
+                        } catch (Exception e) {
+                            throw new QuickJSException(e.getMessage());
                         }
                     });
                 } catch (Exception e) {

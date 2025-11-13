@@ -11,10 +11,10 @@ import com.lzy.okgo.OkGo;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -82,14 +82,11 @@ public class JarLoader {
                     if (classInit != null) {
                         final Method initMethod = classInit.getMethod("init", Context.class);
                         // 在子线程中调用 init 方法，避免网络请求在主线程中执行
-                        Thread initThread = new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    initMethod.invoke(null, App.getInstance());
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                        Thread initThread = new Thread(() -> {
+                            try {
+                                initMethod.invoke(null, App.getInstance());
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
                         });
                         initThread.start();
@@ -146,21 +143,14 @@ public class JarLoader {
         try {
             Response response = OkGo.<File>get(jar).execute();
             assert response.body() != null;
-            InputStream is = response.body().byteStream();
-            OutputStream os = new FileOutputStream(cache);
-            try {
+            try (InputStream is = response.body().byteStream(); OutputStream os = Files.newOutputStream(cache.toPath())) {
                 byte[] buffer = new byte[2048];
                 int length;
                 while ((length = is.read(buffer)) > 0) {
                     os.write(buffer, 0, length);
                 }
-            } finally {
-                try {
-                    is.close();
-                    os.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             loadClassLoader(cache.getAbsolutePath(), key);
             return classLoaders.get(key);

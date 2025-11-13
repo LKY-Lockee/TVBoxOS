@@ -3,8 +3,11 @@ package com.github.tvbox.osc.ui.dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
+
 import com.github.tvbox.osc.R;
+
 import org.greenrobot.eventbus.EventBus;
 import org.jetbrains.annotations.NotNull;
 

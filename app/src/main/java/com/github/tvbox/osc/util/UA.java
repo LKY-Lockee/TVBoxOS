@@ -3,14 +3,13 @@ package com.github.tvbox.osc.util;
 import com.github.tvbox.osc.base.App;
 
 import java.io.DataInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Random;
 
 public class UA {
 
-    private static String[] uas = new String[]{
+    private static final String[] uas = new String[]{
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4557.4 Safari/537.36",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -5421,7 +5420,7 @@ public class UA {
 
     public static String randomOne() {
         int num = uas.length;
-        int key = (int)(Math.random()*num);
+        int key = (int) (Math.random() * num);
         return uas[key];
     }
 
@@ -5434,10 +5433,7 @@ public class UA {
             dis.skipBytes(random * 4);
             int offset = dis.readInt();
             dis.skipBytes((len - 1 - random) * 4 + offset);
-            String s = dis.readUTF();
-            return s;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            return dis.readUTF();
         } catch (IOException e) {
             e.printStackTrace();
         }

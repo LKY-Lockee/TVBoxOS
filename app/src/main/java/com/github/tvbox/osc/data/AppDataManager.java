@@ -24,24 +24,6 @@ import java.io.IOException;
  * @since 2020/5/15
  */
 public class AppDataManager {
-    private static final int DB_FILE_VERSION = 3;
-    private static final String DB_NAME = "tvbox";
-    private static AppDataManager manager;
-    private static AppDataBase dbInstance;
-
-    private AppDataManager() {
-    }
-
-    public static void init() {
-        if (manager == null) {
-            synchronized (AppDataManager.class) {
-                if (manager == null) {
-                    manager = new AppDataManager();
-                }
-            }
-        }
-    }
-
     static final Migration MIGRATION_1_2 = new Migration(1, 2) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
@@ -52,7 +34,6 @@ public class AppDataManager {
             }
         }
     };
-
     static final Migration MIGRATION_2_3 = new Migration(2, 3) {
         @SuppressLint("Range")
         @Override
@@ -85,7 +66,6 @@ public class AppDataManager {
             database.execSQL("ALTER TABLE vodRecordTmp RENAME TO vodRecord");
         }
     };
-
     static final Migration MIGRATION_3_4 = new Migration(3, 4) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
@@ -96,7 +76,6 @@ public class AppDataManager {
             }
         }
     };
-
     static final Migration MIGRATION_4_5 = new Migration(4, 5) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
@@ -107,6 +86,23 @@ public class AppDataManager {
             }
         }
     };
+    private static final int DB_FILE_VERSION = 3;
+    private static final String DB_NAME = "tvbox";
+    private static volatile AppDataManager manager;
+    private static AppDataBase dbInstance;
+
+    private AppDataManager() {
+    }
+
+    public static void init() {
+        if (manager == null) {
+            synchronized (AppDataManager.class) {
+                if (manager == null) {
+                    manager = new AppDataManager();
+                }
+            }
+        }
+    }
 
     static String dbPath() {
         return DB_NAME + ".v" + DB_FILE_VERSION + ".db";

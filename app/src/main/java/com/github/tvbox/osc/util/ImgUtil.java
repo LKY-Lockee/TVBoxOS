@@ -24,47 +24,35 @@ import me.jessyan.autosize.utils.AutoSizeUtils;
 
 /**
  * 图片工具
+ *
  * @version 1.0.0 <br/>
  */
 public class ImgUtil {
     private static final Map<String, Drawable> drawableCache = new HashMap<>();
+    public static final int defaultWidth = 244;
+    public static final int defaultHeight = 320;
+
     public static boolean isBase64Image(String picUrl) {
         return picUrl.startsWith("data:image");
     }
-    public static int defaultWidth = 244;
-    public static int defaultHeight = 320;
 
-    /**
-     * style 数据结构：ratio 指定宽高比（宽 / 高），type 表示风格（例如 rect、list）
-     */
-    public static class Style {
-        public float ratio;
-        public String type;
-
-        public Style(float ratio, String type) {
-            this.ratio = ratio;
-            this.type = type;
-        }
-    }
-
-    public static Style initStyle()
-    {
+    public static Style initStyle() {
         String bStyle = ApiConfig.get().getHomeSourceBean().getStyle();
-        if(!bStyle.isEmpty()){
+        if (!bStyle.isEmpty()) {
             try {
                 JSONObject jsonObject = new JSONObject(bStyle);
                 float ratio = (float) jsonObject.getDouble("ratio");
                 String type = jsonObject.getString("type");
                 return new Style(ratio, type);
-            }catch (JSONException e){
+            } catch (JSONException ignored) {
 
             }
         }
         return null;
     }
 
-    public static int spanCountByStyle(Style style,int defaultCount){
-        int spanCount=defaultCount;
+    public static int spanCountByStyle(Style style, int defaultCount) {
+        int spanCount = defaultCount;
         if ("rect".equals(style.type)) {
             if (style.ratio >= 1.7) {
                 spanCount = 3; // 横图
@@ -77,10 +65,10 @@ public class ImgUtil {
         return spanCount;
     }
 
-    public static int getStyleDefaultWidth(Style style){
+    public static int getStyleDefaultWidth(Style style) {
         int styleDefaultWidth = 280;
-        if(style.ratio<1)styleDefaultWidth=214;
-        if(style.ratio>1.7)styleDefaultWidth=380;
+        if (style.ratio < 1) styleDefaultWidth = 214;
+        if (style.ratio > 1.7) styleDefaultWidth = 380;
         return styleDefaultWidth;
     }
 
@@ -92,8 +80,8 @@ public class ImgUtil {
     }
 
     public static Drawable createTextDrawable(String text) {
-        if(text.isEmpty())text="TVBox";
-        text=text.substring(0, 1);
+        if (text.isEmpty()) text = "TVBox";
+        text = text.substring(0, 1);
         // 如果缓存中已存在，直接返回
         if (drawableCache.containsKey(text)) {
             return drawableCache.get(text);
@@ -123,6 +111,7 @@ public class ImgUtil {
         return drawable;
 
     }
+
     public static int getRandomColor() {
         Random random = new Random();
         return Color.argb(255, random.nextInt(256), random.nextInt(256), random.nextInt(256));
@@ -130,5 +119,18 @@ public class ImgUtil {
 
     public static void clearCache() {
         drawableCache.clear();
+    }
+
+    /**
+     * style 数据结构：ratio 指定宽高比（宽 / 高），type 表示风格（例如 rect、list）
+     */
+    public static class Style {
+        public final float ratio;
+        public final String type;
+
+        public Style(float ratio, String type) {
+            this.ratio = ratio;
+            this.type = type;
+        }
     }
 }

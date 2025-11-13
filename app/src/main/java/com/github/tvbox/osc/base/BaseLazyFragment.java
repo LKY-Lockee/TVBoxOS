@@ -53,7 +53,7 @@ public abstract class BaseLazyFragment extends Fragment implements CustomAdapt {
     protected boolean mIsFirstVisible = true;
     protected Context mContext;
     protected Activity mActivity;
-    private LoadService mLoadService;
+    private LoadService<?> mLoadService;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -114,11 +114,7 @@ public abstract class BaseLazyFragment extends Fragment implements CustomAdapt {
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         // 这里的可见返回为false
-        if (hidden) {
-            dispatchUserVisibleHint(false);
-        } else {
-            dispatchUserVisibleHint(true);
-        }
+        dispatchUserVisibleHint(!hidden);
     }
 
     /**
@@ -158,11 +154,9 @@ public abstract class BaseLazyFragment extends Fragment implements CustomAdapt {
     private void dispatchChildVisibleState(boolean visible) {
         FragmentManager fragmentManager = getChildFragmentManager();
         List<Fragment> fragments = fragmentManager.getFragments();
-        if (null != fragments) {
-            for (Fragment fragment : fragments) {
-                if (fragment instanceof BaseLazyFragment && !fragment.isHidden() && fragment.getUserVisibleHint()) {
-                    ((BaseLazyFragment) fragment).dispatchUserVisibleHint(visible);
-                }
+        for (Fragment fragment : fragments) {
+            if (fragment instanceof BaseLazyFragment && !fragment.isHidden() && fragment.getUserVisibleHint()) {
+                ((BaseLazyFragment) fragment).dispatchUserVisibleHint(visible);
             }
         }
 
@@ -247,19 +241,13 @@ public abstract class BaseLazyFragment extends Fragment implements CustomAdapt {
 
     protected void setLoadSir(View view) {
         if (mLoadService == null) {
-            mLoadService = LoadSir.getDefault().register(view, new Callback.OnReloadListener() {
-                @Override
-                public void onReload(View v) {
-                }
+            mLoadService = LoadSir.getDefault().register(view, (Callback.OnReloadListener) v -> {
             });
         }
     }
 
     protected void setLoadSir2(View view) {
-        mLoadService = LoadSir.getDefault().register(view, new Callback.OnReloadListener() {
-            @Override
-            public void onReload(View v) {
-            }
+        mLoadService = LoadSir.getDefault().register(view, (Callback.OnReloadListener) v -> {
         });
     }
 

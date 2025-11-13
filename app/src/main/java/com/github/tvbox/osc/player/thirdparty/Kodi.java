@@ -1,7 +1,6 @@
 package com.github.tvbox.osc.player.thirdparty;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -18,17 +17,6 @@ public class Kodi {
 
     private static final String PACKAGE_NAME = "org.xbmc.kodi";
     private static final String PLAYBACK_ACTIVITY = "org.xbmc.kodi.Splash";
-
-    private static class KodiPackageInfo {
-        final String packageName;
-        final String activityName;
-
-        KodiPackageInfo(String packageName, String activityName) {
-            this.packageName = packageName;
-            this.activityName = activityName;
-        }
-    }
-
     private static final KodiPackageInfo[] PACKAGES = {
             new KodiPackageInfo(PACKAGE_NAME, PLAYBACK_ACTIVITY),
     };
@@ -51,6 +39,54 @@ public class Kodi {
         return null;
     }
 
+    public static boolean run(Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
+        KodiPackageInfo packageInfo = getPackageInfo();
+        if (packageInfo == null)
+            return false;
+
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setPackage(packageInfo.packageName);
+            intent.setClassName(packageInfo.packageName, packageInfo.activityName);
+            if (headers != null && !headers.isEmpty()) {
+                url = url + "|";
+                int idx = 0;
+                StringBuilder urlBuilder = new StringBuilder(url);
+                for (String hk : headers.keySet()) {
+                    urlBuilder.append(hk).append("=").append(URLEncoder.encode(headers.get(hk), "UTF-8"));
+                    if (idx < headers.size() - 1) {
+                        urlBuilder.append("&");
+                    }
+                    idx++;
+                }
+                url = urlBuilder.toString();
+            }
+            intent.setData(Uri.parse(url));
+            intent.putExtra("title", title);
+            intent.putExtra("name", title);
+
+            if (subtitle != null && !subtitle.isEmpty()) {
+                intent.putExtra("subs", subtitle);
+            }
+            activity.startActivity(intent);
+            return true;
+        } catch (Exception ex) {
+            Log.e(TAG, "Can't run Kodi", ex);
+            return false;
+        }
+    }
+
+    public static class KodiPackageInfo {
+        final String packageName;
+        final String activityName;
+
+        KodiPackageInfo(String packageName, String activityName) {
+            this.packageName = packageName;
+            this.activityName = activityName;
+        }
+    }
+
     private static class Subtitle {
         final Uri uri;
         String name;
@@ -65,44 +101,6 @@ public class Kodi {
 
         Subtitle(String uriStr) {
             this(Uri.parse(uriStr));
-        }
-    }
-
-
-    public static boolean run(Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
-        KodiPackageInfo packageInfo = getPackageInfo();
-        if (packageInfo == null)
-            return false;
-
-
-
-        try {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setPackage(packageInfo.packageName);
-            intent.setClassName(packageInfo.packageName, packageInfo.activityName);
-            if (headers != null && headers.size() > 0) {
-                url = url + "|";
-                int idx = 0;
-                for (String hk : headers.keySet()) {
-                    url += hk + "=" + URLEncoder.encode(headers.get(hk), "UTF-8");
-                    if (idx < headers.keySet().size() -1) {
-                        url += "&";
-                    }
-                    idx ++;
-                }
-            }
-            intent.setData(Uri.parse(url));
-            intent.putExtra("title", title);
-            intent.putExtra("name", title);
-
-            if (subtitle != null && !subtitle.isEmpty()) {
-                intent.putExtra("subs", subtitle);
-            }
-            activity.startActivity(intent);
-            return true;
-        } catch (Exception ex) {
-            Log.e(TAG, "Can't run Kodi", ex);
-            return false;
         }
     }
 }

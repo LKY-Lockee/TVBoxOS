@@ -63,41 +63,41 @@ public class OkHttpUtil {
         return string(OkGoHelper.getDefaultClient(), url, tag, null, headerMap, null);
     }
 
-    public static void get(OkHttpClient client, String url, OKCallBack callBack) {
+    public static void get(OkHttpClient client, String url, OKCallBack<?> callBack) {
         get(client, url, null, null, callBack);
     }
 
-    public static void get(OkHttpClient client, String url, Map<String, String> paramsMap, OKCallBack callBack) {
+    public static void get(OkHttpClient client, String url, Map<String, String> paramsMap, OKCallBack<?> callBack) {
         get(client, url, paramsMap, null, callBack);
     }
 
-    public static void get(OkHttpClient client, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack callBack) {
+    public static void get(OkHttpClient client, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
         new OKRequest(METHOD_GET, url, paramsMap, headerMap, callBack).execute(client);
     }
 
-    public static void post(OkHttpClient client, String url, OKCallBack callBack) {
+    public static void post(OkHttpClient client, String url, OKCallBack<?> callBack) {
         post(client, url, null, callBack);
     }
 
-    public static void post(OkHttpClient client, String url, Map<String, String> paramsMap, OKCallBack callBack) {
+    public static void post(OkHttpClient client, String url, Map<String, String> paramsMap, OKCallBack<?> callBack) {
         post(client, url, paramsMap, null, callBack);
     }
 
-    public static void post(OkHttpClient client, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack callBack) {
+    public static void post(OkHttpClient client, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
         new OKRequest(METHOD_POST, url, paramsMap, headerMap, callBack).execute(client);
     }
 
-    public static void post(OkHttpClient client, String url, String tag, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack callBack) {
+    public static void post(OkHttpClient client, String url, String tag, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
         OKRequest req = new OKRequest(METHOD_POST, url, paramsMap, headerMap, callBack);
         req.setTag(tag);
         req.execute(client);
     }
 
-    public static void postJson(OkHttpClient client, String url, String jsonStr, OKCallBack callBack) {
+    public static void postJson(OkHttpClient client, String url, String jsonStr, OKCallBack<?> callBack) {
         postJson(client, url, jsonStr, null, callBack);
     }
 
-    public static void postJson(OkHttpClient client, String url, String jsonStr, Map<String, String> headerMap, OKCallBack callBack) {
+    public static void postJson(OkHttpClient client, String url, String jsonStr, Map<String, String> headerMap, OKCallBack<?> callBack) {
         new OKRequest(METHOD_POST, url, jsonStr, headerMap, callBack).execute(client);
     }
 
@@ -129,7 +129,7 @@ public class OkHttpUtil {
     public static void cancel(Object tag) {
         cancel(OkGoHelper.getDefaultClient(), tag);
     }
-    
+
     public static void cancelAll() {
         cancelAll(OkGoHelper.getDefaultClient());
     }

@@ -8,6 +8,9 @@ import java.util.Map;
 
 public class StringUtils {
 
+    private static final String U2028 = new String(new byte[]{(byte) 0xE2, (byte) 0x80, (byte) 0xA8});
+    private static final String U2029 = new String(new byte[]{(byte) 0xE2, (byte) 0x80, (byte) 0xA9});
+
     public static boolean isEmpty(CharSequence str) {
         return str == null || str.length() == 0;
     }
@@ -27,8 +30,8 @@ public class StringUtils {
     public static boolean isEmpty(Object obj) {
         if (obj == null) return true;
         else if (obj instanceof CharSequence) return ((CharSequence) obj).length() == 0;
-        else if (obj instanceof Collection) return ((Collection) obj).isEmpty();
-        else if (obj instanceof Map) return ((Map) obj).isEmpty();
+        else if (obj instanceof Collection) return ((Collection<?>) obj).isEmpty();
+        else if (obj instanceof Map) return ((Map<?, ?>) obj).isEmpty();
         else if (obj.getClass().isArray()) return Array.getLength(obj) == 0;
 
         return false;
@@ -37,9 +40,6 @@ public class StringUtils {
     public static boolean isNotEmpty(Object obj) {
         return !isEmpty(obj);
     }
-
-    private static final String U2028 = new String(new byte[]{(byte) 0xE2, (byte) 0x80, (byte) 0xA8});
-    private static final String U2029 = new String(new byte[]{(byte) 0xE2, (byte) 0x80, (byte) 0xA9});
 
     /**
      * Escape JavaString string
@@ -114,9 +114,9 @@ public class StringUtils {
 
     public static String listToString(List<String> list, String cha) {
         StringBuilder builder = new StringBuilder();
-        if (list == null || list.size() <= 0) {
+        if (list == null || list.isEmpty()) {
             return "";
-        } else if (list.size() <= 1) {
+        } else if (list.size() == 1) {
             return list.get(0);
         } else {
             builder.append(list.get(0));
@@ -147,11 +147,11 @@ public class StringUtils {
     }
 
     public static boolean isBlank(String text) {
-        return trim(text).length() == 0;
+        return trim(text).isEmpty();
     }
 
     public static String trimBlanks(String str) {
-        if (str == null || str.length() == 0) {
+        if (str == null || str.isEmpty()) {
             return str;
         }
         int len = str.length();
@@ -167,7 +167,7 @@ public class StringUtils {
     }
 
     public static String trim(String string) {
-        if (string == null || string.length() == 0 || " ".equals(string)) return "";
+        if (string == null || string.isEmpty() || " ".equals(string)) return "";
         int start = 0, len = string.length();
         int end = len - 1;
         while ((start < end) && ((string.charAt(start) <= ' ') || (string.charAt(start) == '　'))) {
@@ -176,7 +176,7 @@ public class StringUtils {
         while ((start < end) && ((string.charAt(end) <= ' ') || (string.charAt(end) == '　'))) {
             --end;
         }
-        if (end < len) ++end;
+        ++end;
         return ((start > 0) || (end < len)) ? string.substring(start, end) : string;
     }
 

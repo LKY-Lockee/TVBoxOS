@@ -1,10 +1,10 @@
 package com.github.tvbox.osc.util;
 
+import org.mozilla.universalchardet.UniversalDetector;
+
 import java.nio.charset.Charset;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.mozilla.universalchardet.UniversalDetector;
 
 /**
  * 字符集工具类，提供了检测字符集的工具方法
@@ -15,7 +15,7 @@ public class CharsetUtils {
     /**
      * 中文常用字符集
      */
-    public static final String[] AVAILABLE_CHINESE_CHARSET_NAMES = new String[] { "GBK", "gb2312", "GB18030", "UTF-8", "Big5" };
+    public static final String[] AVAILABLE_CHINESE_CHARSET_NAMES = new String[]{"GBK", "gb2312", "GB18030", "UTF-8", "Big5"};
 
     /**
      * 中文常用字

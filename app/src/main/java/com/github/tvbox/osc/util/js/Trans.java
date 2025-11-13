@@ -12,19 +12,35 @@ public class Trans {
     private final Map<Character, Character> t2s;
     private final boolean trans;
 
-    private static class Loader {
-        static volatile Trans INSTANCE = new Trans();
+    private Trans() {
+        s2t = new HashMap<>();
+        t2s = new HashMap<>();
+        trans = Locale.getDefault().getCountry().equals("TW");
+        if (trans) init();
     }
 
     private static Trans get() {
         return Loader.INSTANCE;
     }
 
-    private Trans() {
-        s2t = new HashMap<>();
-        t2s = new HashMap<>();
-        trans = Locale.getDefault().getCountry().equals("TW");
-        if (trans) init();
+    public static boolean pass() {
+        return !get().trans;
+    }
+
+    public static String s2t(String text) {
+        return s2t(pass(), text);
+    }
+
+    public static String t2s(String text) {
+        return t2s(pass(), text);
+    }
+
+    public static String s2t(boolean pass, String text) {
+        return pass ? text : get().get(text, get().s2t);
+    }
+
+    public static String t2s(boolean pass, String text) {
+        return pass ? text : get().get(text, get().t2s);
     }
 
     private void init() {
@@ -46,23 +62,7 @@ public class Trans {
         return String.valueOf(chars);
     }
 
-    public static boolean pass() {
-        return !get().trans;
-    }
-
-    public static String s2t(String text) {
-        return s2t(pass(), text);
-    }
-
-    public static String t2s(String text) {
-        return t2s(pass(), text);
-    }
-
-    public static String s2t(boolean pass, String text) {
-        return pass ? text : get().get(text, get().s2t);
-    }
-
-    public static String t2s(boolean pass, String text) {
-        return pass ? text : get().get(text, get().t2s);
+    private static class Loader {
+        static final Trans INSTANCE = new Trans();
     }
 }

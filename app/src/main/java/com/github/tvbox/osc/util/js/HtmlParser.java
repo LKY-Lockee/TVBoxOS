@@ -1,11 +1,14 @@
 package com.github.tvbox.osc.util.js;
 
 import android.text.TextUtils;
+
 import com.github.tvbox.osc.util.StringUtils;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -15,12 +18,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class HtmlParser {
-    private static String pdfh_html = "";
-    private static String pdfa_html = "";
     private static final Pattern p = Pattern.compile("url\\((.*?)\\)", Pattern.MULTILINE | Pattern.DOTALL);
     private static final Pattern NOADD_INDEX = Pattern.compile(":eq|:lt|:gt|:first|:last|^body$|^#"); // 不自动加eq下标索引
     private static final Pattern URLJOIN_ATTR = Pattern.compile("(url|src|href|-original|-src|-play|-url|style)$", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE); // 需要自动urljoin的属性
     private static final Pattern SPECIAL_URL = Pattern.compile("^(ftp|magnet|thunder|ws):", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE); // 过滤特殊链接,不走urlJoin
+    private static String pdfh_html = "";
+    private static String pdfa_html = "";
     private static Document pdfh_doc = null;
     private static Document pdfa_doc = null;
 
@@ -41,12 +44,6 @@ public class HtmlParser {
         //            q = q.replaceAll("^(.+?)#.*?$", "$1");
         //        }
         return q;
-    }
-
-    public static class Painfo {
-        public String nparse_rule;
-        public int nparse_index;
-        public List<String> excludes;
     }
 
     private static Painfo getParseInfo(String nparse) {
@@ -127,7 +124,7 @@ public class HtmlParser {
         // 不自动加eq下标索引
         if (parse.contains("&&")) {
             String[] parses = parse.split("&&"); //带&&的重新拼接
-            List < String > new_parses = new ArrayList < > (); //构造新的解析表达式列表
+            List<String> new_parses = new ArrayList<>(); //构造新的解析表达式列表
             for (int i = 0; i < parses.length; i++) {
                 String[] pss = parses[i].split(" ");
                 String ps = pss[pss.length - 1]; //如果分割&&后带空格就取最后一个元素
@@ -193,7 +190,7 @@ public class HtmlParser {
             } else {
                 result = ret.attr(option);
                 if (option.toLowerCase()
-                    .contains("style") && result.contains("url(")) {
+                        .contains("style") && result.contains("url(")) {
                     Matcher m = p.matcher(result);
                     if (m.find()) {
                         result = m.group(1);
@@ -223,7 +220,7 @@ public class HtmlParser {
 
     }
 
-    public static List < String > parseDomForArray(String html, String rule) {
+    public static List<String> parseDomForArray(String html, String rule) {
         if (!pdfa_html.equals(html)) {
             pdfa_html = html;
             pdfa_doc = Jsoup.parse(html);
@@ -232,14 +229,14 @@ public class HtmlParser {
         rule = parseHikerToJq(rule, false);
         String[] parses = rule.split(" ");
         Elements ret = new Elements();
-        for (String pars: parses) {
+        for (String pars : parses) {
             ret = parseOneRule(doc, pars, ret);
             if (ret.isEmpty()) {
-                return new ArrayList < > ();
+                return new ArrayList<>();
             }
         }
 
-        List < String > eleHtml = new ArrayList < > ();
+        List<String> eleHtml = new ArrayList<>();
         for (int i = 0; i < ret.size(); i++) {
             Element element1 = ret.get(i);
             eleHtml.add(element1.outerHtml());
@@ -267,13 +264,13 @@ public class HtmlParser {
             ret = ret.clone(); //克隆一个, 免得直接remove会影响doc的缓存
             for (int i = 0; i < painfo.excludes.size(); i++) {
                 ret.select(painfo.excludes.get(i))
-                    .remove();
+                        .remove();
             }
         }
         return ret;
     }
 
-    public static List < String > parseDomForList(String html, String p1, String list_text, String list_url, String add_url) {
+    public static List<String> parseDomForList(String html, String p1, String list_text, String list_url, String add_url) {
         if (!pdfa_html.equals(html)) {
             pdfa_html = html;
             pdfa_doc = Jsoup.parse(html);
@@ -282,19 +279,25 @@ public class HtmlParser {
         p1 = parseHikerToJq(p1, false);
         String[] parses = p1.split(" ");
         Elements ret = new Elements();
-        for (String pars: parses) {
+        for (String pars : parses) {
             ret = parseOneRule(doc, pars, ret);
             if (ret.isEmpty()) {
-                return new ArrayList < > ();
+                return new ArrayList<>();
             }
         }
-        List < String > new_vod_list = new ArrayList < > ();
+        List<String> new_vod_list = new ArrayList<>();
         for (int i = 0; i < ret.size(); i++) {
             String it = ret.get(i)
-                .outerHtml();
+                    .outerHtml();
             new_vod_list.add(parseDomForUrl(it, list_text, "")
-                .trim() + '$' + parseDomForUrl(it, list_url, add_url));
+                    .trim() + '$' + parseDomForUrl(it, list_url, add_url));
         }
         return new_vod_list;
+    }
+
+    public static class Painfo {
+        public String nparse_rule;
+        public int nparse_index;
+        public List<String> excludes;
     }
 }

@@ -42,12 +42,12 @@ public class SourceBean {
         this.api = api;
     }
 
-    public void setPlayerUrl(String playerUrl) {
-        this.playerUrl = playerUrl;
-    }
-
     public String getPlayerUrl() {
         return playerUrl;
+    }
+
+    public void setPlayerUrl(String playerUrl) {
+        this.playerUrl = playerUrl;
     }
 
     public int getType() {
@@ -106,16 +106,28 @@ public class SourceBean {
         this.jar = jar;
     }
 
-    public int getPlayerType() { return playerType; }
+    public int getPlayerType() {
+        return playerType;
+    }
 
-    public void setPlayerType(int playerType) { this.playerType = playerType; }
+    public void setPlayerType(int playerType) {
+        this.playerType = playerType;
+    }
 
-    public String getClickSelector() { return clickSelector; }
+    public String getClickSelector() {
+        return clickSelector;
+    }
 
-    public void setClickSelector(String clickSelector) { this.clickSelector = clickSelector; }
+    public void setClickSelector(String clickSelector) {
+        this.clickSelector = clickSelector;
+    }
 
 
-    public String getStyle() { return style; }
+    public String getStyle() {
+        return style;
+    }
 
-    public void setStyle(String style) { this.style = style; }
+    public void setStyle(String style) {
+        this.style = style;
+    }
 }

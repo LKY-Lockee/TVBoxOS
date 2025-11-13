@@ -6,7 +6,6 @@ import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -39,10 +38,10 @@ import xyz.doikki.videoplayer.util.CutoutUtil;
  * @description:
  */
 public abstract class BaseActivity extends AppCompatActivity implements CustomAdapt {
-    protected Context mContext;
-    private LoadService mLoadService;
-
+    protected static BitmapDrawable globalWp = null;
     private static float screenRatio = -100.0f;
+    protected Context mContext;
+    private LoadService<?> mLoadService;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -73,16 +72,14 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
     }
 
     public void hideSysBar() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
-            uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
-            uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
-            uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-            uiOptions |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-            uiOptions |= View.SYSTEM_UI_FLAG_FULLSCREEN;
-            uiOptions |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-            getWindow().getDecorView().setSystemUiVisibility(uiOptions);
-        }
+        int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
+        uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+        uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+        uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+        uiOptions |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+        uiOptions |= View.SYSTEM_UI_FLAG_FULLSCREEN;
+        uiOptions |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+        getWindow().getDecorView().setSystemUiVisibility(uiOptions);
     }
 
     @Override
@@ -109,10 +106,7 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
 
     protected void setLoadSir(View view) {
         if (mLoadService == null) {
-            mLoadService = LoadSir.getDefault().register(view, new Callback.OnReloadListener() {
-                @Override
-                public void onReload(View v) {
-                }
+            mLoadService = LoadSir.getDefault().register(view, (Callback.OnReloadListener) v -> {
             });
         }
     }
@@ -184,8 +178,6 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
     public boolean isBaseOnWidth() {
         return !(screenRatio >= 4.0f);
     }
-
-    protected static BitmapDrawable globalWp = null;
 
     public void changeWallpaper(boolean force) {
         if (!force && globalWp != null)

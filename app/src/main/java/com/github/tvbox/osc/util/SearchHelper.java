@@ -8,9 +8,7 @@ import com.orhanobut.hawk.Hawk;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
-import java.util.Iterator;
 
 public class SearchHelper {
 
@@ -18,7 +16,7 @@ public class SearchHelper {
         HashMap<String, String> mCheckSources;
         try {
             String api = Hawk.get(HawkConfig.API_URL, "");
-            if(api.isEmpty())return null;
+            if (api.isEmpty()) return null;
             HashMap<String, HashMap<String, String>> mCheckSourcesForApi = Hawk.get(HawkConfig.SOURCES_FOR_SEARCH, new HashMap<>());
             mCheckSources = mCheckSourcesForApi.get(api);
         } catch (Exception e) {
@@ -48,17 +46,17 @@ public class SearchHelper {
         return mCheckSources;
     }
 
-    public static void putCheckedSources(HashMap<String, String> mCheckSources,boolean isAll) {
+    public static void putCheckedSources(HashMap<String, String> mCheckSources, boolean isAll) {
         String api = Hawk.get(HawkConfig.API_URL, "");
         if (api.isEmpty()) {
             return;
         }
-        HashMap<String, HashMap<String, String>> mCheckSourcesForApi = Hawk.get(HawkConfig.SOURCES_FOR_SEARCH,null);
+        HashMap<String, HashMap<String, String>> mCheckSourcesForApi = Hawk.get(HawkConfig.SOURCES_FOR_SEARCH, null);
 
-        if(isAll){
+        if (isAll) {
             if (mCheckSourcesForApi == null) return;
-            if (mCheckSourcesForApi.containsKey(api)) mCheckSourcesForApi.remove(api);
-        }else {
+            mCheckSourcesForApi.remove(api);
+        } else {
             if (mCheckSourcesForApi == null) mCheckSourcesForApi = new HashMap<>();
             mCheckSourcesForApi.put(api, mCheckSources);
         }
@@ -66,7 +64,7 @@ public class SearchHelper {
         Hawk.put(HawkConfig.SOURCES_FOR_SEARCH, mCheckSourcesForApi);
     }
 
-    public static HashMap<String, String> getSources(){
+    public static HashMap<String, String> getSources() {
         HashMap<String, String> mCheckSources = new HashMap<>();
         for (SourceBean bean : ApiConfig.get().getSourceBeanList()) {
             if (!bean.isSearchable()) {

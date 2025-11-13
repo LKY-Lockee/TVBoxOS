@@ -4,19 +4,16 @@ package com.github.catvod.crawler;
 import android.util.Log;
 
 import com.github.tvbox.osc.base.App;
-
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.MD5;
-
 import com.github.tvbox.osc.util.js.JsSpider;
 import com.lzy.okgo.OkGo;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,21 +27,21 @@ public class JsLoader {
     private volatile String recentKey = "";
 
     public static void destroy() {
-        for (Spider spider : spiders.values()){
+        for (Spider spider : spiders.values()) {
             spider.cancelByTag();
             spider.destroy();
+        }
+    }
+
+    public static void stopAll() {
+        for (Spider spider : spiders.values()) {
+            spider.cancelByTag();
         }
     }
 
     public void clear() {
         spiders.clear();
         classes.clear();
-    }
-
-    public static void stopAll() {
-        for (Spider spider : spiders.values()){
-            spider.cancelByTag();
-        }
     }
 
     private boolean loadClassLoader(String jar, String key) {
@@ -81,7 +78,7 @@ public class JsLoader {
     }
 
     private Class<?> loadJarInternal(String jar, String md5, String key) {
-        if (classes.containsKey(key)){
+        if (classes.containsKey(key)) {
             Log.i("JSLoader", "echo-loadJarInternal cached");
             return classes.get(key);
         }
@@ -91,30 +88,23 @@ public class JsLoader {
                 loadClassLoader(cache.getAbsolutePath(), key);
                 return classes.get(key);
             }
-        }else {
+        } else {
             if (cache.exists() && !FileUtils.isWeekAgo(cache)) {
-                if(loadClassLoader(cache.getAbsolutePath(), key)){
+                if (loadClassLoader(cache.getAbsolutePath(), key)) {
                     return classes.get(key);
                 }
             }
         }
         try {
             Response response = OkGo.<File>get(jar).execute();
-            InputStream is = response.body().byteStream();
-            OutputStream os = new FileOutputStream(cache);
-            try {
+            try (InputStream is = response.body().byteStream(); OutputStream os = Files.newOutputStream(cache.toPath())) {
                 byte[] buffer = new byte[2048];
                 int length;
                 while ((length = is.read(buffer)) > 0) {
                     os.write(buffer, 0, length);
                 }
-            } finally {
-                try {
-                    is.close();
-                    os.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             loadClassLoader(cache.getAbsolutePath(), key);
             return classes.get(key);
@@ -125,7 +115,7 @@ public class JsLoader {
     }
 
     public Spider getSpider(String key, String api, String ext, String jar) {
-        if (spiders.containsKey(key)){
+        if (spiders.containsKey(key)) {
             Log.i("JSLoader", "echo-getSpider cached");
             return spiders.get(key);
         }
@@ -145,7 +135,7 @@ public class JsLoader {
             spiders.put(key, sp);
             return sp;
         } catch (Throwable th) {
-            LOG.i("echo-getSpider-error "+th.getMessage());
+            LOG.i("echo-getSpider-error " + th.getMessage());
         }
         return new SpiderNull();
     }
@@ -156,7 +146,7 @@ public class JsLoader {
             if (proxyFun != null) {
                 return proxyFun.proxyLocal(params);
             }
-        } catch (Throwable th) {
+        } catch (Throwable ignored) {
         }
         return null;
     }

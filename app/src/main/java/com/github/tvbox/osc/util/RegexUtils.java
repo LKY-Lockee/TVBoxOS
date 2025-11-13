@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 public class RegexUtils {
 
     private static final Map<String, Pattern> patternCache = new HashMap<>();
+
     public static Pattern getPattern(String regex) {
         Pattern pattern = patternCache.get(regex);
         if (pattern == null) {
@@ -16,10 +17,10 @@ public class RegexUtils {
         return pattern;
     }
 
-    public static Pattern getPattern(String regex,int flag) {
+    public static Pattern getPattern(String regex, int flag) {
         Pattern pattern = patternCache.get(regex);
         if (pattern == null) {
-            pattern = Pattern.compile(regex,flag);
+            pattern = Pattern.compile(regex, flag);
             patternCache.put(regex, pattern);
         }
         return pattern;

@@ -2,19 +2,17 @@ package com.github.tvbox.osc.cache;
 
 import android.text.TextUtils;
 
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.data.AppDataManager;
-import com.google.gson.ExclusionStrategy;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.HistoryHelper;
+import com.google.gson.ExclusionStrategy;
 import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-
 import com.orhanobut.hawk.Hawk;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,16 +22,13 @@ import java.util.List;
  * @description:
  */
 public class RoomDataManger {
-    static ExclusionStrategy vodInfoStrategy = new ExclusionStrategy() {
+    static final ExclusionStrategy vodInfoStrategy = new ExclusionStrategy() {
         @Override
         public boolean shouldSkipField(FieldAttributes field) {
             if (field.getDeclaringClass() == VodInfo.class && field.getName().equals("seriesFlags")) {
                 return true;
             }
-            if (field.getDeclaringClass() == VodInfo.class && field.getName().equals("seriesMap")) {
-                return true;
-            }
-            return false;
+            return field.getDeclaringClass() == VodInfo.class && field.getName().equals("seriesMap");
         }
 
         @Override
@@ -84,8 +79,8 @@ public class RoomDataManger {
     public static List<VodInfo> getAllVodRecord(int limit) {
         int count = AppDataManager.get().getVodRecordDao().getCount();
         Integer index = Hawk.get(HawkConfig.HISTORY_NUM, 0);
-        Integer hisNum = HistoryHelper.getHisNum(index);
-        if ( count > hisNum ) {
+        int hisNum = HistoryHelper.getHisNum(index);
+        if (count > hisNum) {
             AppDataManager.get().getVodRecordDao().reserver(hisNum);
         }
         List<VodRecord> recordList = AppDataManager.get().getVodRecordDao().getAll(limit);
@@ -136,7 +131,7 @@ public class RoomDataManger {
             AppDataManager.get().getVodCollectDao().delete(record);
         }
     }
-    
+
     public static void deleteVodCollectAll() {
         AppDataManager.get().getVodCollectDao().deleteAll();
     }

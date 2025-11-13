@@ -27,6 +27,7 @@ package com.github.tvbox.osc.subtitle.runtime;
 
 import android.os.Handler;
 import android.os.Looper;
+
 import androidx.annotation.Nullable;
 
 import java.util.concurrent.ExecutorService;
@@ -38,10 +39,10 @@ import java.util.concurrent.Executors;
 
 public class DefaultTaskExecutor extends TaskExecutor {
 
+    private final Object mLock = new Object();
     @Nullable
     private Handler mMainHandler;
-    private final Object mLock = new Object();
-    private ExecutorService mDeskIO = Executors.newFixedThreadPool(3);
+    private final ExecutorService mDeskIO = Executors.newFixedThreadPool(3);
 
     @Override
     public void executeOnDeskIO(final Runnable task) {

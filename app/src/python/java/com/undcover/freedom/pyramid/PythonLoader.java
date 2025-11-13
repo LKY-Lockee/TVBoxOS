@@ -36,13 +36,17 @@ import okhttp3.Call;
 import okhttp3.Response;
 
 public class PythonLoader {
-    private final ConcurrentHashMap<String, Spider> spiders = new ConcurrentHashMap<>();
     private static PythonLoader sInstance;
-    private Application app;
+    private final ConcurrentHashMap<String, Spider> spiders = new ConcurrentHashMap<>();
     private final HashMap<String, JSONObject> siteMap;
     Python pyInstance;
     PyObject pyApp;
     Python.Platform androidPlatform;
+    String cache = "/storage/emulated/0/plugin/";
+    int port = -1;
+    FileStreamCallback streamCallback;
+    FileStringCallback stringCallback;
+    private Application app;
 
     public PythonLoader() {
         siteMap = new HashMap<>();
@@ -94,8 +98,6 @@ public class PythonLoader {
         }
         return this;
     }
-
-    String cache = "/storage/emulated/0/plugin/";
 
     public PythonLoader setPluginConfig(String config) {
         this.cache = config;
@@ -163,8 +165,6 @@ public class PythonLoader {
         return new SpiderNull();
     }
 
-    int port = -1;
-
     public void getPort() {
         if (port <= 0) {
             for (int i = 9978; i < 10000; i++) {
@@ -225,9 +225,6 @@ public class PythonLoader {
             return OkHttpUtil.string(url, str2map(header));
         }
     }
-
-    FileStreamCallback streamCallback;
-    FileStringCallback stringCallback;
 
     public PythonLoader setFileStreamCallback(FileStreamCallback callback) {
         streamCallback = callback;

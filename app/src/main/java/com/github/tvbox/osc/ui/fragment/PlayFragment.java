@@ -114,6 +114,10 @@ import xyz.doikki.videoplayer.player.AbstractPlayer;
 import xyz.doikki.videoplayer.player.ProgressManager;
 
 public class PlayFragment extends BaseLazyFragment {
+    private final long videoDuration = -1;
+    private final Map<String, Boolean> loadedUrls = new HashMap<>();
+    private final AtomicInteger loadFoundCount = new AtomicInteger(0);
+    ExecutorService parseThreadPool;
     private MyVideoView mVideoView;
     private TextView mPlayLoadTip;
     private ImageView mPlayLoadErr;
@@ -121,8 +125,26 @@ public class PlayFragment extends BaseLazyFragment {
     private VodController mController;
     private SourceViewModel sourceViewModel;
     private Handler mHandler;
-
-    private final long videoDuration = -1;
+    private VodInfo mVodInfo;
+    private JSONObject mVodPlayerCfg;
+    private String sourceKey;
+    private SourceBean sourceBean;
+    private int autoRetryCount = 0;
+    private long lastRetryTime = 0;  // 记录上次调用时间（毫秒）
+    private boolean allowSwitchPlayer = true;
+    private String playSubtitle;
+    private String subtitleCacheKey;
+    private String progressKey;
+    private String parseFlag;
+    private String webUrl;
+    private String webUserAgent;
+    private HashMap<String, String> webHeaderMap;
+    private String webPlayUrl;
+    // webview
+    private XWalkView mXwalkWebView;
+    private WebView mSysWebView;
+    private LinkedList<String> loadFoundVideoUrls = new LinkedList<>();
+    private HashMap<String, HashMap<String, String>> loadFoundVideoUrlsHeader = new HashMap<>();
 
     @Override
     protected int getLayoutResID() {
@@ -141,7 +163,7 @@ public class PlayFragment extends BaseLazyFragment {
         initView();
         initViewModel();
         initData();
-        Hawk.put(HawkConfig.PLAYER_IS_LIVE,false);
+        Hawk.put(HawkConfig.PLAYER_IS_LIVE, false);
     }
 
     public long getSavedProgress(String url) {
@@ -152,7 +174,7 @@ public class PlayFragment extends BaseLazyFragment {
             e.printStackTrace();
         }
         long skip = st * 1000L;
-        Object theCache=CacheManager.getCache(MD5.string2MD5(url));
+        Object theCache = CacheManager.getCache(MD5.string2MD5(url));
         if (theCache == null) {
             return skip;
         }
@@ -234,15 +256,15 @@ public class PlayFragment extends BaseLazyFragment {
             @Override
             public void replay(boolean replay) {
                 autoRetryCount = 0;
-                if(replay){
+                if (replay) {
                     play(true);
-                }else {
-                    if(webPlayUrl!=null && !webPlayUrl.isEmpty()) {
+                } else {
+                    if (webPlayUrl != null && !webPlayUrl.isEmpty()) {
                         stopParse();
                         initParseLoadFound();
-                        if(mVideoView!=null) mVideoView.release();
-                        goPlayUrl(webPlayUrl,webHeaderMap);
-                    }else {
+                        if (mVideoView != null) mVideoView.release();
+                        goPlayUrl(webPlayUrl, webHeaderMap);
+                    } else {
                         play(false);
                     }
                 }
@@ -271,19 +293,23 @@ public class PlayFragment extends BaseLazyFragment {
             public void prepared() {
                 initSubtitleView();
             }
+
             @Override
             public void startPlayUrl(String url, HashMap<String, String> headers) {
                 goPlayUrl(url, headers);
             }
+
             @Override
-            public void setAllowSwitchPlayer(boolean isAllow){allowSwitchPlayer=isAllow;}
+            public void setAllowSwitchPlayer(boolean isAllow) {
+                allowSwitchPlayer = isAllow;
+            }
         });
         mVideoView.setVideoController(mController);
     }
 
     //设置字幕
     void setSubtitle(String path) {
-        if (path != null && path .length() > 0) {
+        if (path != null && path.length() > 0) {
             // 设置字幕
             mController.mSubtitleView.setVisibility(View.GONE);
             mController.mSubtitleView.setSubtitlePath(path);
@@ -304,14 +330,17 @@ public class PlayFragment extends BaseLazyFragment {
             public void setTextSize(int size) {
                 mController.mSubtitleView.setTextSize(size);
             }
+
             @Override
             public void setSubtitleDelay(int milliseconds) {
                 mController.mSubtitleView.setSubtitleDelay(milliseconds);
             }
+
             @Override
             public void selectInternalSubtitle() {
                 selectMyInternalSubtitle();
             }
+
             @Override
             public void setTextStyle(int style) {
                 setSubtitleViewTextStyle(style);
@@ -336,9 +365,9 @@ public class PlayFragment extends BaseLazyFragment {
                         });
                     }
                 });
-                if(mVodInfo.playFlag.contains("Ali")||mVodInfo.playFlag.contains("parse")){
+                if (mVodInfo.playFlag.contains("Ali") || mVodInfo.playFlag.contains("parse")) {
                     searchSubtitleDialog.setSearchWord(mVodInfo.playNote);
-                }else {
+                } else {
                     searchSubtitleDialog.setSearchWord(mVodInfo.name);
                 }
                 searchSubtitleDialog.show();
@@ -377,10 +406,10 @@ public class PlayFragment extends BaseLazyFragment {
         AbstractPlayer mediaPlayer = mVideoView.getMediaPlayer();
         TrackInfo trackInfo = null;
         if (mediaPlayer instanceof IjkMediaPlayer) {
-            trackInfo = ((IjkMediaPlayer)mediaPlayer).getTrackInfo();
+            trackInfo = ((IjkMediaPlayer) mediaPlayer).getTrackInfo();
         }
         if (mediaPlayer instanceof ExoPlayer) {
-            trackInfo = ((ExoPlayer)mediaPlayer).getTrackInfo();
+            trackInfo = ((ExoPlayer) mediaPlayer).getTrackInfo();
         }
         if (trackInfo == null) {
             Toast.makeText(mContext, "没有音轨", Toast.LENGTH_SHORT).show();
@@ -399,12 +428,12 @@ public class PlayFragment extends BaseLazyFragment {
                     }
                     mediaPlayer.pause();
                     long progress = mediaPlayer.getCurrentPosition();//保存当前进度，ijk 切换轨道 会有快进几秒
-                    if (mediaPlayer instanceof IjkMediaPlayer)((IjkMediaPlayer)mediaPlayer).setTrack(value.index,progressKey);
-                    if (mediaPlayer instanceof ExoPlayer)((ExoPlayer)mediaPlayer).setTrack(value.groupIndex,value.index,progressKey);
+                    if (mediaPlayer instanceof IjkMediaPlayer) ((IjkMediaPlayer) mediaPlayer).setTrack(value.index, progressKey);
+                    if (mediaPlayer instanceof ExoPlayer) ((ExoPlayer) mediaPlayer).setTrack(value.groupIndex, value.index, progressKey);
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            if(mediaPlayer instanceof IjkMediaPlayer)mediaPlayer.seekTo(progress);
+                            if (mediaPlayer instanceof IjkMediaPlayer) mediaPlayer.seekTo(progress);
                             mediaPlayer.start();
                         }
                     }, 200);
@@ -438,7 +467,7 @@ public class PlayFragment extends BaseLazyFragment {
             return;
         }
         TrackInfo trackInfo = null;
-        trackInfo = ((IjkMediaPlayer)mediaPlayer).getTrackInfo();
+        trackInfo = ((IjkMediaPlayer) mediaPlayer).getTrackInfo();
         if (trackInfo == null) {
             Toast.makeText(mContext, "没有内置字幕", Toast.LENGTH_SHORT).show();
             return;
@@ -459,7 +488,7 @@ public class PlayFragment extends BaseLazyFragment {
                     mController.mSubtitleView.destroy();
                     mController.mSubtitleView.clearSubtitleCache();
                     mController.mSubtitleView.isInternal = true;
-                    ((IjkMediaPlayer)mediaPlayer).setTrack(value.index);
+                    ((IjkMediaPlayer) mediaPlayer).setTrack(value.index);
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -528,25 +557,26 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     void playUrl(String url, HashMap<String, String> headers) {
-        if(!url.startsWith("data:application"))EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, url));//更新播放地址
+        if (!url.startsWith("data:application")) EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, url));//更新播放地址
         if (!Hawk.get(HawkConfig.M3U8_PURIFY, false)) {
-            goPlayUrl(url,headers);
+            goPlayUrl(url, headers);
             return;
         }
         if (url.startsWith("http://127.0.0.1") || !url.contains(".m3u8")) {
-            goPlayUrl(url,headers);
+            goPlayUrl(url, headers);
             return;
         }
-        if(DefaultConfig.noAd(mVodInfo.playFlag)){
-            goPlayUrl(url,headers);
+        if (DefaultConfig.noAd(mVodInfo.playFlag)) {
+            goPlayUrl(url, headers);
             return;
         }
         LOG.i("echo-playM3u8:" + url);
-        mController.playM3u8(url,headers);
+        mController.playM3u8(url, headers);
     }
+
     public void goPlayUrl(String url, HashMap<String, String> headers) {
         LOG.i("echo-goPlayUrl:" + url);
-        if(autoRetryCount==0)webPlayUrl=url;
+        if (autoRetryCount == 0) webPlayUrl = url;
         if (mActivity == null) return;
         if (!isAdded()) return;
         final String finalUrl = url;
@@ -601,16 +631,16 @@ public class PlayFragment extends BaseLazyFragment {
         TrackInfo trackInfo = null;
         AbstractPlayer mediaPlayer = mVideoView.getMediaPlayer();
         if (mediaPlayer instanceof IjkMediaPlayer) {
-            trackInfo = ((IjkMediaPlayer)mediaPlayer).getTrackInfo();
+            trackInfo = ((IjkMediaPlayer) mediaPlayer).getTrackInfo();
             if (trackInfo != null && trackInfo.getSubtitle().size() > 0) {
                 mController.mSubtitleView.hasInternal = true;
             }
             //默认选中第一个音轨 一般第一个音轨是国语 && 加载上一次选中的
-            ((IjkMediaPlayer)mediaPlayer).loadDefaultTrack(trackInfo,progressKey);
-            ((IjkMediaPlayer)mediaPlayer).setOnTimedTextListener(new IMediaPlayer.OnTimedTextListener() {
+            ((IjkMediaPlayer) mediaPlayer).loadDefaultTrack(trackInfo, progressKey);
+            ((IjkMediaPlayer) mediaPlayer).setOnTimedTextListener(new IMediaPlayer.OnTimedTextListener() {
                 @Override
                 public void onTimedText(IMediaPlayer mp, IjkTimedText text) {
-                    if(text==null)return;
+                    if (text == null) return;
                     if (mController.mSubtitleView.isInternal) {
                         com.github.tvbox.osc.subtitle.model.Subtitle subtitle = new com.github.tvbox.osc.subtitle.model.Subtitle();
                         subtitle.content = text.getText();
@@ -619,36 +649,36 @@ public class PlayFragment extends BaseLazyFragment {
                 }
             });
         }
-        if(mediaPlayer instanceof ExoPlayer){
+        if (mediaPlayer instanceof ExoPlayer) {
             //加载上一次选中的
             ((ExoPlayer) mediaPlayer).loadDefaultTrack(progressKey);
         }
         mController.mSubtitleView.bindToMediaPlayer(mVideoView.getMediaPlayer());
         mController.mSubtitleView.setPlaySubtitleCacheKey(subtitleCacheKey);
-        String subtitlePathCache = (String)CacheManager.getCache(MD5.string2MD5(subtitleCacheKey));
+        String subtitlePathCache = (String) CacheManager.getCache(MD5.string2MD5(subtitleCacheKey));
         if (subtitlePathCache != null && !subtitlePathCache.isEmpty()) {
             mController.mSubtitleView.setSubtitlePath(subtitlePathCache);
         } else {
-            if (playSubtitle != null && playSubtitle .length() > 0) {
+            if (playSubtitle != null && playSubtitle.length() > 0) {
                 mController.mSubtitleView.setSubtitlePath(playSubtitle);
             } else {
                 if (mController.mSubtitleView.hasInternal) {
                     mController.mSubtitleView.isInternal = true;
-                    if (trackInfo != null && trackInfo.getSubtitle().size()>0) {
+                    if (trackInfo != null && trackInfo.getSubtitle().size() > 0) {
                         List<TrackInfoBean> subtitleTrackList = trackInfo.getSubtitle();
                         int selectedIndex = trackInfo.getSubtitleSelected(true);
-                        boolean hasCh =false;
-                        for(TrackInfoBean subtitleTrackInfoBean : subtitleTrackList) {
+                        boolean hasCh = false;
+                        for (TrackInfoBean subtitleTrackInfoBean : subtitleTrackList) {
                             String lowerLang = subtitleTrackInfoBean.language.toLowerCase();
                             if (lowerLang.contains("zh") || lowerLang.contains("ch")) {
-                                hasCh=true;
+                                hasCh = true;
                                 if (selectedIndex != subtitleTrackInfoBean.index) {
-                                    ((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(subtitleTrackInfoBean.index);
+                                    ((IjkMediaPlayer) (mVideoView.getMediaPlayer())).setTrack(subtitleTrackInfoBean.index);
                                     break;
                                 }
                             }
                         }
-                        if(!hasCh)((IjkMediaPlayer)(mVideoView.getMediaPlayer())).setTrack(subtitleTrackList.get(0).index);
+                        if (!hasCh) ((IjkMediaPlayer) (mVideoView.getMediaPlayer())).setTrack(subtitleTrackList.get(0).index);
                     }
                 }
             }
@@ -667,9 +697,9 @@ public class PlayFragment extends BaseLazyFragment {
                         boolean parse = info.optString("parse", "1").equals("1");
                         boolean jx = info.optString("jx", "0").equals("1");
                         playSubtitle = info.optString("subt", /*"https://dash.akamaized.net/akamai/test/caption_test/ElephantsDream/ElephantsDream_en.vtt"*/"");
-                        if(playSubtitle.isEmpty() && info.has("subs")) {
+                        if (playSubtitle.isEmpty() && info.has("subs")) {
                             try {
-                                JSONObject obj =info.getJSONArray("subs").optJSONObject(0);
+                                JSONObject obj = info.getJSONArray("subs").optJSONObject(0);
                                 String url = obj.optString("url", "");
                                 if (!TextUtils.isEmpty(url) && !FileUtils.hasExtension(url)) {
                                     String format = obj.optString("format", "");
@@ -699,13 +729,13 @@ public class PlayFragment extends BaseLazyFragment {
                         subtitleCacheKey = info.optString("subtKey", null);
                         String playUrl = info.optString("playUrl", "");
                         String msg = info.optString("msg", "");
-                        if(!msg.isEmpty()){
+                        if (!msg.isEmpty()) {
                             Toast.makeText(mContext, msg, Toast.LENGTH_SHORT).show();
                         }
                         String flag = info.optString("flag");
                         String url = info.getString("url");
-                        if(url.startsWith("[")){
-                            url=mController.firstUrlByArray(url);
+                        if (url.startsWith("[")) {
+                            url = mController.firstUrlByArray(url);
                         }
                         HashMap<String, String> headers = null;
                         webUserAgent = null;
@@ -770,7 +800,7 @@ public class PlayFragment extends BaseLazyFragment {
         }
         try {
             if (!mVodPlayerCfg.has("pl")) {
-                mVodPlayerCfg.put("pl", (sourceBean.getPlayerType() == -1) ? (int)Hawk.get(HawkConfig.PLAY_TYPE, 1) : sourceBean.getPlayerType());
+                mVodPlayerCfg.put("pl", (sourceBean.getPlayerType() == -1) ? (int) Hawk.get(HawkConfig.PLAY_TYPE, 1) : sourceBean.getPlayerType());
             }
             if (!mVodPlayerCfg.has("pr")) {
                 mVodPlayerCfg.put("pr", Hawk.get(HawkConfig.PLAY_RENDER, 0));
@@ -818,8 +848,8 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (event !=null) {
-            if (mController.onKeyDown(keyCode,event)) {
+        if (event != null) {
+            if (mController.onKeyDown(keyCode, event)) {
                 return true;
             }
         }
@@ -827,8 +857,8 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        if (event !=null) {
-            if (mController.onKeyUp(keyCode,event)) {
+        if (event != null) {
+            if (mController.onKeyUp(keyCode, event)) {
                 return true;
             }
         }
@@ -878,11 +908,6 @@ public class PlayFragment extends BaseLazyFragment {
         mController.stopOther();
     }
 
-    private VodInfo mVodInfo;
-    private JSONObject mVodPlayerCfg;
-    private String sourceKey;
-    private SourceBean sourceBean;
-
     private void playNext(boolean isProgress) {
         boolean hasNext;
         if (mVodInfo == null || mVodInfo.seriesMap.get(mVodInfo.playFlag) == null) {
@@ -893,7 +918,7 @@ public class PlayFragment extends BaseLazyFragment {
         if (!hasNext) {
             Toast.makeText(requireContext(), "已经是最后一集了!", Toast.LENGTH_SHORT).show();
             return;
-        }else {
+        } else {
             mVodInfo.playIndex++;
         }
         play(false);
@@ -914,13 +939,9 @@ public class PlayFragment extends BaseLazyFragment {
         play(false);
     }
 
-    private int autoRetryCount = 0;
-    private long lastRetryTime = 0;  // 记录上次调用时间（毫秒）
-
-    private boolean allowSwitchPlayer = true;
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastRetryTime > 60_000){
+        if (currentTime - lastRetryTime > 60_000) {
             LOG.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
             allowSwitchPlayer = false;
@@ -932,25 +953,25 @@ public class PlayFragment extends BaseLazyFragment {
             return true;
         }
         if (autoRetryCount < 2) {
-            if(autoRetryCount==1){
+            if (autoRetryCount == 1) {
                 //第二次重试时重新调用接口
                 play(false);
                 autoRetryCount++;
-            }else {
+            } else {
                 //第一次重试直接带着原地址继续播放
-                if(webPlayUrl!=null){
-                    if(allowSwitchPlayer){
+                if (webPlayUrl != null) {
+                    if (allowSwitchPlayer) {
                         //切换播放器不占用重试次数
-                        if(mController.switchPlayer())autoRetryCount++;
-                    }else {
+                        if (mController.switchPlayer()) autoRetryCount++;
+                    } else {
                         autoRetryCount++;
-                        allowSwitchPlayer=true;
+                        allowSwitchPlayer = true;
                     }
                     stopParse();
                     initParseLoadFound();
-                    if(mVideoView!=null) mVideoView.release();
+                    if (mVideoView != null) mVideoView.release();
                     playUrl(webPlayUrl, webHeaderMap);
-                }else {
+                } else {
                     play(false);
                     autoRetryCount++;
                 }
@@ -964,7 +985,7 @@ public class PlayFragment extends BaseLazyFragment {
 
     void autoRetryFromLoadFoundVideoUrls() {
         String videoUrl = loadFoundVideoUrls.poll();
-        HashMap<String,String> header = loadFoundVideoUrlsHeader.get(videoUrl);
+        HashMap<String, String> header = loadFoundVideoUrlsHeader.get(videoUrl);
         playUrl(videoUrl, header);
     }
 
@@ -974,21 +995,20 @@ public class PlayFragment extends BaseLazyFragment {
         loadFoundVideoUrlsHeader = new HashMap<String, HashMap<String, String>>();
     }
 
-    public void setPlayTitle(boolean show)
-    {
-        if(show){
-            String playTitleInfo= "";
-            if(mVodInfo!=null){
+    public void setPlayTitle(boolean show) {
+        if (show) {
+            String playTitleInfo = "";
+            if (mVodInfo != null) {
                 playTitleInfo = mVodInfo.name + " " + mVodInfo.seriesMap.get(mVodInfo.playFlag).get(mVodInfo.playIndex).name;
             }
             mController.setTitle(playTitleInfo);
-        }else {
+        } else {
             mController.setTitle("");
         }
     }
 
     public void play(boolean reset) {
-        if(mVodInfo==null)return;
+        if (mVodInfo == null) return;
         VodInfo.VodSeries vs = mVodInfo.seriesMap.get(mVodInfo.playFlag).get(mVodInfo.playIndex);
         EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, mVodInfo.playIndex));
         setTip("正在获取播放信息", true, false);
@@ -997,34 +1017,34 @@ public class PlayFragment extends BaseLazyFragment {
 
         stopParse();
         initParseLoadFound();
-        allowSwitchPlayer=true;
+        allowSwitchPlayer = true;
         mController.stopOther();
-        if(mVideoView!=null) mVideoView.release();
-        subtitleCacheKey = mVodInfo.sourceKey + "-" + mVodInfo.id + "-" + mVodInfo.playFlag + "-" + mVodInfo.playIndex+ "-" + vs.name + "-subt";
+        if (mVideoView != null) mVideoView.release();
+        subtitleCacheKey = mVodInfo.sourceKey + "-" + mVodInfo.id + "-" + mVodInfo.playFlag + "-" + mVodInfo.playIndex + "-" + vs.name + "-subt";
         progressKey = mVodInfo.sourceKey + mVodInfo.id + mVodInfo.playFlag + mVodInfo.playIndex + vs.name;
         //重新播放清除现有进度
         if (reset) {
             CacheManager.delete(MD5.string2MD5(progressKey), 0);
             CacheManager.delete(MD5.string2MD5(subtitleCacheKey), 0);
-        }else{
-            try{
+        } else {
+            try {
                 int playerType = mVodPlayerCfg.getInt("pl");
-                if(playerType==1){
+                if (playerType == 1) {
                     mController.mSubtitleView.setVisibility(View.VISIBLE);
-                }else {
+                } else {
                     mController.mSubtitleView.setVisibility(View.GONE);
                 }
-            }catch (JSONException e) {
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
 
-        if(Jianpian.isJpUrl(vs.url)){//荐片地址特殊判断
-            String jp_url= vs.url;
+        if (Jianpian.isJpUrl(vs.url)) {//荐片地址特殊判断
+            String jp_url = vs.url;
             mController.showParse(false);
-            if(vs.url.startsWith("tvbox-xg:")){
+            if (vs.url.startsWith("tvbox-xg:")) {
                 playUrl(Jianpian.JPUrlDec(jp_url.substring(9)), null);
-            }else {
+            } else {
                 playUrl(Jianpian.JPUrlDec(jp_url), null);
             }
             return;
@@ -1053,15 +1073,6 @@ public class PlayFragment extends BaseLazyFragment {
         }
         sourceViewModel.getPlay(sourceKey, mVodInfo.playFlag, progressKey, vs.url, subtitleCacheKey);
     }
-
-    private String playSubtitle;
-    private String subtitleCacheKey;
-    private String progressKey;
-    private String parseFlag;
-    private String webUrl;
-    private String webUserAgent;
-    private HashMap<String, String > webHeaderMap;
-    private String webPlayUrl;
 
     private void initParse(String flag, boolean useParse, String playUrl, final String url) {
         parseFlag = flag;
@@ -1137,19 +1148,16 @@ public class PlayFragment extends BaseLazyFragment {
         }
     }
 
-    ExecutorService parseThreadPool;
-
     private void doParse(ParseBean pb) {
         stopParse();
         initParseLoadFound();
         if (pb.getType() == 4) {
-            parseMix(pb,true);
-        }
-        else if (pb.getType() == 0) {
+            parseMix(pb, true);
+        } else if (pb.getType() == 0) {
             setTip("正在嗅探播放地址", true, false);
             mHandler.removeMessages(100);
             mHandler.sendEmptyMessageDelayed(100, 20 * 1000);
-            if(pb.getExt()!=null){
+            if (pb.getExt() != null) {
                 // 解析ext
                 try {
                     HashMap<String, String> reqHeaders = new HashMap<>();
@@ -1161,11 +1169,11 @@ public class PlayFragment extends BaseLazyFragment {
                             String key = keys.next();
                             if (key.equalsIgnoreCase("user-agent")) {
                                 webUserAgent = headerJson.getString(key).trim();
-                            }else {
+                            } else {
                                 reqHeaders.put(key, headerJson.optString(key, ""));
                             }
                         }
-                        if(reqHeaders.size()>0)webHeaderMap = reqHeaders;
+                        if (reqHeaders.size() > 0) webHeaderMap = reqHeaders;
                     }
                 } catch (Throwable e) {
                     e.printStackTrace();
@@ -1273,7 +1281,7 @@ public class PlayFragment extends BaseLazyFragment {
                             }
                         }
                         if (rs.has("jxFrom")) {
-                            if(!isAdded())return;
+                            if (!isAdded()) return;
                             requireActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -1292,12 +1300,11 @@ public class PlayFragment extends BaseLazyFragment {
                 }
             });
         } else if (pb.getType() == 3) { // json 聚合
-             parseMix(pb,false);
+            parseMix(pb, false);
         }
     }
 
-    private void parseMix(ParseBean pb,boolean isSuper)
-    {
+    private void parseMix(ParseBean pb, boolean isSuper) {
         setTip("正在解析播放地址", true, false);
         parseThreadPool = Executors.newSingleThreadExecutor();
         LinkedHashMap<String, HashMap<String, String>> jxs = new LinkedHashMap<>();
@@ -1321,9 +1328,9 @@ public class PlayFragment extends BaseLazyFragment {
         parseThreadPool.execute(new Runnable() {
             @Override
             public void run() {
-                if(isSuper){
+                if (isSuper) {
                     //并发执行 嗅探和json
-                    JSONObject rs = SuperParse.parse(jxs, parseFlag+"123", webUrl);
+                    JSONObject rs = SuperParse.parse(jxs, parseFlag + "123", webUrl);
                     if (!rs.has("url") || rs.optString("url").isEmpty()) {
                         setTip("解析错误", false, true);
                     } else {
@@ -1333,7 +1340,7 @@ public class PlayFragment extends BaseLazyFragment {
                             }
                             setTip("超级解析中", true, false);
 
-                            if(!isAdded())return;
+                            if (!isAdded()) return;
                             requireActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -1352,10 +1359,10 @@ public class PlayFragment extends BaseLazyFragment {
                                 }
                             });
                         } else {
-                            rsJsonJX(rs,false);
+                            rsJsonJX(rs, false);
                         }
                     }
-                }else {
+                } else {
                     JSONObject rs = ApiConfig.get().jsonExtMix(parseFlag + "111", pb.getUrl(), finalExtendName, jxs, webUrl);
                     if (rs == null || !rs.has("url") || rs.optString("url").isEmpty()) {
 //                        errorWithRetry("解析错误", false);
@@ -1365,7 +1372,7 @@ public class PlayFragment extends BaseLazyFragment {
                             if (rs.has("ua")) {
                                 webUserAgent = rs.optString("ua").trim();
                             }
-                            if(!isAdded())return;
+                            if (!isAdded()) return;
                             requireActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -1378,7 +1385,7 @@ public class PlayFragment extends BaseLazyFragment {
                                 }
                             });
                         } else {
-                            rsJsonJX(rs,false);
+                            rsJsonJX(rs, false);
                         }
                     }
                 }
@@ -1386,9 +1393,9 @@ public class PlayFragment extends BaseLazyFragment {
         });
     }
 
-    private void rsJsonJX(JSONObject rs,boolean isSuper){
-        if(isSuper){
-            if(rs==null || !rs.has("url"))return;
+    private void rsJsonJX(JSONObject rs, boolean isSuper) {
+        if (isSuper) {
+            if (rs == null || !rs.has("url")) return;
             stopLoadWebView(false);
         }
         HashMap<String, String> headers = null;
@@ -1408,7 +1415,7 @@ public class PlayFragment extends BaseLazyFragment {
             }
         }
         if (rs.has("jxFrom")) {
-            if(!isAdded())return;
+            if (!isAdded()) return;
             requireActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -1418,17 +1425,10 @@ public class PlayFragment extends BaseLazyFragment {
         }
         playUrl(rs.optString("url", ""), headers);
     }
+
     public MyVideoView getPlayer() {
         return mVideoView;
     }
-
-    // webview
-    private XWalkView mXwalkWebView;
-    private WebView mSysWebView;
-    private final Map<String, Boolean> loadedUrls = new HashMap<>();
-    private LinkedList<String> loadFoundVideoUrls = new LinkedList<>();
-    private HashMap<String, HashMap<String, String>> loadFoundVideoUrlsHeader = new HashMap<>();
-    private final AtomicInteger loadFoundCount = new AtomicInteger(0);
 
     void loadWebView(String url) {
         if (mSysWebView == null && mXwalkWebView == null) {
@@ -1475,31 +1475,31 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     void loadUrl(String url) {
-        if(!isAdded())return;
+        if (!isAdded()) return;
         requireActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (mXwalkWebView != null) {
                     mXwalkWebView.stopLoading();
-                    if(webUserAgent != null) {
+                    if (webUserAgent != null) {
                         mXwalkWebView.getSettings().setUserAgentString(webUserAgent);
                     }
                     //mXwalkWebView.clearCache(true);
-                    if(webHeaderMap != null){
-                        mXwalkWebView.loadUrl(url,webHeaderMap);
-                    }else {
+                    if (webHeaderMap != null) {
+                        mXwalkWebView.loadUrl(url, webHeaderMap);
+                    } else {
                         mXwalkWebView.loadUrl(url);
                     }
                 }
                 if (mSysWebView != null) {
                     mSysWebView.stopLoading();
-                    if(webUserAgent != null) {
+                    if (webUserAgent != null) {
                         mSysWebView.getSettings().setUserAgentString(webUserAgent);
                     }
                     //mSysWebView.clearCache(true);
-                    if(webHeaderMap != null){
-                        mSysWebView.loadUrl(url,webHeaderMap);
-                    }else {
+                    if (webHeaderMap != null) {
+                        mSysWebView.loadUrl(url, webHeaderMap);
+                    } else {
                         mSysWebView.loadUrl(url);
                     }
                 }
@@ -1509,7 +1509,7 @@ public class PlayFragment extends BaseLazyFragment {
 
     void stopLoadWebView(boolean destroy) {
         if (mActivity == null) return;
-        if(!isAdded())return;
+        if (!isAdded()) return;
         requireActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1539,20 +1539,161 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     boolean checkVideoFormat(String url) {
-        try{
+        try {
             if (url.contains("url=http") || url.contains(".html")) {
                 return false;
             }
             if (sourceBean.getType() == 3) {
                 Spider sp = ApiConfig.get().getCSP(sourceBean);
-                if (sp != null && sp.manualVideoCheck()){
+                if (sp != null && sp.manualVideoCheck()) {
                     return sp.isVideoFormat(url);
                 }
             }
             return VideoParseRuler.checkIsVideoForParse(webUrl, url);
-        }catch (Exception e){
+        } catch (Exception e) {
             return false;
         }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void configWebViewSys(WebView webView) {
+        if (webView == null) {
+            return;
+        }
+        ViewGroup.LayoutParams layoutParams = Hawk.get(HawkConfig.DEBUG_OPEN, false)
+                ? new ViewGroup.LayoutParams(800, 400) :
+                new ViewGroup.LayoutParams(1, 1);
+        webView.setFocusable(false);
+        webView.setFocusableInTouchMode(false);
+        webView.clearFocus();
+        webView.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
+        if (!isAdded()) return;
+        requireActivity().addContentView(webView, layoutParams);
+        /* 添加webView配置 */
+        final WebSettings settings = webView.getSettings();
+        settings.setNeedInitialFocus(false);
+        settings.setAllowContentAccess(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setDatabaseEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setJavaScriptEnabled(true);
+
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+            settings.setBlockNetworkImage(false);
+        } else {
+            settings.setBlockNetworkImage(true);
+        }
+        settings.setUseWideViewPort(true);
+        settings.setDomStorageEnabled(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
+        settings.setLoadWithOverviewMode(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setSupportZoom(false);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        //        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        /* 添加webView配置 */
+        //设置编码
+        settings.setDefaultTextEncodingName("utf-8");
+        settings.setUserAgentString(webView.getSettings().getUserAgentString());
+//         settings.setUserAgentString(ANDROID_UA);
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                return false;
+            }
+
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                return true;
+            }
+
+            @Override
+            public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, JsPromptResult result) {
+                return true;
+            }
+        });
+        SysWebClient mSysWebClient = new SysWebClient();
+        webView.setWebViewClient(mSysWebClient);
+        webView.setBackgroundColor(Color.BLACK);
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void configWebViewX5(XWalkView webView) {
+        if (webView == null) {
+            return;
+        }
+        ViewGroup.LayoutParams layoutParams = Hawk.get(HawkConfig.DEBUG_OPEN, false)
+                ? new ViewGroup.LayoutParams(800, 400) :
+                new ViewGroup.LayoutParams(1, 1);
+        webView.setFocusable(false);
+        webView.setFocusableInTouchMode(false);
+        webView.clearFocus();
+        webView.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
+        if (!isAdded()) return;
+        requireActivity().addContentView(webView, layoutParams);
+        /* 添加webView配置 */
+        final XWalkSettings settings = webView.getSettings();
+        settings.setAllowContentAccess(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setDatabaseEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setJavaScriptEnabled(true);
+
+        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+            settings.setBlockNetworkImage(false);
+        } else {
+            settings.setBlockNetworkImage(true);
+        }
+
+        settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setUseWideViewPort(true);
+        settings.setDomStorageEnabled(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(false);
+        settings.setLoadWithOverviewMode(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setSupportZoom(false);
+//        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // settings.setUserAgentString(ANDROID_UA);
+
+        webView.setBackgroundColor(Color.BLACK);
+        webView.setUIClient(new XWalkUIClient(webView) {
+            @Override
+            public boolean onConsoleMessage(XWalkView view, String message, int lineNumber, String sourceId, ConsoleMessageType messageType) {
+                return false;
+            }
+
+            @Override
+            public boolean onJsAlert(XWalkView view, String url, String message, XWalkJavascriptResult result) {
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(XWalkView view, String url, String message, XWalkJavascriptResult result) {
+                return true;
+            }
+
+            @Override
+            public boolean onJsPrompt(XWalkView view, String url, String message, String defaultValue, XWalkJavascriptResult result) {
+                return true;
+            }
+        });
+        XWalkWebClient mX5WebClient = new XWalkWebClient(webView);
+        webView.setResourceClient(mX5WebClient);
     }
 
     class MyWebView extends WebView {
@@ -1591,83 +1732,6 @@ public class PlayFragment extends BaseLazyFragment {
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private void configWebViewSys(WebView webView) {
-        if (webView == null) {
-            return;
-        }
-        ViewGroup.LayoutParams layoutParams = Hawk.get(HawkConfig.DEBUG_OPEN, false)
-                ? new ViewGroup.LayoutParams(800, 400) :
-                new ViewGroup.LayoutParams(1, 1);
-        webView.setFocusable(false);
-        webView.setFocusableInTouchMode(false);
-        webView.clearFocus();
-        webView.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
-        if(!isAdded())return;
-        requireActivity().addContentView(webView, layoutParams);
-        /* 添加webView配置 */
-        final WebSettings settings = webView.getSettings();
-        settings.setNeedInitialFocus(false);
-        settings.setAllowContentAccess(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowUniversalAccessFromFileURLs(true);
-        settings.setAllowFileAccessFromFileURLs(true);
-        settings.setDatabaseEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setJavaScriptEnabled(true);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            settings.setMediaPlaybackRequiresUserGesture(false);
-        }
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            settings.setBlockNetworkImage(false);
-        } else {
-            settings.setBlockNetworkImage(true);
-        }
-        settings.setUseWideViewPort(true);
-        settings.setDomStorageEnabled(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setSupportMultipleWindows(false);
-        settings.setLoadWithOverviewMode(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setSupportZoom(false);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        }
-//        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        /* 添加webView配置 */
-        //设置编码
-        settings.setDefaultTextEncodingName("utf-8");
-        settings.setUserAgentString(webView.getSettings().getUserAgentString());
-//         settings.setUserAgentString(ANDROID_UA);
-
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                return false;
-            }
-
-            @Override
-            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-                return true;
-            }
-
-            @Override
-            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
-                return true;
-            }
-
-            @Override
-            public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, JsPromptResult result) {
-                return true;
-            }
-        });
-        SysWebClient mSysWebClient = new SysWebClient();
-        webView.setWebViewClient(mSysWebClient);
-        webView.setBackgroundColor(Color.BLACK);
-    }
-
     private class SysWebClient extends WebViewClient {
 
         @SuppressLint("WebViewClientOnReceivedSslError")
@@ -1688,15 +1752,15 @@ public class PlayFragment extends BaseLazyFragment {
 
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
-            super.onPageStarted( view,  url, favicon);
+            super.onPageStarted(view, url, favicon);
         }
 
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
             LOG.i("echo-onPageFinished url:" + url);
-            if(!url.equals("about:blank")){
-                mController.evaluateScript(sourceBean,url,view,null);
+            if (!url.equals("about:blank")) {
+                mController.evaluateScript(sourceBean, url, view, null);
             }
         }
 
@@ -1710,7 +1774,7 @@ public class PlayFragment extends BaseLazyFragment {
 
             boolean isFilter = VideoParseRuler.isFilter(webUrl, url);
             if (isFilter) {
-                LOG.i( "shouldInterceptLoadRequest filter:" + url);
+                LOG.i("shouldInterceptLoadRequest filter:" + url);
                 return null;
             }
 
@@ -1726,14 +1790,14 @@ public class PlayFragment extends BaseLazyFragment {
                 if (checkVideoFormat(url)) {
                     loadFoundVideoUrls.add(url);
                     loadFoundVideoUrlsHeader.put(url, headers);
-                    LOG.i("echo-loadFoundVideoUrl:" + url );
+                    LOG.i("echo-loadFoundVideoUrl:" + url);
                     if (loadFoundCount.incrementAndGet() == 1) {
                         stopLoadWebView(false);
                         SuperParse.stopJsonJx();
                         url = loadFoundVideoUrls.poll();
                         mHandler.removeMessages(100);
                         String cookie = CookieManager.getInstance().getCookie(url);
-                        if(!TextUtils.isEmpty(cookie))headers.put("Cookie", " " + cookie);//携带cookie
+                        if (!TextUtils.isEmpty(cookie)) headers.put("Cookie", " " + cookie);//携带cookie
                         playUrl(url, headers);
                     }
                 }
@@ -1753,7 +1817,6 @@ public class PlayFragment extends BaseLazyFragment {
 
         @Nullable
         @Override
-        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             String url = request.getUrl().toString();
             LOG.i("echo-shouldInterceptRequest url:" + url);
@@ -1764,7 +1827,7 @@ public class PlayFragment extends BaseLazyFragment {
                     if (k.equalsIgnoreCase("user-agent")
                             || k.equalsIgnoreCase("referer")
                             || k.equalsIgnoreCase("origin")) {
-                        webHeaders.put(k," " + hds.get(k));
+                        webHeaders.put(k, " " + hds.get(k));
                     }
                 }
             }
@@ -1775,76 +1838,6 @@ public class PlayFragment extends BaseLazyFragment {
         public void onLoadResource(WebView webView, String url) {
             super.onLoadResource(webView, url);
         }
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void configWebViewX5(XWalkView webView) {
-        if (webView == null) {
-            return;
-        }
-        ViewGroup.LayoutParams layoutParams = Hawk.get(HawkConfig.DEBUG_OPEN, false)
-                ? new ViewGroup.LayoutParams(800, 400) :
-                new ViewGroup.LayoutParams(1, 1);
-        webView.setFocusable(false);
-        webView.setFocusableInTouchMode(false);
-        webView.clearFocus();
-        webView.setOverScrollMode(View.OVER_SCROLL_ALWAYS);
-        if(!isAdded())return;
-        requireActivity().addContentView(webView, layoutParams);
-        /* 添加webView配置 */
-        final XWalkSettings settings = webView.getSettings();
-        settings.setAllowContentAccess(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowUniversalAccessFromFileURLs(true);
-        settings.setAllowFileAccessFromFileURLs(true);
-        settings.setDatabaseEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setJavaScriptEnabled(true);
-
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            settings.setBlockNetworkImage(false);
-        } else {
-            settings.setBlockNetworkImage(true);
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            settings.setMediaPlaybackRequiresUserGesture(false);
-        }
-        settings.setUseWideViewPort(true);
-        settings.setDomStorageEnabled(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setSupportMultipleWindows(false);
-        settings.setLoadWithOverviewMode(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setSupportZoom(false);
-//        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        // settings.setUserAgentString(ANDROID_UA);
-
-        webView.setBackgroundColor(Color.BLACK);
-        webView.setUIClient(new XWalkUIClient(webView) {
-            @Override
-            public boolean onConsoleMessage(XWalkView view, String message, int lineNumber, String sourceId, ConsoleMessageType messageType) {
-                return false;
-            }
-
-            @Override
-            public boolean onJsAlert(XWalkView view, String url, String message, XWalkJavascriptResult result) {
-                return true;
-            }
-
-            @Override
-            public boolean onJsConfirm(XWalkView view, String url, String message, XWalkJavascriptResult result) {
-                return true;
-            }
-
-            @Override
-            public boolean onJsPrompt(XWalkView view, String url, String message, String defaultValue, XWalkJavascriptResult result) {
-                return true;
-            }
-        });
-        XWalkWebClient mX5WebClient = new XWalkWebClient(webView);
-        webView.setResourceClient(mX5WebClient);
     }
 
     private class XWalkWebClient extends XWalkResourceClient {
@@ -1866,8 +1859,8 @@ public class PlayFragment extends BaseLazyFragment {
         public void onLoadFinished(XWalkView view, String url) {
             super.onLoadFinished(view, url);
             LOG.i("echo-onLoadFinished url:" + url);
-            if(!url.equals("about:blank")){
-                mController.evaluateScript(sourceBean,url,null,view);
+            if (!url.equals("about:blank")) {
+                mController.evaluateScript(sourceBean, url, null, view);
             }
         }
 
@@ -1890,7 +1883,7 @@ public class PlayFragment extends BaseLazyFragment {
 
             boolean isFilter = VideoParseRuler.isFilter(webUrl, url);
             if (isFilter) {
-                LOG.i( "shouldInterceptLoadRequest filter:" + url);
+                LOG.i("shouldInterceptLoadRequest filter:" + url);
                 return null;
             }
 
@@ -1901,7 +1894,7 @@ public class PlayFragment extends BaseLazyFragment {
             } else {
                 ad = Boolean.TRUE.equals(loadedUrls.get(url));
             }
-            if (!ad ) {
+            if (!ad) {
                 if (checkVideoFormat(url)) {
                     HashMap<String, String> webHeaders = new HashMap<>();
                     Map<String, String> hds = request.getRequestHeaders();
@@ -1910,20 +1903,20 @@ public class PlayFragment extends BaseLazyFragment {
                             if (k.equalsIgnoreCase("user-agent")
                                     || k.equalsIgnoreCase("referer")
                                     || k.equalsIgnoreCase("origin")) {
-                                webHeaders.put(k," " + hds.get(k));
+                                webHeaders.put(k, " " + hds.get(k));
                             }
                         }
                     }
                     loadFoundVideoUrls.add(url);
                     loadFoundVideoUrlsHeader.put(url, webHeaders);
-                    LOG.i("echo-loadFoundVideoUrl:" + url );
+                    LOG.i("echo-loadFoundVideoUrl:" + url);
                     if (loadFoundCount.incrementAndGet() == 1) {
                         stopLoadWebView(false);
                         SuperParse.stopJsonJx();
                         mHandler.removeMessages(100);
                         url = loadFoundVideoUrls.poll();
                         String cookie = CookieManager.getInstance().getCookie(url);
-                        if(!TextUtils.isEmpty(cookie))webHeaders.put("Cookie", " " + cookie);//携带cookie
+                        if (!TextUtils.isEmpty(cookie)) webHeaders.put("Cookie", " " + cookie);//携带cookie
                         playUrl(url, webHeaders);
                     }
                 }

@@ -18,8 +18,8 @@ public class ScreenUtils {
         wm.getDefaultDisplay().getMetrics(dm);
         double x = Math.pow(dm.widthPixels / dm.xdpi, 2);
         double y = Math.pow(dm.heightPixels / dm.ydpi, 2);
-        double screenInches = Math.sqrt(x + y);// 屏幕尺寸
-        return screenInches;
+        // 屏幕尺寸
+        return Math.sqrt(x + y);
     }
 
     private static boolean checkScreenLayoutIsTv(Context context) {

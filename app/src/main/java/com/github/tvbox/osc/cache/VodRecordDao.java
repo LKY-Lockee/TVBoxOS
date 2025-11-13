@@ -35,6 +35,7 @@ public interface VodRecordDao {
 
     /**
      * 保留最新指定条数, 其他删除.
+     *
      * @param size 保留条数
      * @return
      */

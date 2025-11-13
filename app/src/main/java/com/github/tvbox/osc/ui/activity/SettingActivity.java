@@ -10,7 +10,6 @@ import android.widget.TextView;
 
 import androidx.viewpager.widget.ViewPager;
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.BaseActivity;
@@ -33,20 +32,33 @@ import java.util.List;
  * @description:
  */
 public class SettingActivity extends BaseActivity {
-    private TvRecyclerView mGridView;
+    public static DevModeCallback callback = null;
+    String devMode = "";
     private ViewPager mViewPager;
     private SettingMenuAdapter sortAdapter;
-    private SettingPageAdapter pageAdapter;
-    private List<BaseLazyFragment> fragments = new ArrayList<>();
+    private final List<BaseLazyFragment> fragments = new ArrayList<>();
     private boolean sortChange = false;
     private int defaultSelected = 0;
     private int sortFocused = 0;
-    private Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler();
     private String homeSourceKey;
     private String currentApi;
     private int homeRec;
     private int dnsOpt;
     private String currentLiveApi;
+    private final Runnable mDataRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (sortChange) {
+                sortChange = false;
+                if (sortFocused != defaultSelected) {
+                    defaultSelected = sortFocused;
+                    mViewPager.setCurrentItem(sortFocused, false);
+                }
+            }
+        }
+    };
+    private final Runnable mDevModeRun = () -> devMode = "";
 
     @Override
     protected int getLayoutResID() {
@@ -60,22 +72,19 @@ public class SettingActivity extends BaseActivity {
     }
 
     private void initView() {
-        mGridView = findViewById(R.id.mGridView);
+        TvRecyclerView mGridView = findViewById(R.id.mGridView);
         mViewPager = findViewById(R.id.mViewPager);
         sortAdapter = new SettingMenuAdapter();
         mGridView.setAdapter(sortAdapter);
         mGridView.setLayoutManager(new V7LinearLayoutManager(this.mContext, 1, false));
-        sortAdapter.setOnItemChildClickListener(new BaseQuickAdapter.OnItemChildClickListener() {
-            @Override
-            public void onItemChildClick(BaseQuickAdapter adapter, View view, int position) {
-                if (view.getId() == R.id.tvName) {
-                    if (view.getParent() != null) {
-                        ((ViewGroup) view.getParent()).requestFocus();
-                        sortFocused = position;
-                        if (sortFocused != defaultSelected) {
-                            defaultSelected = sortFocused;
-                            mViewPager.setCurrentItem(sortFocused, false);
-                        }
+        sortAdapter.setOnItemChildClickListener((adapter, view, position) -> {
+            if (view.getId() == R.id.tvName) {
+                if (view.getParent() != null) {
+                    ((ViewGroup) view.getParent()).requestFocus();
+                    sortFocused = position;
+                    if (sortFocused != defaultSelected) {
+                        defaultSelected = sortFocused;
+                        mViewPager.setCurrentItem(sortFocused, false);
                     }
                 }
             }
@@ -120,56 +129,25 @@ public class SettingActivity extends BaseActivity {
 
     private void initViewPager() {
         fragments.add(ModelSettingFragment.newInstance());
-        pageAdapter = new SettingPageAdapter(getSupportFragmentManager(), fragments);
+        SettingPageAdapter pageAdapter = new SettingPageAdapter(getSupportFragmentManager(), fragments);
         mViewPager.setAdapter(pageAdapter);
         mViewPager.setCurrentItem(0);
     }
-
-    private Runnable mDataRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (sortChange) {
-                sortChange = false;
-                if (sortFocused != defaultSelected) {
-                    defaultSelected = sortFocused;
-                    mViewPager.setCurrentItem(sortFocused, false);
-                }
-            }
-        }
-    };
-
-    private Runnable mDevModeRun = new Runnable() {
-        @Override
-        public void run() {
-            devMode = "";
-        }
-    };
-
-
-    public interface DevModeCallback {
-        void onChange();
-    }
-
-    public static DevModeCallback callback = null;
-
-    String devMode = "";
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
             mHandler.removeCallbacks(mDataRunnable);
             int keyCode = event.getKeyCode();
-            switch (keyCode) {
-                case KeyEvent.KEYCODE_0:
-                    mHandler.removeCallbacks(mDevModeRun);
-                    devMode += "0";
-                    mHandler.postDelayed(mDevModeRun, 200);
-                    if (devMode.length() >= 4) {
-                        if (callback != null) {
-                            callback.onChange();
-                        }
+            if (keyCode == KeyEvent.KEYCODE_0) {
+                mHandler.removeCallbacks(mDevModeRun);
+                devMode += "0";
+                mHandler.postDelayed(mDevModeRun, 200);
+                if (devMode.length() >= 4) {
+                    if (callback != null) {
+                        callback.onChange();
                     }
-                    break;
+                }
             }
         } else if (event.getAction() == KeyEvent.ACTION_UP) {
             mHandler.postDelayed(mDataRunnable, 200);
@@ -180,13 +158,12 @@ public class SettingActivity extends BaseActivity {
     @Override
     public void onBackPressed() {
         if (currentApi.equals(Hawk.get(HawkConfig.API_URL, ""))) {
-            if(dnsOpt != Hawk.get(HawkConfig.DOH_URL, 0)){
+            if (dnsOpt != Hawk.get(HawkConfig.DOH_URL, 0)) {
                 AppManager.getInstance().finishAllActivity();
                 jumpActivity(HomeActivity.class);
-            }
-            else if ((homeSourceKey != null && !homeSourceKey.equals(Hawk.get(HawkConfig.HOME_API, "")))  || homeRec != Hawk.get(HawkConfig.HOME_REC, 0)) {
+            } else if ((homeSourceKey != null && !homeSourceKey.equals(Hawk.get(HawkConfig.HOME_API, ""))) || homeRec != Hawk.get(HawkConfig.HOME_REC, 0)) {
                 jumpActivity(HomeActivity.class, createBundle());
-            }else if(!currentLiveApi.equals(Hawk.get(HawkConfig.LIVE_API_URL, ""))){
+            } else if (!currentLiveApi.equals(Hawk.get(HawkConfig.LIVE_API_URL, ""))) {
                 jumpActivity(HomeActivity.class);
             }
         } else {
@@ -200,5 +177,9 @@ public class SettingActivity extends BaseActivity {
         Bundle bundle = new Bundle();
         bundle.putBoolean("useCache", true);
         return bundle;
+    }
+
+    public interface DevModeCallback {
+        void onChange();
     }
 }

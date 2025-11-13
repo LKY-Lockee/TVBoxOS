@@ -67,11 +67,11 @@ public class VodInfo implements Serializable {
         actor = video.actor;
         director = video.director;
         des = video.des;
-        if (video.urlBean != null && video.urlBean.infoList != null && video.urlBean.infoList.size() > 0) {
+        if (video.urlBean != null && video.urlBean.infoList != null && !video.urlBean.infoList.isEmpty()) {
             LinkedHashMap<String, List<VodSeries>> tempSeriesMap = new LinkedHashMap<>();
             seriesFlags = new ArrayList<>();
             for (Movie.Video.UrlBean.UrlInfo urlInfo : video.urlBean.infoList) {
-                if (urlInfo.beanList != null && urlInfo.beanList.size() > 0) {
+                if (urlInfo.beanList != null && !urlInfo.beanList.isEmpty()) {
                     List<VodSeries> seriesList = new ArrayList<>();
                     for (Movie.Video.UrlBean.UrlInfo.InfoBean infoBean : urlInfo.beanList) {
                         seriesList.add(new VodSeries(infoBean.name, infoBean.url));
@@ -85,8 +85,8 @@ public class VodInfo implements Serializable {
             for (VodSeriesFlag flag : seriesFlags) {
                 List<VodSeries> list = tempSeriesMap.get(flag.name);
                 assert list != null;
-                if(seriesFlags.size()<=5){
-                    if(isReverse(list))Collections.reverse(list);
+                if (seriesFlags.size() <= 5) {
+                    if (isReverse(list)) Collections.reverse(list);
                 }
                 seriesMap.put(flag.name, list);
             }
@@ -100,6 +100,7 @@ public class VodInfo implements Serializable {
         }
         return 0;
     }
+
     private boolean isReverse(List<VodInfo.VodSeries> list) {
         int ascCount = 0, descCount = 0;
         // 比较最多前 6 个相邻元素对

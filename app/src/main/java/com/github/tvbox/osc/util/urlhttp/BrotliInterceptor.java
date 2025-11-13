@@ -21,6 +21,14 @@ import okio.Source;
 
 public class BrotliInterceptor implements Interceptor {
 
+    public static boolean isEmpty(CharSequence str) {
+        return str == null || str.length() == 0;
+    }
+
+    public static boolean isNotEmpty(@Nullable CharSequence str) {
+        return !isEmpty(str);
+    }
+
     @NonNull
     @Override
     public Response intercept(Chain chain) throws IOException {
@@ -29,17 +37,11 @@ public class BrotliInterceptor implements Interceptor {
             userRequest = chain.request().newBuilder()
                     .header("Accept-Encoding", "br,gzip")
                     .build();
-          return uncompress(chain.proceed(userRequest));
+            return uncompress(chain.proceed(userRequest));
         }
         return chain.proceed(userRequest);
     }
-    public static boolean isEmpty(CharSequence str) {
-        return str == null || str.length() == 0;
-    }
 
-    public static boolean isNotEmpty(@Nullable CharSequence str) {
-        return !isEmpty(str);
-    }
     @NotNull
     public final Response uncompress(@NotNull Response response) throws IOException {
         ResponseBody body = response.body();

@@ -26,6 +26,26 @@ import java.util.regex.Pattern;
  */
 public class DefaultConfig {
 
+    private static final Pattern snifferMatch = Pattern.compile(
+            "http((?!http).){12,}?\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)\\?.*|" +
+                    "http((?!http).){12,}\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)|" +
+                    "http((?!http).)*?video/tos*|" +
+                    "http((?!http).){20,}?/m3u8\\?pt=m3u8.*|" +
+                    "http((?!http).)*?default\\.ixigua\\.com/.*|" +
+                    "http((?!http).)*?dycdn-tos\\.pstatp[^\\?]*|" +
+                    "http.*?/player/m3u8play\\.php\\?url=.*|" +
+                    "http.*?/player/.*?[pP]lay\\.php\\?url=.*|" +
+                    "http.*?/playlist/m3u8/\\?vid=.*|" +
+                    "http.*?\\.php\\?type=m3u8&.*|" +
+                    "http.*?/download.aspx\\?.*|" +
+                    "http.*?/api/up_api.php\\?.*|" +
+                    "https.*?\\.66yk\\.cn.*|" +
+                    "http((?!http).)*?netease\\.com/file/.*"
+    );
+    private static final List<String> NO_AD_KEYWORDS = Arrays.asList(
+            "tx", "youku", "qq", "qiyi", "letv", "leshi", "sohu", "mgtv", "bilibili", "imgo", "优酷", "芒果", "腾讯", "奇艺"
+    );
+
     public static List<MovieSort.SortData> adjustSort(String sourceKey, List<MovieSort.SortData> list, boolean withMy) {
         List<MovieSort.SortData> data = new ArrayList<>();
         if (sourceKey != null) {
@@ -107,41 +127,22 @@ public class DefaultConfig {
         return start > -1 ? fileName.substring(0, start) : fileName;
     }
 
-    private static final Pattern snifferMatch = Pattern.compile(
-            "http((?!http).){12,}?\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)\\?.*|" +
-            "http((?!http).){12,}\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)|" +
-            "http((?!http).)*?video/tos*|" +
-            "http((?!http).){20,}?/m3u8\\?pt=m3u8.*|" +
-            "http((?!http).)*?default\\.ixigua\\.com/.*|" +
-            "http((?!http).)*?dycdn-tos\\.pstatp[^\\?]*|" +
-            "http.*?/player/m3u8play\\.php\\?url=.*|" +
-            "http.*?/player/.*?[pP]lay\\.php\\?url=.*|" +
-            "http.*?/playlist/m3u8/\\?vid=.*|" +
-            "http.*?\\.php\\?type=m3u8&.*|" +
-            "http.*?/download.aspx\\?.*|" +
-            "http.*?/api/up_api.php\\?.*|" +
-            "https.*?\\.66yk\\.cn.*|" +
-            "http((?!http).)*?netease\\.com/file/.*"
-    );
     public static boolean isVideoFormat(String url) {
         Uri uri = Uri.parse(url);
         String path = uri.getPath();
         if (TextUtils.isEmpty(path)) {
             return false;
         }
-        if (snifferMatch.matcher(url).find()) return true;
-        return false;
+        return snifferMatch.matcher(url).find();
     }
-
 
     public static String safeJsonString(JsonObject obj, String key, String defaultVal) {
         try {
-            if (obj.has(key)){
-                return obj.get(key).isJsonObject() || obj.get(key).isJsonArray()?obj.get(key).toString().trim():obj.getAsJsonPrimitive(key).getAsString().trim();
-            }
-            else
+            if (obj.has(key)) {
+                return obj.get(key).isJsonObject() || obj.get(key).isJsonArray() ? obj.get(key).toString().trim() : obj.getAsJsonPrimitive(key).getAsString().trim();
+            } else
                 return defaultVal;
-        } catch (Throwable th) {
+        } catch (Throwable ignored) {
         }
         return defaultVal;
     }
@@ -152,7 +153,7 @@ public class DefaultConfig {
                 return obj.getAsJsonPrimitive(key).getAsInt();
             else
                 return defaultVal;
-        } catch (Throwable th) {
+        } catch (Throwable ignored) {
         }
         return defaultVal;
     }
@@ -169,7 +170,7 @@ public class DefaultConfig {
                     }
                 }
             }
-        } catch (Throwable th) {
+        } catch (Throwable ignored) {
         }
         return result;
     }
@@ -179,10 +180,6 @@ public class DefaultConfig {
             return urlOri.replace("proxy://", ControlManager.get().getAddress(true) + "proxy?");
         return urlOri;
     }
-
-    private static final List<String> NO_AD_KEYWORDS = Arrays.asList(
-            "tx", "youku", "qq","qiyi", "letv", "leshi","sohu", "mgtv", "bilibili", "imgo","优酷", "芒果", "腾讯", "奇艺"
-    );
 
     public static boolean noAd(String flag) {
         if (flag == null || flag.isEmpty()) return false;

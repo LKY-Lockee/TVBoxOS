@@ -53,87 +53,44 @@ public class SubtitleLoader {
 
     private static void loadFromRemoteAsync(final String remoteSubtitlePath,
                                             final Callback callback) {
-        AppTaskExecutor.deskIO().execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final SubtitleLoadSuccessResult subtitleLoadSuccessResult = loadFromRemote(remoteSubtitlePath);
-                    if (callback != null) {
-                        AppTaskExecutor.mainThread().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                callback.onSuccess(subtitleLoadSuccessResult);
-                            }
-                        });
-                    }
-
-                } catch (final Exception e) {
-                    e.printStackTrace();
-                    if (callback != null) {
-                        AppTaskExecutor.mainThread().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                callback.onError(e);
-                            }
-                        });
-                    }
-
+        AppTaskExecutor.deskIO().execute(() -> {
+            try {
+                final SubtitleLoadSuccessResult subtitleLoadSuccessResult = loadFromRemote(remoteSubtitlePath);
+                if (callback != null) {
+                    AppTaskExecutor.mainThread().execute(() -> callback.onSuccess(subtitleLoadSuccessResult));
                 }
+
+            } catch (final Exception e) {
+                e.printStackTrace();
+                if (callback != null) {
+                    AppTaskExecutor.mainThread().execute(() -> callback.onError(e));
+                }
+
             }
         });
     }
 
     private static void loadFromLocalAsync(final String localSubtitlePath,
                                            final Callback callback) {
-        AppTaskExecutor.deskIO().execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final SubtitleLoadSuccessResult subtitleLoadSuccessResult = loadFromLocal(localSubtitlePath);
-                    if (callback != null) {
-                        AppTaskExecutor.mainThread().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                callback.onSuccess(subtitleLoadSuccessResult);
-                            }
-                        });
-                    }
-
-                } catch (final Exception e) {
-                    e.printStackTrace();
-                    if (callback != null) {
-                        AppTaskExecutor.mainThread().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                callback.onError(e);
-                            }
-                        });
-                    }
-
+        AppTaskExecutor.deskIO().execute(() -> {
+            try {
+                final SubtitleLoadSuccessResult subtitleLoadSuccessResult = loadFromLocal(localSubtitlePath);
+                if (callback != null) {
+                    AppTaskExecutor.mainThread().execute(() -> callback.onSuccess(subtitleLoadSuccessResult));
                 }
+
+            } catch (final Exception e) {
+                e.printStackTrace();
+                if (callback != null) {
+                    AppTaskExecutor.mainThread().execute(() -> callback.onError(e));
+                }
+
             }
         });
     }
 
-    public SubtitleLoadSuccessResult loadSubtitle(String path) {
-        if (TextUtils.isEmpty(path)) {
-            return null;
-        }
-        try {
-            if (path.startsWith("http://")
-                    || path.startsWith("https://")) {
-                return loadFromRemote(path);
-            } else {
-                return loadFromLocal(path);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     private static SubtitleLoadSuccessResult loadFromRemote(final String remoteSubtitlePath)
-            throws IOException, FatalParsingException, Exception {
+            throws Exception {
         Log.d(TAG, "parseRemote: remoteSubtitlePath = " + remoteSubtitlePath);
         String referer = "";
         if (remoteSubtitlePath.contains("alicloud") || remoteSubtitlePath.contains("aliyundrive")) {
@@ -164,13 +121,13 @@ public class SubtitleLoader {
                 filename = filenameInfo.replace("filename=", "");
                 filename = filename.replace("\"", "");
             } else if (filenameInfo.startsWith("filename*=")) {
-                filename = filenameInfo.substring(filenameInfo.lastIndexOf("''")+2);
+                filename = filenameInfo.substring(filenameInfo.lastIndexOf("''") + 2);
             }
             filename = filename.trim();
             filename = URLDecoder.decode(filename);
         }
         String filePath = filename;
-        if (filename == null || filename.length() < 1) {
+        if (filename == null || filename.isEmpty()) {
             Uri uri = Uri.parse(remoteSubtitlePath);
             filePath = uri.getPath();
         }
@@ -204,8 +161,7 @@ public class SubtitleLoader {
         String filePath = file.getPath();
         SubtitleLoadSuccessResult subtitleLoadSuccessResult = new SubtitleLoadSuccessResult();
         subtitleLoadSuccessResult.timedTextObject = loadAndParse(is, filePath);
-        String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-        subtitleLoadSuccessResult.fileName = fileName;
+        subtitleLoadSuccessResult.fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
         subtitleLoadSuccessResult.subtitlePath = localSubtitlePath;
         return subtitleLoadSuccessResult;
     }
@@ -230,13 +186,28 @@ public class SubtitleLoader {
             return new FormatSTL().parseFile(fileName, newInputStream);
         }
         TimedTextFileFormat[] arr = {new FormatSRT(), new FormatASS(), new FormatSTL(), new FormatSTL()};
-        for(TimedTextFileFormat oneFormat : arr) {
+        for (TimedTextFileFormat oneFormat : arr) {
             try {
-                TimedTextObject obj = oneFormat.parseFile(fileName, newInputStream);
-                return obj;
-            } catch (Exception e) {
-                continue;
+                return oneFormat.parseFile(fileName, newInputStream);
+            } catch (Exception ignored) {
             }
+        }
+        return null;
+    }
+
+    public SubtitleLoadSuccessResult loadSubtitle(String path) {
+        if (TextUtils.isEmpty(path)) {
+            return null;
+        }
+        try {
+            if (path.startsWith("http://")
+                    || path.startsWith("https://")) {
+                return loadFromRemote(path);
+            } else {
+                return loadFromLocal(path);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }

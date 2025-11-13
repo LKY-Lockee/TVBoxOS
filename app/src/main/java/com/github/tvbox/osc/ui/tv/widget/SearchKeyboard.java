@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.chad.library.adapter.base.BaseMultiItemQuickAdapter;
-import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.chad.library.adapter.base.entity.MultiItemEntity;
 import com.github.tvbox.osc.R;
@@ -30,10 +29,10 @@ import java.util.List;
  */
 public class SearchKeyboard extends FrameLayout {
     private RecyclerView mRecyclerView;
-    private List<String> keys = Arrays.asList("远程搜索", "删除", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
-    private List<Keyboard> keyboardList = new ArrayList<>();
+    private final List<String> keys = Arrays.asList("远程搜索", "删除", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0");
+    private final List<Keyboard> keyboardList = new ArrayList<>();
     private OnSearchKeyListener searchKeyListener;
-    private OnFocusChangeListener focusChangeListener = new OnFocusChangeListener() {
+    private final OnFocusChangeListener focusChangeListener = new OnFocusChangeListener() {
         @Override
         public void onFocusChange(View itemView, boolean hasFocus) {
             if (null != itemView && itemView != mRecyclerView) {
@@ -57,7 +56,7 @@ public class SearchKeyboard extends FrameLayout {
 
     private void initView() {
         View view = LayoutInflater.from(getContext()).inflate(R.layout.layout_keyborad, this);
-        mRecyclerView = (RecyclerView) view.findViewById(R.id.mRecyclerView);
+        mRecyclerView = view.findViewById(R.id.mRecyclerView);
         GridLayoutManager manager = new GridLayoutManager(getContext(), 6);
         mRecyclerView.setLayoutManager(manager);
         mRecyclerView.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
@@ -79,30 +78,32 @@ public class SearchKeyboard extends FrameLayout {
         }
         final KeyboardAdapter adapter = new KeyboardAdapter(keyboardList);
         mRecyclerView.setAdapter(adapter);
-        adapter.setSpanSizeLookup(new BaseQuickAdapter.SpanSizeLookup() {
-            @Override
-            public int getSpanSize(GridLayoutManager gridLayoutManager, int position) {
-                if (position == 0)
-                    return 3;
-                else if (position == 1)
-                    return 3;
-                return 1;
-            }
+        adapter.setSpanSizeLookup((gridLayoutManager, position) -> {
+            if (position == 0)
+                return 3;
+            else if (position == 1)
+                return 3;
+            return 1;
         });
 
-        adapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                Keyboard keyboard = (Keyboard) adapter.getItem(position);
-                if (searchKeyListener != null) {
-                    searchKeyListener.onSearchKey(position, keyboard.getKey());
-                }
+        adapter.setOnItemClickListener((adapter1, view1, position) -> {
+            Keyboard keyboard = (Keyboard) adapter1.getItem(position);
+            if (searchKeyListener != null) {
+                searchKeyListener.onSearchKey(position, keyboard.getKey());
             }
         });
     }
 
+    public void setOnSearchKeyListener(OnSearchKeyListener listener) {
+        searchKeyListener = listener;
+    }
+
+    public interface OnSearchKeyListener {
+        void onSearchKey(int pos, String key);
+    }
+
     static class Keyboard implements MultiItemEntity {
-        private int itemType;
+        private final int itemType;
         private String key;
 
         private Keyboard(int itemType, String key) {
@@ -133,19 +134,9 @@ public class SearchKeyboard extends FrameLayout {
 
         @Override
         protected void convert(BaseViewHolder helper, Keyboard item) {
-            switch (helper.getItemViewType()) {
-                case 1:
-                    helper.setText(R.id.keyName, item.key);
-                    break;
+            if (helper.getItemViewType() == 1) {
+                helper.setText(R.id.keyName, item.key);
             }
         }
-    }
-
-    public void setOnSearchKeyListener(OnSearchKeyListener listener) {
-        searchKeyListener = listener;
-    }
-
-    public interface OnSearchKeyListener {
-        void onSearchKey(int pos, String key);
     }
 }

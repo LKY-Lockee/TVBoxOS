@@ -21,17 +21,6 @@ public class ReexPlayer {
 
     private static final String PACKAGE_NAME = "xyz.re.player.ex";
     private static final String PLAYBACK_ACTIVITY = "xyz.re.player.ex.MainActivity";
-
-    private static class ReexPackageInfo {
-        final String packageName;
-        final String activityName;
-
-        ReexPackageInfo(String packageName, String activityName) {
-            this.packageName = packageName;
-            this.activityName = activityName;
-        }
-    }
-
     private static final ReexPackageInfo[] PACKAGES = {
             new ReexPackageInfo(PACKAGE_NAME, PLAYBACK_ACTIVITY),
     };
@@ -63,7 +52,7 @@ public class ReexPlayer {
         intent.putExtra("title", title);
         intent.putExtra("name", title);
         intent.putExtra("reex.extra.title", title);
-        if (headers != null && headers.size() > 0) {
+        if (headers != null && !headers.isEmpty()) {
             try {
                 JSONObject json = new JSONObject();
                 for (String key : headers.keySet()) {
@@ -83,6 +72,16 @@ public class ReexPlayer {
         } catch (ActivityNotFoundException ex) {
             Log.e(TAG, "Can't run Reex Player(Pro)", ex);
             return false;
+        }
+    }
+
+    public static class ReexPackageInfo {
+        final String packageName;
+        final String activityName;
+
+        ReexPackageInfo(String packageName, String activityName) {
+            this.packageName = packageName;
+            this.activityName = activityName;
         }
     }
 }

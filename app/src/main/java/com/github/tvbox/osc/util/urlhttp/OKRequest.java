@@ -15,25 +15,25 @@ import okhttp3.Response;
 
 class OKRequest {
     private final String mMethodType;
-    private String mUrl;
-    private Object mTag = null;
     private final Map<String, String> mParamsMap;
     private final String mJsonStr;
     private final Map<String, String> mHeaderMap;
-    private final OKCallBack mCallBack;
+    private final OKCallBack<?> mCallBack;
+    private String mUrl;
+    private Object mTag = null;
     private okhttp3.Request mOkHttpRequest;
     private okhttp3.Request.Builder mRequestBuilder;
 
 
-    OKRequest(String methodType, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack callBack) {
+    OKRequest(String methodType, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
         this(methodType, url, null, paramsMap, headerMap, callBack);
     }
 
-    OKRequest(String methodType, String url, String jsonStr, Map<String, String> headerMap, OKCallBack callBack) {
+    OKRequest(String methodType, String url, String jsonStr, Map<String, String> headerMap, OKCallBack<?> callBack) {
         this(methodType, url, jsonStr, null, headerMap, callBack);
     }
 
-    private OKRequest(String methodType, String url, String jsonStr, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack callBack) {
+    private OKRequest(String methodType, String url, String jsonStr, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
         mMethodType = methodType;
         mUrl = url;
         mJsonStr = jsonStr;
@@ -122,7 +122,7 @@ class OKRequest {
             }
 
             @Override
-            public void onResponse(final Call call, final Response response) throws IOException {
+            public void onResponse(final Call call, final Response response) {
                 if (mCallBack != null) {
                     mCallBack.onSuccess(call, response);
                 }

@@ -1,11 +1,13 @@
 package com.github.tvbox.osc.player.controller;
 
-import android.app.Activity;
+import static xyz.doikki.videoplayer.util.PlayerUtils.seconds2Time;
+import static xyz.doikki.videoplayer.util.PlayerUtils.stringForTime;
+
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.view.KeyEvent;
@@ -21,7 +23,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
@@ -64,76 +65,24 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-
-import java.util.Date;
 import java.util.Map;
 
 import xyz.doikki.videoplayer.player.VideoView;
 
-import static xyz.doikki.videoplayer.util.PlayerUtils.stringForTime;
-import static xyz.doikki.videoplayer.util.PlayerUtils.seconds2Time;
-
 public class VodController extends BaseController {
-    public VodController(@NonNull @NotNull Context context) {
-        super(context);
-        mHandlerCallback = new HandlerCallback() {
-            @Override
-            public void callback(Message msg) {
-                switch (msg.what) {
-                    case 1000: { // seek 刷新
-                        mProgressRoot.setVisibility(VISIBLE);
-                        break;
-                    }
-                    case 1001: { // seek 关闭
-                        mProgressRoot.setVisibility(GONE);
-                        break;
-                    }
-                    case 1002: { // 显示底部菜单
-                        mBottomRoot.setVisibility(VISIBLE);
-                        mTopRoot1.setVisibility(VISIBLE);
-                        mTopRoot2.setVisibility(VISIBLE);
-                        mPlayLoadNetSpeedRightTop.setVisibility(VISIBLE);
-                        if(Hawk.get(HawkConfig.SCREEN_DISPLAY,GONE)==GONE){
-                            mPlayPauseTime.setVisibility(VISIBLE);
-                        }else {
-                            net_play_speed.setVisibility(GONE);
-                        }
-                        mPlayTitle.setVisibility(GONE);
-                        backBtn.setVisibility(ScreenUtils.isTv(context) ? INVISIBLE : VISIBLE);
-                        showLockView();
-                        break;
-                    }
-                    case 1003: { // 隐藏底部菜单
-                        mBottomRoot.setVisibility(GONE);
-                        mTopRoot1.setVisibility(GONE);
-                        mPlayLoadNetSpeedRightTop.setVisibility(GONE);
-                        if(Hawk.get(HawkConfig.SCREEN_DISPLAY,GONE)==GONE){
-                            mPlayPauseTime.setVisibility(GONE);
-                        }else {
-                            net_play_speed.setVisibility(VISIBLE);
-                        }
-                        backBtn.setVisibility(INVISIBLE);
-                        break;
-                    }
-                    case 1004: { // 设置速度
-                        if (isInPlaybackState()) {
-                            try {
-                                float speed = (float) mPlayerConfig.getDouble("sp");
-                                mControlWrapper.setSpeed(speed);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        } else
-                            mHandler.sendEmptyMessageDelayed(1004, 100);
-                        break;
-                    }
-                }
-            }
-        };
-    }
-
+    private static final long LONG_PRESS_DELAY = 800;
+    private static int switchPlayerCount = 0;
+    private final Handler mmHandler = new Handler();
+    public TextView mPlayerSpeedBtn;
+    public TextView mPlayerTimeStartEndText;
+    public TextView mPlayerTimeStartBtn;
+    public TextView mPlayerTimeSkipBtn;
+    public TextView mPlayerTimeResetBtn;
+    public SimpleSubtitleView mSubtitleView;
+    public TextView mLandscapePortraitBtn;
     SeekBar mSeekBar;
     TextView mCurrentTime;
     TextView mTotalTime;
@@ -154,37 +103,19 @@ public class VodController extends BaseController {
     TextView mNextBtn;
     TextView mPreBtn;
     TextView mPlayerScaleBtn;
-    public TextView mPlayerSpeedBtn;
     TextView mPlayerBtn;
     TextView mPlayerIJKBtn;
     TextView mPlayerRetry;
     TextView mPlayrefresh;
-    public TextView mPlayerTimeStartEndText;
-    public TextView mPlayerTimeStartBtn;
-    public TextView mPlayerTimeSkipBtn;
-    public TextView mPlayerTimeResetBtn;
     TextView mPlayPauseTime;
     TextView mPlayLoadNetSpeed;
     TextView mVideoSize;
-    public SimpleSubtitleView mSubtitleView;
     TextView mZimuBtn;
     TextView mAudioTrackBtn;
-    public TextView mLandscapePortraitBtn;
-    private View backBtn;//返回键
-    private boolean isClickBackBtn;
     TextView seekTime; //右上角进度时间显示
     TextView mScreenDisplay; //增加屏显开关
     LinearLayout tv_screen_display; //增加屏显布局
     TextView net_play_speed;
-
-    LockRunnable lockRunnable = new LockRunnable();
-    private boolean isLock = false;
-    Handler myHandle;
-    Runnable myRunnable;
-    int myHandleSeconds = 10000;//闲置多少毫秒秒关闭底栏  默认6秒
-
-    int videoPlayState = 0;
-
     private final Runnable myRunnable2 = new Runnable() {
         @SuppressLint("SetTextI18n")
         @Override
@@ -193,20 +124,95 @@ public class VodController extends BaseController {
             @SuppressLint("SimpleDateFormat") SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
             mPlayPauseTime.setText(timeFormat.format(date));
             long mSpeed = mControlWrapper.getTcpSpeed();
-            String speed = PlayerHelper.getDisplaySpeed(mSpeed,false);
-            String speedBps = PlayerHelper.getDisplaySpeedBps(mSpeed,true);
+            String speed = PlayerHelper.getDisplaySpeed(mSpeed, false);
+            String speedBps = PlayerHelper.getDisplaySpeedBps(mSpeed, true);
             mPlayLoadNetSpeedRightTop.setText(speedBps);
             mPlayLoadNetSpeed.setText(speed);
             net_play_speed.setText(speedBps);
             int[] mVideoSizes = mControlWrapper.getVideoSize();
             String width = Integer.toString(mVideoSizes[0]);
             String height = Integer.toString(mVideoSizes[1]);
-            mVideoSize.setText("[ " + width + " X " + height +" ]");
+            mVideoSize.setText("[ " + width + " X " + height + " ]");
 
             mHandler.postDelayed(this, 1000);
         }
     };
-    
+    final LockRunnable lockRunnable = new LockRunnable();
+    Handler myHandle;
+    Runnable myRunnable;
+    final int myHandleSeconds = 10000;//闲置多少毫秒秒关闭底栏  默认6秒
+
+    int videoPlayState = 0;
+    private View backBtn;//返回键
+    private boolean isClickBackBtn;
+    private boolean isLock = false;
+    private JSONObject mPlayerConfig = null;
+    private VodControlListener listener;
+    private boolean skipEnd = true;
+    private boolean simSlideStart = false;
+    private int simSeekPosition = 0;
+    private long simSlideOffset = 0;
+    private long lastSlideTime = 0;
+    private boolean fromLongPress;
+    private float speed_old = 1.0f;
+    private Runnable mLongPressRunnable;
+    private boolean isLongPressTriggered = false;
+
+    public VodController(@NonNull @NotNull Context context) {
+        super(context);
+        mHandlerCallback = msg -> {
+            switch (msg.what) {
+                case 1000: { // seek 刷新
+                    mProgressRoot.setVisibility(VISIBLE);
+                    break;
+                }
+                case 1001: { // seek 关闭
+                    mProgressRoot.setVisibility(GONE);
+                    break;
+                }
+                case 1002: { // 显示底部菜单
+                    mBottomRoot.setVisibility(VISIBLE);
+                    mTopRoot1.setVisibility(VISIBLE);
+                    mTopRoot2.setVisibility(VISIBLE);
+                    mPlayLoadNetSpeedRightTop.setVisibility(VISIBLE);
+                    if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == GONE) {
+                        mPlayPauseTime.setVisibility(VISIBLE);
+                    } else {
+                        net_play_speed.setVisibility(GONE);
+                    }
+                    mPlayTitle.setVisibility(GONE);
+                    backBtn.setVisibility(ScreenUtils.isTv(context) ? INVISIBLE : VISIBLE);
+                    showLockView();
+                    break;
+                }
+                case 1003: { // 隐藏底部菜单
+                    mBottomRoot.setVisibility(GONE);
+                    mTopRoot1.setVisibility(GONE);
+                    mPlayLoadNetSpeedRightTop.setVisibility(GONE);
+                    if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == GONE) {
+                        mPlayPauseTime.setVisibility(GONE);
+                    } else {
+                        net_play_speed.setVisibility(VISIBLE);
+                    }
+                    backBtn.setVisibility(INVISIBLE);
+                    break;
+                }
+                case 1004: { // 设置速度
+                    if (isInPlaybackState()) {
+                        try {
+                            float speed = (float) mPlayerConfig.getDouble("sp");
+                            mControlWrapper.setSpeed(speed);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else
+                        mHandler.sendEmptyMessageDelayed(1004, 100);
+                    break;
+                }
+            }
+        };
+    }
+
     private void showLockView() {
         mLockView.setVisibility(ScreenUtils.isTv(getContext()) ? INVISIBLE : VISIBLE);
         mHandler.removeCallbacks(lockRunnable);
@@ -255,73 +261,51 @@ public class VodController extends BaseController {
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
         mScreenDisplay = findViewById(R.id.screen_display);
-        backBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (getContext() instanceof Activity) {
-                    isClickBackBtn = true;
-                    ((Activity) getContext()).onBackPressed();
-                }
+        backBtn.setOnClickListener(v -> {
+            if (getContext() instanceof Activity) {
+                isClickBackBtn = true;
+                ((Activity) getContext()).onBackPressed();
             }
         });
         mLockView = findViewById(R.id.tv_lock);
-        mLockView.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                isLock = !isLock;
-                mLockView.setImageResource(isLock ? R.drawable.icon_lock : R.drawable.icon_unlock);
-                if (isLock) {
-                    Message obtain = Message.obtain();
-                    obtain.what = 1003;//隐藏底部菜单
-                    mHandler.sendMessage(obtain);
-                }
-                showLockView();
+        mLockView.setOnClickListener(v -> {
+            isLock = !isLock;
+            mLockView.setImageResource(isLock ? R.drawable.icon_lock : R.drawable.icon_unlock);
+            if (isLock) {
+                Message obtain = Message.obtain();
+                obtain.what = 1003;//隐藏底部菜单
+                mHandler.sendMessage(obtain);
             }
+            showLockView();
         });
         View rootView = findViewById(R.id.rootView);
-        rootView.setOnTouchListener(new OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (isLock) {
-                    if (event.getAction() == MotionEvent.ACTION_UP) {
-                        showLockView();
-                    }
+        rootView.setOnTouchListener((v, event) -> {
+            if (isLock) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    showLockView();
                 }
-                return isLock;
             }
+            return isLock;
         });
 
         initSubtitleInfo();
 
         myHandle = new Handler();
-        myRunnable = new Runnable() {
-            @Override
-            public void run() {
-                hideBottom();
-            }
-        };
+        myRunnable = this::hideBottom;
 
-        mPlayPauseTime.post(new Runnable() {
-            @Override
-            public void run() {
-                mHandler.post(myRunnable2);
-            }
-        });
+        mPlayPauseTime.post(() -> mHandler.post(myRunnable2));
 
         mGridParseView.setLayoutManager(new V7LinearLayoutManager(getContext(), 0, false));
         ParseAdapter parseAdapter = new ParseAdapter();
-        parseAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                ParseBean parseBean = parseAdapter.getItem(position);
-                // 当前默认解析需要刷新
-                int currentDefault = parseAdapter.getData().indexOf(ApiConfig.get().getDefaultParse());
-                parseAdapter.notifyItemChanged(currentDefault);
-                ApiConfig.get().setDefaultParse(parseBean);
-                parseAdapter.notifyItemChanged(position);
-                listener.changeParse(parseBean);
-                hideBottom();
-            }
+        parseAdapter.setOnItemClickListener((adapter, view, position) -> {
+            ParseBean parseBean = parseAdapter.getItem(position);
+            // 当前默认解析需要刷新
+            int currentDefault = parseAdapter.getData().indexOf(ApiConfig.get().getDefaultParse());
+            parseAdapter.notifyItemChanged(currentDefault);
+            ApiConfig.get().setDefaultParse(parseBean);
+            parseAdapter.notifyItemChanged(position);
+            listener.changeParse(parseBean);
+            hideBottom();
         });
         mGridParseView.setAdapter(parseAdapter);
         parseAdapter.setNewData(ApiConfig.get().getParseBeanList());
@@ -358,339 +342,279 @@ public class VodController extends BaseController {
                 mControlWrapper.startFadeOut();
             }
         });
-        mPlayerRetry.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                listener.replay(true);
-                hideBottom();
+        mPlayerRetry.setOnClickListener(v -> {
+            listener.replay(true);
+            hideBottom();
+        });
+        mPlayrefresh.setOnClickListener(v -> {
+            listener.replay(false);
+            hideBottom();
+        });
+        mNextBtn.setOnClickListener(view -> {
+            listener.playNext(false);
+            hideBottom();
+        });
+        mPreBtn.setOnClickListener(view -> {
+            listener.playPre();
+            hideBottom();
+        });
+        mPlayerScaleBtn.setOnClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                int scaleType = mPlayerConfig.getInt("sc");
+                scaleType++;
+                if (scaleType > 5)
+                    scaleType = 0;
+                mPlayerConfig.put("sc", scaleType);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+                mControlWrapper.setScreenScaleType(scaleType);
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
-        mPlayrefresh.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        mPlayerSpeedBtn.setOnClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                float speed = (float) mPlayerConfig.getDouble("sp");
+                speed += 0.25f;
+                if (speed > 3)
+                    speed = 0.5f;
+                mPlayerConfig.put("sp", speed);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+                speed_old = speed;
+                mControlWrapper.setSpeed(speed);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        });
+
+        mPlayerSpeedBtn.setOnLongClickListener(view -> {
+            try {
+                mPlayerConfig.put("sp", 1.0f);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+                speed_old = 1.0f;
+                mControlWrapper.setSpeed(1.0f);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return true;
+        });
+        mPlayerBtn.setOnClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                int playerType = mPlayerConfig.getInt("pl");
+                ArrayList<Integer> exsitPlayerTypes = PlayerHelper.getExistPlayerTypes();
+                int playerTypeIdx = 0;
+                int playerTypeSize = exsitPlayerTypes.size();
+                for (int i = 0; i < playerTypeSize; i++) {
+                    if (playerType == exsitPlayerTypes.get(i)) {
+                        if (i == playerTypeSize - 1) {
+                            playerTypeIdx = 0;
+                        } else {
+                            playerTypeIdx = i + 1;
+                        }
+                    }
+                }
+                playerType = exsitPlayerTypes.get(playerTypeIdx);
+                mPlayerConfig.put("pl", playerType);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+                listener.replay(false);
+                listener.setAllowSwitchPlayer(false);
+                hideBottom();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        });
+
+        mPlayerBtn.setOnLongClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            FastClickCheckUtil.check(view);
+            try {
+                int playerType = mPlayerConfig.getInt("pl");
+                int defaultPos = 0;
+                ArrayList<Integer> players = PlayerHelper.getExistPlayerTypes();
+                ArrayList<Integer> renders = new ArrayList<>();
+                for (int p = 0; p < players.size(); p++) {
+                    renders.add(p);
+                    if (players.get(p) == playerType) {
+                        defaultPos = p;
+                    }
+                }
+                SelectDialog<Integer> dialog = new SelectDialog<>(mActivity);
+                dialog.setTip("请选择播放器");
+                dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+                    @Override
+                    public void click(Integer value, int pos) {
+                        try {
+                            dialog.cancel();
+                            int thisPlayType = players.get(pos);
+                            if (thisPlayType != playerType) {
+                                mPlayerConfig.put("pl", thisPlayType);
+                                updatePlayerCfgView();
+                                listener.updatePlayerCfg();
+                                listener.replay(false);
+                                listener.setAllowSwitchPlayer(false);
+                                hideBottom();
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public String getDisplay(Integer val) {
+                        Integer playerType = players.get(val);
+                        return PlayerHelper.getPlayerName(playerType);
+                    }
+                }, new DiffUtil.ItemCallback<Integer>() {
+                    @Override
+                    public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
+                        return oldItem.intValue() == newItem.intValue();
+                    }
+
+                    @Override
+                    public boolean areContentsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
+                        return oldItem.intValue() == newItem.intValue();
+                    }
+                }, renders, defaultPos);
+                dialog.show();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return true;
+        });
+        mPlayerIJKBtn.setOnClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                String ijk = mPlayerConfig.getString("ijk");
+                List<IJKCode> codecs = ApiConfig.get().getIjkCodes();
+                for (int i = 0; i < codecs.size(); i++) {
+                    if (ijk.equals(codecs.get(i).getName())) {
+                        if (i >= codecs.size() - 1)
+                            ijk = codecs.get(0).getName();
+                        else {
+                            ijk = codecs.get(i + 1).getName();
+                        }
+                        break;
+                    }
+                }
+                mPlayerConfig.put("ijk", ijk);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
                 listener.replay(false);
                 hideBottom();
-            }
-        });
-        mNextBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                listener.playNext(false);
-                hideBottom();
-            }
-        });
-        mPreBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                listener.playPre();
-                hideBottom();
-            }
-        });
-        mPlayerScaleBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    int scaleType = mPlayerConfig.getInt("sc");
-                    scaleType++;
-                    if (scaleType > 5)
-                        scaleType = 0;
-                    mPlayerConfig.put("sc", scaleType);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                    mControlWrapper.setScreenScaleType(scaleType);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        mPlayerSpeedBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    float speed = (float) mPlayerConfig.getDouble("sp");
-                    speed += 0.25f;
-                    if (speed > 3)
-                        speed = 0.5f;
-                    mPlayerConfig.put("sp", speed);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                    speed_old = speed;
-                    mControlWrapper.setSpeed(speed);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        mPlayerSpeedBtn.setOnLongClickListener(new OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                try {
-                    mPlayerConfig.put("sp", 1.0f);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                    speed_old = 1.0f;
-                    mControlWrapper.setSpeed(1.0f);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
-        });
-        mPlayerBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    int playerType = mPlayerConfig.getInt("pl");
-                    ArrayList<Integer> exsitPlayerTypes = PlayerHelper.getExistPlayerTypes();
-                    int playerTypeIdx = 0;
-                    int playerTypeSize = exsitPlayerTypes.size();
-                    for(int i = 0; i<playerTypeSize; i++) {
-                        if (playerType == exsitPlayerTypes.get(i)) {
-                            if (i == playerTypeSize - 1) {
-                                playerTypeIdx = 0;
-                            } else {
-                                playerTypeIdx = i + 1;
-                            }
-                        }
-                    }
-                    playerType = exsitPlayerTypes.get(playerTypeIdx);
-                    mPlayerConfig.put("pl", playerType);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                    listener.replay(false);
-                    listener.setAllowSwitchPlayer(false);
-                    hideBottom();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        mPlayerBtn.setOnLongClickListener(new OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                FastClickCheckUtil.check(view);
-                try {
-                    int playerType = mPlayerConfig.getInt("pl");
-                    int defaultPos = 0;
-                    ArrayList<Integer> players = PlayerHelper.getExistPlayerTypes();
-                    ArrayList<Integer> renders = new ArrayList<>();
-                    for(int p = 0; p<players.size(); p++) {
-                        renders.add(p);
-                        if (players.get(p) == playerType) {
-                            defaultPos = p;
-                        }
-                    }
-                    SelectDialog<Integer> dialog = new SelectDialog<>(mActivity);
-                    dialog.setTip("请选择播放器");
-                    dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
-                        @Override
-                        public void click(Integer value, int pos) {
-                            try {
-                                dialog.cancel();
-                                int thisPlayType = players.get(pos);
-                                if (thisPlayType != playerType) {
-                                    mPlayerConfig.put("pl", thisPlayType);
-                                    updatePlayerCfgView();
-                                    listener.updatePlayerCfg();
-                                    listener.replay(false);
-                                    listener.setAllowSwitchPlayer(false);
-                                    hideBottom();
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        @Override
-                        public String getDisplay(Integer val) {
-                            Integer playerType = players.get(val);
-                            return PlayerHelper.getPlayerName(playerType);
-                        }
-                    }, new DiffUtil.ItemCallback<Integer>() {
-                        @Override
-                        public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
-                            return oldItem.intValue() == newItem.intValue();
-                        }
-
-                        @Override
-                        public boolean areContentsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
-                            return oldItem.intValue() == newItem.intValue();
-                        }
-                    }, renders, defaultPos);
-                    dialog.show();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
-        });
-        mPlayerIJKBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    String ijk = mPlayerConfig.getString("ijk");
-                    List<IJKCode> codecs = ApiConfig.get().getIjkCodes();
-                    for (int i = 0; i < codecs.size(); i++) {
-                        if (ijk.equals(codecs.get(i).getName())) {
-                            if (i >= codecs.size() - 1)
-                                ijk = codecs.get(0).getName();
-                            else {
-                                ijk = codecs.get(i + 1).getName();
-                            }
-                            break;
-                        }
-                    }
-                    mPlayerConfig.put("ijk", ijk);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                    listener.replay(false);
-                    hideBottom();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
 //        增加播放页面片头片尾时间重置
-        mPlayerTimeResetBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    mPlayerConfig.put("et", 0);
-                    mPlayerConfig.put("st", 0);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+        mPlayerTimeResetBtn.setOnClickListener(v -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                mPlayerConfig.put("et", 0);
+                mPlayerConfig.put("st", 0);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
-        mPlayerTimeStartBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    int current = (int) mControlWrapper.getCurrentPosition();
-                    int duration = (int) mControlWrapper.getDuration();
-                    if (current > duration / 2) return;
-                    mPlayerConfig.put("st",current/1000);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+        mPlayerTimeStartBtn.setOnClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                int current = (int) mControlWrapper.getCurrentPosition();
+                int duration = (int) mControlWrapper.getDuration();
+                if (current > duration / 2) return;
+                mPlayerConfig.put("st", current / 1000);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
-        mPlayerTimeStartBtn.setOnLongClickListener(new OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                try {
-                    mPlayerConfig.put("st", 0);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                return true;
+        mPlayerTimeStartBtn.setOnLongClickListener(view -> {
+            try {
+                mPlayerConfig.put("st", 0);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return true;
+        });
+        mPlayerTimeSkipBtn.setOnClickListener(view -> {
+            myHandle.removeCallbacks(myRunnable);
+            myHandle.postDelayed(myRunnable, myHandleSeconds);
+            try {
+                int current = (int) mControlWrapper.getCurrentPosition();
+                int duration = (int) mControlWrapper.getDuration();
+                if (current < duration / 2) return;
+                mPlayerConfig.put("et", (duration - current) / 1000);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
-        mPlayerTimeSkipBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                myHandle.removeCallbacks(myRunnable);
-                myHandle.postDelayed(myRunnable, myHandleSeconds);
-                try {
-                    int current = (int) mControlWrapper.getCurrentPosition();
-                    int duration = (int) mControlWrapper.getDuration();
-                    if (current < duration / 2) return;
-                    mPlayerConfig.put("et", (duration - current)/1000);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+        mPlayerTimeSkipBtn.setOnLongClickListener(view -> {
+            try {
+                mPlayerConfig.put("et", 0);
+                updatePlayerCfgView();
+                listener.updatePlayerCfg();
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
+            return true;
         });
-        mPlayerTimeSkipBtn.setOnLongClickListener(new OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                try {
-                    mPlayerConfig.put("et", 0);
-                    updatePlayerCfgView();
-                    listener.updatePlayerCfg();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                return true;
-            }
+        mZimuBtn.setOnClickListener(view -> {
+            FastClickCheckUtil.check(view);
+            listener.selectSubtitle();
+            hideBottom();
         });
-        mZimuBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                FastClickCheckUtil.check(view);
-                listener.selectSubtitle();
-                hideBottom();
-            }
+        mZimuBtn.setOnLongClickListener(view -> {
+            mSubtitleView.setVisibility(View.GONE);
+            mSubtitleView.destroy();
+            mSubtitleView.clearSubtitleCache();
+            mSubtitleView.isInternal = false;
+            hideBottom();
+            Toast.makeText(getContext(), "字幕已关闭", Toast.LENGTH_SHORT).show();
+            return true;
         });
-        mZimuBtn.setOnLongClickListener(new OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                mSubtitleView.setVisibility(View.GONE);
-                mSubtitleView.destroy();
-                mSubtitleView.clearSubtitleCache();
-                mSubtitleView.isInternal = false;
-                hideBottom();
-                Toast.makeText(getContext(), "字幕已关闭", Toast.LENGTH_SHORT).show();
-                return true;
-            }
+        mAudioTrackBtn.setOnClickListener(view -> {
+            FastClickCheckUtil.check(view);
+            listener.selectAudioTrack();
+            hideBottom();
         });
-        mAudioTrackBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                FastClickCheckUtil.check(view);
-                listener.selectAudioTrack();
-                hideBottom();
-            }
-        });
-        mLandscapePortraitBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                FastClickCheckUtil.check(view);
-                setLandscapePortrait();
-                hideBottom();
-            }
+        mLandscapePortraitBtn.setOnClickListener(view -> {
+            FastClickCheckUtil.check(view);
+            setLandscapePortrait();
+            hideBottom();
         });
         //屏显
         int disPlay = Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE);
         seekTime.setVisibility(disPlay);
         net_play_speed.setVisibility(disPlay);
         mPlayPauseTime.setVisibility(disPlay);
-        mScreenDisplay.setTextColor(disPlay==VISIBLE?getResources().getColor(R.color.color_02F8E1): Color.WHITE);
-        mScreenDisplay.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                int disPlay =(Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == VISIBLE) ? GONE : VISIBLE;
-                seekTime.setVisibility(disPlay);
-                net_play_speed.setVisibility(disPlay);
-                if(disPlay==VISIBLE)mPlayPauseTime.setVisibility(disPlay);
-                Hawk.put(HawkConfig.SCREEN_DISPLAY, disPlay);
-                mScreenDisplay.setTextColor(disPlay==VISIBLE?getResources().getColor(R.color.color_02F8E1): Color.WHITE);
-                hideBottom();
-            }
+        mScreenDisplay.setTextColor(disPlay == VISIBLE ? getResources().getColor(R.color.color_02F8E1) : Color.WHITE);
+        mScreenDisplay.setOnClickListener(view -> {
+            int disPlay1 = (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == VISIBLE) ? GONE : VISIBLE;
+            seekTime.setVisibility(disPlay1);
+            net_play_speed.setVisibility(disPlay1);
+            if (disPlay1 == VISIBLE) mPlayPauseTime.setVisibility(disPlay1);
+            Hawk.put(HawkConfig.SCREEN_DISPLAY, disPlay1);
+            mScreenDisplay.setTextColor(disPlay1 == VISIBLE ? getResources().getColor(R.color.color_02F8E1) : Color.WHITE);
+            hideBottom();
         });
         mNextBtn.setNextFocusLeftId(R.id.screen_display);
         mScreenDisplay.setNextFocusRightId(R.id.play_next);
@@ -713,7 +637,7 @@ public class VodController extends BaseController {
     }
 
     public void initLandscapePortraitBtnInfo() {
-        if(mControlWrapper!=null && mActivity!=null){
+        if (mControlWrapper != null && mActivity != null) {
             int width = mControlWrapper.getVideoSize()[0];
             int height = mControlWrapper.getVideoSize()[1];
             double screenSqrt = ScreenUtils.getSqrt(mActivity);
@@ -748,8 +672,6 @@ public class VodController extends BaseController {
     public void showParse(boolean userJxList) {
         mParseRoot.setVisibility(userJxList ? VISIBLE : GONE);
     }
-
-    private JSONObject mPlayerConfig = null;
 
     public void setPlayerConfig(JSONObject playerCfg) {
         this.mPlayerConfig = playerCfg;
@@ -788,37 +710,9 @@ public class VodController extends BaseController {
         mHandler.sendEmptyMessageDelayed(1004, 100);
     }
 
-    public interface VodControlListener {
-        void playNext(boolean rmProgress);
-
-        void playPre();
-
-        void prepared();
-
-        void changeParse(ParseBean pb);
-
-        void updatePlayerCfg();
-
-        void replay(boolean replay);
-
-        void errReplay();
-
-        void selectSubtitle();
-
-        void selectAudioTrack();
-
-        void startPlayUrl(String url, HashMap<String, String> headers);
-
-        void setAllowSwitchPlayer(boolean isAllow);
-    }
-
     public void setListener(VodControlListener listener) {
         this.listener = listener;
     }
-
-    private VodControlListener listener;
-
-    private boolean skipEnd = true;
 
     @SuppressLint("SetTextI18n")
     @Override
@@ -858,11 +752,6 @@ public class VodController extends BaseController {
         }
     }
 
-    private boolean simSlideStart = false;
-    private int simSeekPosition = 0;
-    private long simSlideOffset = 0;
-    private long lastSlideTime = 0;
-
     public void tvSlideStop() {
         if (!simSlideStart)
             return;
@@ -873,6 +762,7 @@ public class VodController extends BaseController {
         simSeekPosition = 0;
         simSlideOffset = 0;
     }
+
     public void tvSlideStart(int dir) {
         int duration = (int) mControlWrapper.getDuration();
         if (duration <= 0)
@@ -888,7 +778,7 @@ public class VodController extends BaseController {
             simSlideOffset = (long) baseSkip * dir;
         } else {
             if (currentTime - lastSlideTime <= threshold) {
-                simSlideOffset += (baseSkip * accelerationFactor * dir);
+                simSlideOffset += (long) (baseSkip * accelerationFactor * dir);
             } else {
                 simSlideOffset = (long) baseSkip * dir;
             }
@@ -946,7 +836,7 @@ public class VodController extends BaseController {
                 break;
             case VideoView.STATE_PREPARING:
             case VideoView.STATE_BUFFERING:
-                if(mProgressRoot.getVisibility()==GONE)mPlayLoadNetSpeed.setVisibility(VISIBLE);
+                if (mProgressRoot.getVisibility() == GONE) mPlayLoadNetSpeed.setVisibility(VISIBLE);
                 break;
             case VideoView.STATE_PLAYBACK_COMPLETED:
                 listener.playNext(true);
@@ -1001,7 +891,7 @@ public class VodController extends BaseController {
                     togglePlay();
                     return true;
                 }
-            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode== KeyEvent.KEYCODE_MENU) {
+            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_MENU) {
                 if (!isBottomVisible()) {
                     showBottom();
                     myHandle.postDelayed(myRunnable, myHandleSeconds);
@@ -1019,11 +909,7 @@ public class VodController extends BaseController {
         return super.dispatchKeyEvent(event);
     }
 
-
-    private boolean fromLongPress;
-    private float speed_old = 1.0f;
-
-    private void speedPlayStart(){
+    private void speedPlayStart() {
         fromLongPress = true;
         try {
             speed_old = (float) mPlayerConfig.getDouble("sp");
@@ -1037,9 +923,10 @@ public class VodController extends BaseController {
             f.printStackTrace();
         }
     }
-    private void speedPlayEnd(){
+
+    private void speedPlayEnd() {
         if (fromLongPress) {
-            fromLongPress =false;
+            fromLongPress = false;
             try {
                 float speed = speed_old;
                 mPlayerConfig.put("sp", speed);
@@ -1052,9 +939,10 @@ public class VodController extends BaseController {
             findViewById(R.id.play_speed_3_container).setVisibility(View.GONE);
         }
     }
+
     @Override
     public void onLongPress(MotionEvent e) {
-        if (videoPlayState!=VideoView.STATE_PAUSED) {
+        if (videoPlayState != VideoView.STATE_PAUSED) {
             speedPlayStart();
         }
     }
@@ -1068,23 +956,17 @@ public class VodController extends BaseController {
         return super.onTouchEvent(e);
     }
 
-
-    private final Handler mmHandler = new Handler();
-    private Runnable mLongPressRunnable;
-    private static final long LONG_PRESS_DELAY = 800;
-    private boolean isLongPressTriggered = false;
-
-    private boolean setMinPlayTimeChange(String typeEt,boolean increase){
+    private boolean setMinPlayTimeChange(String typeEt, boolean increase) {
         myHandle.removeCallbacks(myRunnable);
         myHandle.postDelayed(myRunnable, myHandleSeconds);
         try {
             int currentValue = mPlayerConfig.optInt(typeEt, 0);
-            if(currentValue!=0){
+            if (currentValue != 0) {
                 int newValue = increase ? currentValue + 1 : currentValue - 1;
-                if(newValue < 0) {
+                if (newValue < 0) {
                     newValue = 0;
                 }
-                mPlayerConfig.put(typeEt,newValue);
+                mPlayerConfig.put(typeEt, newValue);
                 updatePlayerCfgView();
                 listener.updatePlayerCfg();
                 return true;
@@ -1094,12 +976,13 @@ public class VodController extends BaseController {
         }
         return false;
     }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (isBottomVisible()) {
-            if (keyCode == KeyEvent.KEYCODE_DPAD_UP ) {
-                if(mPlayerTimeStartBtn.hasFocus()){
-                    if(setMinPlayTimeChange("st",true)){
+            if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                if (mPlayerTimeStartBtn.hasFocus()) {
+                    if (setMinPlayTimeChange("st", true)) {
                         return true;
                     }
                 }
@@ -1108,21 +991,18 @@ public class VodController extends BaseController {
                     return true;
                 }
             }
-            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN ) {
-                if(mPlayerTimeStartBtn.hasFocus()){
-                    if(setMinPlayTimeChange("st",false))return true;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                if (mPlayerTimeStartBtn.hasFocus()) {
+                    if (setMinPlayTimeChange("st", false)) return true;
                 }
             }
             return super.onKeyDown(keyCode, event);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP && event.getRepeatCount() == 0) {
             isLongPressTriggered = false;
-            mLongPressRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    speedPlayStart();
-                    isLongPressTriggered = true;
-                }
+            mLongPressRunnable = () -> {
+                speedPlayStart();
+                isLongPressTriggered = true;
             };
             mmHandler.postDelayed(mLongPressRunnable, LONG_PRESS_DELAY);
             return true;
@@ -1144,7 +1024,7 @@ public class VodController extends BaseController {
                 if (!isBottomVisible()) {
                     showUpBottom();
                     myHandle.postDelayed(myRunnable, myHandleSeconds);
-                }else {
+                } else {
                     return super.onKeyUp(keyCode, event);
                 }
             }
@@ -1165,14 +1045,7 @@ public class VodController extends BaseController {
         }
         return true;
     }
-    
-    private class LockRunnable implements Runnable {
-        @Override
-        public void run() {
-            mLockView.setVisibility(INVISIBLE);
-        }
-    }
-    
+
     @Override
     public boolean onBackPressed() {
         if (isClickBackBtn) {
@@ -1198,10 +1071,9 @@ public class VodController extends BaseController {
         mHandler.removeCallbacks(myRunnable2);
     }
 
-
     //尝试去bom
     public String getWebPlayUrlIfNeeded(String webPlayUrl) {
-        if (webPlayUrl != null && !webPlayUrl.contains("127.0.0.1:9978") &&  webPlayUrl.contains(".m3u8")) {
+        if (webPlayUrl != null && !webPlayUrl.contains("127.0.0.1:9978") && webPlayUrl.contains(".m3u8")) {
             try {
                 String urlEncode = URLEncoder.encode(webPlayUrl, "UTF-8");
                 LOG.i("echo-BOM-------");
@@ -1221,24 +1093,23 @@ public class VodController extends BaseController {
         }
     }
 
-    private static int switchPlayerCount=0;
-    public boolean switchPlayer(){
+    public boolean switchPlayer() {
         try {
-            int playerType= mPlayerConfig.getInt("pl");
+            int playerType = mPlayerConfig.getInt("pl");
             int p_type = (playerType == 1) ? playerType + 1 : (playerType == 2) ? playerType - 1 : playerType;
             if (p_type != playerType) {
-                Toast.makeText(getContext(), "切换到"+(p_type==1?"IJK":"EXO")+"播放器重试", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "切换到" + (p_type == 1 ? "IJK" : "EXO") + "播放器重试", Toast.LENGTH_SHORT).show();
                 mPlayerConfig.put("pl", p_type);
                 updatePlayerCfgView();
                 listener.updatePlayerCfg();
-            }else {
+            } else {
                 return true;
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             return true;
         }
-        if(switchPlayerCount==1) {
-            switchPlayerCount=0;
+        if (switchPlayerCount == 1) {
+            switchPlayerCount = 0;
             return true;
         }
         switchPlayerCount++;
@@ -1246,7 +1117,7 @@ public class VodController extends BaseController {
     }
 
     public void playM3u8(final String url, final HashMap<String, String> headers) {
-        if(url.contains("url=")){
+        if (url.contains("url=")) {
             listener.startPlayUrl(url, headers);
             return;
         }
@@ -1293,7 +1164,7 @@ public class VodController extends BaseController {
     }
 
     private String extractForwardUrl(String baseUrl, String content) {
-        String[] lines = content.split("\\r?\\n",50);
+        String[] lines = content.split("\\r?\\n", 50);
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
             if (line.startsWith("#EXT-X-STREAM-INF")) {
@@ -1317,12 +1188,12 @@ public class VodController extends BaseController {
     private void processM3u8Content(String url, String content, HashMap<String, String> headers) {
         String basePath = getBasePath(url);
         RemoteServer.m3u8Content = M3u8.purify(basePath, content);
-        if (RemoteServer.m3u8Content == null || M3u8.currentAdCount==0) {
+        if (RemoteServer.m3u8Content == null || M3u8.currentAdCount == 0) {
             LOG.i("echo-m3u8内容解析：未检测到广告");
             listener.startPlayUrl(url, headers);
         } else {
             listener.startPlayUrl(ControlManager.get().getAddress(true) + "proxyM3u8", headers);
-            Toast.makeText(getContext(), "已移除视频广告 "+M3u8.currentAdCount+" 条", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "已移除视频广告 " + M3u8.currentAdCount + " 条", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -1338,10 +1209,12 @@ public class VodController extends BaseController {
                         LOG.i("echo-m3u82-to-play");
                         processM3u8Content(forwardUrl, content, headers);
                     }
+
                     @Override
                     public String convertResponse(okhttp3.Response response) throws Throwable {
                         return response.body().string();
                     }
+
                     @Override
                     public void onError(Response<String> response) {
                         super.onError(response);
@@ -1369,8 +1242,7 @@ public class VodController extends BaseController {
         }
     }
 
-    public String firstUrlByArray(String url)
-    {
+    public String firstUrlByArray(String url) {
         try {
             JSONArray urlArray = new JSONArray(url);
             for (int i = 0; i < urlArray.length(); i++) {
@@ -1380,14 +1252,14 @@ public class VodController extends BaseController {
                     break; // 找到第一个立即终止循环
                 }
             }
-        } catch (JSONException e) {
+        } catch (JSONException ignored) {
         }
         return url;
     }
 
-    public void evaluateScript(SourceBean sourceBean,String url, WebView web_view, XWalkView xWalk_view){
+    public void evaluateScript(SourceBean sourceBean, String url, WebView web_view, XWalkView xWalk_view) {
         String clickSelector = sourceBean.getClickSelector().trim();
-        clickSelector=clickSelector.isEmpty()?VideoParseRuler.getHostScript(url):clickSelector;
+        clickSelector = clickSelector.isEmpty() ? VideoParseRuler.getHostScript(url) : clickSelector;
         if (!clickSelector.isEmpty()) {
             String selector;
             if (clickSelector.contains(";") && !clickSelector.endsWith(";")) {
@@ -1403,25 +1275,51 @@ public class VodController extends BaseController {
             String js = selector;
 //            if(!selector.contains("click()"))js+=".click();";
             LOG.i("echo-javascript:" + js);
-            if(web_view!=null){
+            if (web_view != null) {
                 //4.4以上才支持这种写法
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    web_view.evaluateJavascript(js, null);
-                } else {
-                    web_view.loadUrl("javascript:" + js);
-                }
+                web_view.evaluateJavascript(js, null);
             }
-            if(xWalk_view!=null){
+            if (xWalk_view != null) {
                 //4.0+开始全部支持这种写法
                 xWalk_view.evaluateJavascript(js, null);
             }
         }
     }
 
-    public void stopOther()
-    {
+    public void stopOther() {
         Thunder.stop(false);//停止磁力下载
         Jianpian.finish();//停止p2p下载
         App.getInstance().setDashData(null);
+    }
+
+    public interface VodControlListener {
+        void playNext(boolean rmProgress);
+
+        void playPre();
+
+        void prepared();
+
+        void changeParse(ParseBean pb);
+
+        void updatePlayerCfg();
+
+        void replay(boolean replay);
+
+        void errReplay();
+
+        void selectSubtitle();
+
+        void selectAudioTrack();
+
+        void startPlayUrl(String url, HashMap<String, String> headers);
+
+        void setAllowSwitchPlayer(boolean isAllow);
+    }
+
+    private class LockRunnable implements Runnable {
+        @Override
+        public void run() {
+            mLockView.setVisibility(INVISIBLE);
+        }
     }
 }

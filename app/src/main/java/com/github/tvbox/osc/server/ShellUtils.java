@@ -90,7 +90,7 @@ public class ShellUtils {
      * @return
      * @see ShellUtils#execCommand(String[], boolean, boolean)
      */
-    public static CommandResult execCommand(List<String> commands,boolean isRoot, boolean isNeedResultMsg) {
+    public static CommandResult execCommand(List<String> commands, boolean isRoot, boolean isNeedResultMsg) {
         return execCommand(commands == null ? null : commands.toArray(new String[]{}),
                 isRoot, isNeedResultMsg);
     }
@@ -145,8 +145,6 @@ public class ShellUtils {
                     errorMsg.append(s);
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -167,7 +165,7 @@ public class ShellUtils {
                 process.destroy();
             }
         }
-        return new CommandResult(result, successMsg == null ? null: successMsg.toString(), errorMsg == null ? null
+        return new CommandResult(result, successMsg == null ? null : successMsg.toString(), errorMsg == null ? null
                 : errorMsg.toString());
     }
 
@@ -191,7 +189,7 @@ public class ShellUtils {
         /**
          * 运行结果
          **/
-        public int result;
+        public final int result;
         /**
          * 运行成功结果
          **/

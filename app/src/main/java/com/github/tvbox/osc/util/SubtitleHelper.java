@@ -21,8 +21,7 @@ public class SubtitleHelper {
 
     public static int getTextSize(Activity activity) {
         int autoSize = getSubtitleTextAutoSize(activity);
-        int subtitleConfigSize = Hawk.get(HawkConfig.SUBTITLE_TEXT_SIZE, autoSize);
-        return subtitleConfigSize;
+        return Hawk.get(HawkConfig.SUBTITLE_TEXT_SIZE, autoSize);
     }
 
     public static void setTextSize(int size) {
@@ -30,8 +29,7 @@ public class SubtitleHelper {
     }
 
     public static int getTimeDelay() {
-        int subtitleConfigTimeDelay = Hawk.get(HawkConfig.SUBTITLE_TIME_DELAY, 0);
-        return subtitleConfigTimeDelay;
+        return Hawk.get(HawkConfig.SUBTITLE_TIME_DELAY, 0);
     }
 
     public static void setTimeDelay(int delay) {

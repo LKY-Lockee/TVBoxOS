@@ -8,13 +8,13 @@ import android.util.Log;
  * @description:
  */
 public class LOG {
-    private static String TAG = "TVBox-runtime";
+    private static final String TAG = "TVBox-runtime";
 
     public static void e(String msg) {
-        Log.e(TAG, "" + msg);
+        Log.e(TAG, msg);
     }
 
     public static void i(String msg) {
-        Log.i(TAG, "" + msg);
+        Log.i(TAG, msg);
     }
 }

@@ -25,24 +25,30 @@ import okhttp3.Response;
 
 public class RemoteTVBox {
 
+    private static int avalibleFailNum;
+    private static int avalibleSuccessNum;
+    private static int avalibleIpNum;
+
     public static boolean run(Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
         String actionUrl = getAvalibleActionUrl();
         if (TextUtils.isEmpty(actionUrl)) {
             return false;
         }
         try {
-            if (headers != null && headers.size() > 0) {
+            if (headers != null && !headers.isEmpty()) {
                 url = url + "|";
                 int idx = 0;
+                StringBuilder urlBuilder = new StringBuilder(url);
                 for (String hk : headers.keySet()) {
-                    url += hk + "=" + URLEncoder.encode(headers.get(hk), "UTF-8");
-                    if (idx < headers.keySet().size() -1) {
-                        url += "&";
+                    urlBuilder.append(hk).append("=").append(URLEncoder.encode(headers.get(hk), "UTF-8"));
+                    if (idx < headers.size() - 1) {
+                        urlBuilder.append("&");
                     }
-                    idx ++;
+                    idx++;
                 }
+                url = urlBuilder.toString();
             }
-            Map<String ,String> params = new HashMap<>();
+            Map<String, String> params = new HashMap<>();
             params.put("do", "push");
             params.put("url", url);
             post(actionUrl, params, new okhttp3.Callback() {
@@ -54,9 +60,6 @@ public class RemoteTVBox {
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
                     String pushResult = response.body().string();
-                    if (pushResult.equals("ok")) {
-
-                    }
                 }
             });
         } catch (Exception e) {
@@ -66,10 +69,6 @@ public class RemoteTVBox {
         return true;
     }
 
-    private static int avalibleFailNum;
-    private static int avalibleSuccessNum;
-    private static int avalibleIpNum;
-
     public static void searchAvalible(Callback callback) {
         avalibleFailNum = 0;
         avalibleSuccessNum = 0;
@@ -77,14 +76,14 @@ public class RemoteTVBox {
         List<IpScanningVo> searchList = new IpScanning().search(localIp, false);
         avalibleIpNum = searchList.size();
         int port = 9978;
-        for(IpScanningVo one : searchList) {
+        for (IpScanningVo one : searchList) {
             String ip = one.getIp();
             if (ip.equals(localIp)) {
-                avalibleIpNum --;
+                avalibleIpNum--;
                 continue;
             }
             String actionUrl = "http://" + ip + ":" + port + "/action";
-            String viewHost = "" + ip  + ":" + port;
+            String viewHost = ip + ":" + port;
             try {
                 post(actionUrl, null, new okhttp3.Callback() {
                     @Override
@@ -95,23 +94,26 @@ public class RemoteTVBox {
 
                     @Override
                     public void onResponse(Call call, Response response) throws IOException {
-                        avalibleSuccessNum ++;
+                        avalibleSuccessNum++;
                         String result = response.body().string();
                         if (result.equals("ok")) {
                             callback.found(viewHost, (avalibleSuccessNum + avalibleFailNum) == avalibleIpNum);
                         }
                     }
                 });
-            } catch (Exception e) {
+            } catch (Exception ignored) {
 
             }
         }
 
-        return;
     }
 
     public static String getAvalible() {
         return Hawk.get(HawkConfig.REMOTE_TVBOX, null);
+    }
+
+    public static void setAvalible(String viewHost) {
+        Hawk.put(HawkConfig.REMOTE_TVBOX, viewHost);
     }
 
     public static String getAvalibleActionUrl() {
@@ -121,10 +123,6 @@ public class RemoteTVBox {
         return "http://" + getAvalible() + "/action";
     }
 
-    public static void setAvalible(String viewHost) {
-        Hawk.put(HawkConfig.REMOTE_TVBOX, viewHost);
-    }
-
     public static void post(String url, Map<String, String> params, okhttp3.Callback callback) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder.readTimeout(1000, TimeUnit.MILLISECONDS);
@@ -132,8 +130,8 @@ public class RemoteTVBox {
         builder.connectTimeout(1000, TimeUnit.MILLISECONDS);
         OkHttpClient client = builder.build();
         FormBody.Builder formBodyBuilder = new FormBody.Builder();
-        if (params != null && params.size() > 0) {
-            for(Map.Entry<String, String> entry : params.entrySet()) {
+        if (params != null && !params.isEmpty()) {
+            for (Map.Entry<String, String> entry : params.entrySet()) {
                 formBodyBuilder.add(entry.getKey(), entry.getValue());
             }
         }
@@ -143,6 +141,7 @@ public class RemoteTVBox {
 
     public abstract class Callback {
         public abstract void found(String viewHost, boolean end);
+
         public abstract void fail(boolean all, boolean end);
     }
 

@@ -1,32 +1,31 @@
 package com.github.tvbox.osc.util;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PushbackInputStream;
 import java.io.Reader;
+import java.nio.file.Files;
 
 public class UnicodeReader extends Reader {
+    private static final int BOM_SIZE = 4;
     private InputStreamReader internalIn = null;
     private String encoding;
-    private static final int BOM_SIZE = 4;
 
     public UnicodeReader(String file)
-            throws IOException, FileNotFoundException, SecurityException {
+            throws IOException, SecurityException {
         this(new File(file));
     }
 
     public UnicodeReader(File file)
-            throws IOException, FileNotFoundException, SecurityException {
-        this(new FileInputStream(file));
+            throws IOException, SecurityException {
+        this(Files.newInputStream(file.toPath()));
     }
 
     public UnicodeReader(File file, String defaultEncoding)
-            throws IOException, FileNotFoundException, SecurityException {
-        this(new FileInputStream(file), defaultEncoding);
+            throws IOException, SecurityException {
+        this(Files.newInputStream(file.toPath()), defaultEncoding);
     }
 
     public UnicodeReader(InputStream in)
@@ -61,14 +60,6 @@ public class UnicodeReader extends Reader {
             this.encoding = "UTF-32BE";
             unread = n - 4;
         } else {
-            if (n == 4) {
-                if ((bom[0] == -1) && (bom[1] == -2) &&
-                        (bom[2] == 0) && (bom[3] == 0)) {
-                    this.encoding = "UTF-32LE";
-                    unread = n - 4;
-                    //break label240;
-                }
-            }
             if ((bom[0] == -17) && (bom[1] == -69) &&
                     (bom[2] == -65)) {
                 this.encoding = "UTF-8";

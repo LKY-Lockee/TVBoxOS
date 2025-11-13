@@ -32,14 +32,9 @@ public class ApiHistoryDialog extends BaseDialog {
     public void setAdapter(ApiHistoryDialogAdapter.SelectDialogInterface sourceBeanSelectDialogInterface, List<String> data, int select) {
         ApiHistoryDialogAdapter adapter = new ApiHistoryDialogAdapter(sourceBeanSelectDialogInterface);
         adapter.setData(data, select);
-        TvRecyclerView tvRecyclerView = ((TvRecyclerView) findViewById(R.id.list));
+        TvRecyclerView tvRecyclerView = findViewById(R.id.list);
         tvRecyclerView.setAdapter(adapter);
         tvRecyclerView.setSelectedPosition(select);
-        tvRecyclerView.post(new Runnable() {
-            @Override
-            public void run() {
-                tvRecyclerView.scrollToPosition(select);
-            }
-        });
+        tvRecyclerView.post(() -> tvRecyclerView.scrollToPosition(select));
     }
 }

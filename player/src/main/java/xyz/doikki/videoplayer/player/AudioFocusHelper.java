@@ -119,6 +119,8 @@ public final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeLi
         }
 
         mStartRequested = false;
-        mAudioManager.abandonAudioFocusRequest(mAudioFocusRequest);
+        if (mAudioFocusRequest != null) {
+            mAudioManager.abandonAudioFocusRequest(mAudioFocusRequest);
+        }
     }
 }

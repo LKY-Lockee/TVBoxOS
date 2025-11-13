@@ -1,4 +1,5 @@
 package com.github.tvbox.osc.util;
+
 import com.github.catvod.crawler.SpiderDebug;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.util.parser.SuperParse;
@@ -20,18 +21,16 @@ public class Proxy {
         try {
             String what = params.get("go");
             assert what != null;
-            if (what.equals("live")) {
-                return itv(params);
-            }
-            else if (what.equals("bom")) {
-                return removeBOMFromM3U8(params);
-            }
-            else if (what.equals("ad")) {
-                //TODO
-                return null;
-            }
-            else if (what.equals("SuperParse")) {
-                return SuperParse.loadHtml(params.get("flag"), params.get("url"));
+            switch (what) {
+                case "live":
+                    return itv(params);
+                case "bom":
+                    return removeBOMFromM3U8(params);
+                case "ad":
+                    //TODO
+                    return null;
+                case "SuperParse":
+                    return SuperParse.loadHtml(params.get("flag"), params.get("url"));
             }
 
         } catch (Throwable ignored) {
@@ -39,12 +38,13 @@ public class Proxy {
         }
         return null;
     }
-    public static Object[] itv(Map<String, String> params) throws Exception {
+
+    public static Object[] itv(Map<String, String> params) {
         try {
             Object[] result = new Object[3];
             String url = params.get("url");
             String type = params.get("type");
-            url = URLDecoder.decode(url,"UTF-8");
+            url = URLDecoder.decode(url, "UTF-8");
 
             OkHttpClient client = OkGoHelper.ItvClient;
             assert type != null;
@@ -87,11 +87,11 @@ public class Proxy {
         }
     }
 
-    public static Object[] removeBOMFromM3U8(Map<String, String> params) throws Exception {
+    public static Object[] removeBOMFromM3U8(Map<String, String> params) {
         try {
             Object[] result = new Object[3];
             String url = params.get("url");
-            url = URLDecoder.decode(url,"UTF-8");
+            url = URLDecoder.decode(url, "UTF-8");
 
             OkHttpClient client = OkGoHelper.ItvClient;
             String redirectUrl = getRedirectedUrl(url);
@@ -152,14 +152,14 @@ public class Proxy {
             URI urlUri = new URI(url);
             String proxyUrl = ControlManager.get().getAddress(true) + "proxy?go=live&type=ts&url=";
             if (url.startsWith("http://") || url.startsWith("https://")) {
-                return proxyUrl + URLEncoder.encode(urlUri.toString(),"UTF-8");
+                return proxyUrl + URLEncoder.encode(urlUri.toString(), "UTF-8");
             } else if (url.startsWith("://")) {
-                return proxyUrl + URLEncoder.encode(new URI(baseUri.getScheme() + url).toString(),"UTF-8");
+                return proxyUrl + URLEncoder.encode(new URI(baseUri.getScheme() + url).toString(), "UTF-8");
             } else if (url.startsWith("//")) {
-                return proxyUrl + URLEncoder.encode(new URI(baseUri.getScheme() + ":" + url).toString(),"UTF-8");
+                return proxyUrl + URLEncoder.encode(new URI(baseUri.getScheme() + ":" + url).toString(), "UTF-8");
             } else {
                 URI resolvedUri = baseUri.resolve(url);
-                return proxyUrl + URLEncoder.encode(resolvedUri.toString(),"UTF-8");
+                return proxyUrl + URLEncoder.encode(resolvedUri.toString(), "UTF-8");
             }
         } catch (Exception e) {
             e.printStackTrace();

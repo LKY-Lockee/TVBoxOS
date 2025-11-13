@@ -1,4 +1,5 @@
 package com.undcover.freedom.pyramid;
+
 import android.util.Log;
 
 /**
@@ -12,26 +13,6 @@ public class PyLog {
     public final static int LEVEL_W = 2;
     public final static int LEVEL_E = 1;
     public final static int LEVEL_RELEASE = 0;
-    private static int logLevel = LEVEL_RELEASE;
-    private static PyLog mLog;
-
-    public synchronized static PyLog getInstance() {
-        mLog = new PyLog();
-        return mLog;
-    }
-
-    public PyLog setLogLevel(int logLevel) {
-        try
-        {
-            checkInit();
-        }
-        catch (Exception e){
-            return mLog;
-        }
-        this.logLevel = logLevel;
-        return mLog;
-    }
-
     /**
      * 用于生命周期
      */
@@ -48,34 +29,16 @@ public class PyLog {
      * 用于FrameWork内置log
      */
     public final static int FILTER_FW = 0x08;
-
+    private static int logLevel = LEVEL_RELEASE;
+    private static PyLog mLog;
     private static boolean isLifeCycleEnable = false;
     private static boolean isNetWorkEnable = false;
     private static boolean isFrameWorkEnable = false;
     private static boolean isAtyManagerEnable = false;
+    private static int segmentSize = 3 * 1024;
 
-    /**
-     * 设置内设Log的过滤，添加需要输出的Log<br/>
-     * FILTER_LC 生命周期<br/>
-     * FILTER_NW 网络请求<br/>
-     * FILTER_AM AtyManager<br/>
-     * FILTER_FW 框架<br/>
-     *
-     * @param filter
-     * @return
-     */
-    public PyLog setFilter(int filter) {
-        try
-        {
-            checkInit();
-        }
-        catch (Exception e){
-            return mLog;
-        }
-        isLifeCycleEnable = (filter & FILTER_LC) / FILTER_LC == 1 ? true : false;
-        isNetWorkEnable = (filter & FILTER_NW) / FILTER_NW == 1 ? true : false;
-        isFrameWorkEnable = (filter & FILTER_FW) / FILTER_FW == 1 ? true : false;
-        isAtyManagerEnable = (filter & FILTER_AM) / FILTER_AM == 1 ? true : false;
+    public synchronized static PyLog getInstance() {
+        mLog = new PyLog();
         return mLog;
     }
 
@@ -108,8 +71,6 @@ public class PyLog {
             return;
         Log.e(tag, msg);
     }
-
-    private static int segmentSize = 3 * 1024;
 
     private static void longV(String tag, String msg) {
         if (logLevel < LEVEL_V)
@@ -431,6 +392,39 @@ public class PyLog {
         if (mLog == null) {
             throw new Exception("SDK未初始化");
         }
+    }
+
+    public PyLog setLogLevel(int logLevel) {
+        try {
+            checkInit();
+        } catch (Exception e) {
+            return mLog;
+        }
+        this.logLevel = logLevel;
+        return mLog;
+    }
+
+    /**
+     * 设置内设Log的过滤，添加需要输出的Log<br/>
+     * FILTER_LC 生命周期<br/>
+     * FILTER_NW 网络请求<br/>
+     * FILTER_AM AtyManager<br/>
+     * FILTER_FW 框架<br/>
+     *
+     * @param filter
+     * @return
+     */
+    public PyLog setFilter(int filter) {
+        try {
+            checkInit();
+        } catch (Exception e) {
+            return mLog;
+        }
+        isLifeCycleEnable = (filter & FILTER_LC) / FILTER_LC == 1 ? true : false;
+        isNetWorkEnable = (filter & FILTER_NW) / FILTER_NW == 1 ? true : false;
+        isFrameWorkEnable = (filter & FILTER_FW) / FILTER_FW == 1 ? true : false;
+        isAtyManagerEnable = (filter & FILTER_AM) / FILTER_AM == 1 ? true : false;
+        return mLog;
     }
 
     public static class TagConstant {

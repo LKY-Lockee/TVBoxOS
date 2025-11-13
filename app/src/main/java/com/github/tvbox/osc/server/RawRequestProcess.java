@@ -14,10 +14,10 @@ import fi.iki.elonen.NanoHTTPD;
  * @description: 资源文件加载
  */
 public class RawRequestProcess implements RequestProcess {
-    private Context mContext;
-    private String fileName;
-    private int resourceId;
-    private String mimeType;
+    private final Context mContext;
+    private final String fileName;
+    private final int resourceId;
+    private final String mimeType;
 
     public RawRequestProcess(Context context, String fileName, int resourceId, String mimeType) {
         this.mContext = context;
@@ -35,7 +35,7 @@ public class RawRequestProcess implements RequestProcess {
     public NanoHTTPD.Response doResponse(NanoHTTPD.IHTTPSession session, String fileName, Map<String, String> params, Map<String, String> files) {
         InputStream inputStream = mContext.getResources().openRawResource(this.resourceId);
         try {
-            return RemoteServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, mimeType + "; charset=utf-8", inputStream, (long) inputStream.available());
+            return RemoteServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, mimeType + "; charset=utf-8", inputStream, inputStream.available());
         } catch (IOException IOExc) {
             return RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, "SERVER INTERNAL ERROR: IOException: " + IOExc.getMessage());
         }

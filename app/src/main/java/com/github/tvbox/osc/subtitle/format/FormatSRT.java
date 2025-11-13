@@ -85,7 +85,7 @@ public class FormatSRT implements TimedTextFileFormat {
                             lineCounter++;
                             line = br.readLine().trim();
                             String start = line.substring(0, 12);
-                            String end = line.substring(line.length() - 12, line.length());
+                            String end = line.substring(line.length() - 12);
                             Time time = new Time("hh:mm:ss,ms", start);
                             caption.start = time;
                             time = new Time("hh:mm:ss,ms", end);
@@ -99,13 +99,13 @@ public class FormatSRT implements TimedTextFileFormat {
                         //we go to next line where the caption text starts
                         lineCounter++;
                         line = br.readLine().trim();
-                        String text = "";
+                        StringBuilder text = new StringBuilder();
                         while (!line.isEmpty()) {
-                            text += line + "<br />";
+                            text.append(line).append("<br />");
                             line = br.readLine().trim();
                             lineCounter++;
                         }
-                        caption.content = text;
+                        caption.content = text.toString();
                         int key = caption.start.mseconds;
                         //in case the key is already there, we increase it by a millisecond, since no duplicates are allowed
                         while (tto.captions.containsKey(key)) key++;
@@ -144,7 +144,7 @@ public class FormatSRT implements TimedTextFileFormat {
         //we will write the lines in an ArrayList,
         int index = 0;
         //the minimum size of the file is 4*number of captions, so we'll take some extra space.
-        ArrayList<String> file = new ArrayList<String>(5 * tto.captions.size());
+        ArrayList<String> file = new ArrayList<>(5 * tto.captions.size());
         //we iterate over our captions collection, they are ordered since they come from a TreeMap
         Collection<Subtitle> c = tto.captions.values();
         Iterator<Subtitle> itr = c.iterator();
@@ -156,22 +156,14 @@ public class FormatSRT implements TimedTextFileFormat {
             //number is written
             file.add(index++, "" + captionNumber++);
             //we check for offset value:
-            if (tto.offset != 0) {
-                current.start.mseconds += tto.offset;
-                current.end.mseconds += tto.offset;
-            }
             //time is written
             file.add(index++, current.start.getTime("hh:mm:ss,ms") + " --> " + current.end.getTime("hh:mm:ss,ms"));
             //offset is undone
-            if (tto.offset != 0) {
-                current.start.mseconds -= tto.offset;
-                current.end.mseconds -= tto.offset;
-            }
             //text is added
             String[] lines = cleanTextForSRT(current);
             int i = 0;
             while (i < lines.length)
-                file.add(index++, "" + lines[i++]);
+                file.add(index++, lines[i++]);
             //we add the next blank line
             file.add(index++, "");
         }

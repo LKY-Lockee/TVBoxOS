@@ -6,12 +6,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
-import com.owen.tvrecyclerview.widget.GridLayoutManager;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 
 import org.jetbrains.annotations.NotNull;
@@ -47,16 +44,13 @@ public class SelectDialog<T> extends BaseDialog {
         TvRecyclerView tvRecyclerView = findViewById(R.id.list);
         tvRecyclerView.setAdapter(adapter);
         tvRecyclerView.setSelectedPosition(select);
-        if (select<10){
+        if (select < 10) {
             tvRecyclerView.setSelection(select);
         }
-        tvRecyclerView.post(new Runnable() {
-            @Override
-            public void run() {
-                if (selectIdx >= 10) {
-                    tvRecyclerView.smoothScrollToPosition(selectIdx);
-                    tvRecyclerView.setSelectionWithSmooth(selectIdx);
-                }
+        tvRecyclerView.post(() -> {
+            if (selectIdx >= 10) {
+                tvRecyclerView.smoothScrollToPosition(selectIdx);
+                tvRecyclerView.setSelectionWithSmooth(selectIdx);
             }
         });
     }

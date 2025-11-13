@@ -1,7 +1,6 @@
 package com.github.tvbox.osc.ui.tv.widget;
 
 
-
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.AttributeSet;
@@ -10,24 +9,28 @@ import android.widget.ListView;
 import com.github.tvbox.osc.ui.activity.LivePlayActivity;
 
 public class ChannelListView extends ListView {
+    public int pos = LivePlayActivity.currentChannelGroupIndex;
     DataChangedListener dataChangedListener;
-    public int pos= LivePlayActivity.currentChannelGroupIndex;
     private int y;
 
     public ChannelListView(Context context) {
         super(context);
     }
+
     public ChannelListView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
+
     public ChannelListView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
-    public void setSelect(int position,int y) {
+
+    public void setSelect(int position, int y) {
         super.setSelection(position);
-        pos=position;
-        this.y=y;
+        pos = position;
+        this.y = y;
     }
+
     @Override
     protected void onFocusChanged(boolean gainFocus, int direction,
                                   Rect previouslyFocusedRect) {
@@ -41,13 +44,15 @@ public class ChannelListView extends ListView {
     @Override
     protected void handleDataChanged() {
         super.handleDataChanged();
-        if(dataChangedListener!=null)dataChangedListener.onSuccess();
+        if (dataChangedListener != null) dataChangedListener.onSuccess();
     }
+
     public void setDataChangedListener(DataChangedListener dataChangedListener) {
         this.dataChangedListener = dataChangedListener;
     }
-    public interface DataChangedListener{
-        public void onSuccess();
+
+    public interface DataChangedListener {
+        void onSuccess();
     }
 
 }

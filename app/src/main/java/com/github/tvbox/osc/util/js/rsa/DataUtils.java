@@ -3,7 +3,6 @@ package com.github.tvbox.osc.util.js.rsa;
 import android.util.Base64;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 /**
  * 数据工具类
@@ -17,7 +16,7 @@ public class DataUtils {
         return Base64.decode(data.getBytes(), Base64.NO_WRAP);
     }
 
-   /**
+    /**
      * 将 字节数组 转换成 Base64 编码
      */
     public static String base64Encode(byte[] data) {

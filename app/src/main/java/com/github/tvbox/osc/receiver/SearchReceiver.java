@@ -16,7 +16,7 @@ import org.greenrobot.eventbus.EventBus;
  * @description:
  */
 public class SearchReceiver extends BroadcastReceiver {
-    public static String action = "android.content.movie.search.Action";
+    public static final String action = "android.content.movie.search.Action";
 
     @Override
     public void onReceive(Context context, Intent intent) {

@@ -1,31 +1,27 @@
 package com.github.tvbox.osc.bean;
 
-import com.github.tvbox.osc.util.HawkConfig;
-import com.orhanobut.hawk.Hawk;
-
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.TimeZone;
 
 public class Epginfo {
 
-    public Date startdateTime;
-    public Date enddateTime;
-    public int datestart;
-    public int dateend;
-    public String title;
-    public String originStart;
-    public String originEnd;
-    public String start;
-    public String end;
-    public int index;
-    public Date epgDate;
-    public String currentEpgDate = null;
-    SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd");
+    public final Date startdateTime;
+    public final Date enddateTime;
+    public final int datestart;
+    public final int dateend;
+    public final String title;
+    public final String originStart;
+    public final String originEnd;
+    public final String start;
+    public final String end;
+    public final int index;
+    public final Date epgDate;
+    public final String currentEpgDate;
+    final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd");
 
-    public Epginfo(Date Date,String str, Date date, String str1, String str2,int pos) {
+    public Epginfo(Date Date, String str, Date date, String str1, String str2, int pos) {
         epgDate = Date;
         currentEpgDate = timeFormat.format(epgDate);
         title = str;

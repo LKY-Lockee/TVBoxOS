@@ -7,7 +7,7 @@ import androidx.annotation.NonNull;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.picasso.MyOkhttpDownLoader;
-import com.github.tvbox.osc.util.SSL.SSLSocketFactoryCompat;
+import com.github.tvbox.osc.util.ssl.SSLSocketFactoryCompat;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -50,7 +50,13 @@ public class OkGoHelper {
             + "{\"name\": \"阿里\", \"url\": \"https://dns.alidns.com/dns-query\"},"
             + "{\"name\": \"360\", \"url\": \"https://doh.360.cn/dns-query\"}"
             + "]";
+    public static DnsOverHttps dnsOverHttps = null;
+    public static final ArrayList<String> dnsHttpsList = new ArrayList<>();
+    public static boolean is_doh = false;
+    public static Map<String, String> myHosts = null;
     static OkHttpClient ItvClient = null;
+    static OkHttpClient defaultClient = null;
+    static OkHttpClient noRedirectClient = null;
 
     static void initExoOkHttpClient() {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
@@ -82,13 +88,6 @@ public class OkGoHelper {
 
         ExoMediaSourceHelper.getInstance(App.getInstance()).setOkClient(ItvClient);
     }
-
-    public static DnsOverHttps dnsOverHttps = null;
-
-    public static ArrayList<String> dnsHttpsList = new ArrayList<>();
-
-    public static boolean is_doh = false;
-    public static Map<String, String> myHosts = null;
 
     public static String getDohUrl(int type) {
         String json = Hawk.get(HawkConfig.DOH_JSON, "");
@@ -174,91 +173,6 @@ public class OkGoHelper {
         dnsOverHttps = new DnsOverHttps.Builder().client(dohClient).url(dohUrl.isEmpty() ? null : HttpUrl.get(dohUrl)).bootstrapDnsHosts((ips != null && !dohUrl.equals("https://doh.pub/dns-query")) ? DohIps(ips) : null).build();
     }
 
-    // 自定义 DNS 解析器
-    static class CustomDns implements Dns {
-        private final DnsOverHttps mDnsOverHttps;
-
-        // 接收外部注入的 DoH 实例
-        public CustomDns(DnsOverHttps dnsOverHttps) {
-            this.mDnsOverHttps = dnsOverHttps;
-        }
-
-        @NonNull
-        @Override
-        public List<InetAddress> lookup(@NonNull String hostname) throws UnknownHostException {
-            if (myHosts == null) {
-                myHosts = ApiConfig.get().getMyHost(); //确保只获取一次减少消耗
-            }
-            if (!myHosts.isEmpty() && myHosts.containsKey(hostname)) {
-                hostname = myHosts.get(hostname);
-            }
-            assert hostname != null;
-            if (isValidIpAddress(hostname)) {
-                return Collections.singletonList(InetAddress.getByName(hostname));
-            } else {
-                return mDnsOverHttps.lookup(hostname);
-            }
-        }
-
-        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-        public synchronized void mapHosts(Map<String, String> hosts) throws UnknownHostException {
-            ConcurrentHashMap<String, List<InetAddress>> map = new ConcurrentHashMap<>();
-            for (Map.Entry<String, String> entry : hosts.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue();
-                if (isValidIpAddress(value)) {
-                    map.put(key, Collections.singletonList(InetAddress.getByName(value)));
-                } else {
-                    map.put(key, getAllByName(value));
-                }
-            }
-        }
-
-        private List<InetAddress> getAllByName(String host) {
-            try {
-                // 获取所有与主机名关联的 IP 地址
-                InetAddress[] allAddresses = InetAddress.getAllByName(host);
-                String excludeIps = "2409:8087:6c02:14:100::14,2409:8087:6c02:14:100::18,39.134.108.253,39.134.108.245";
-                // 创建一个列表用于存储有效的 IP 地址
-                List<InetAddress> validAddresses = new ArrayList<>();
-                Set<String> excludeIpsSet = new HashSet<>();
-                for (String ip : excludeIps.split(",")) {
-                    excludeIpsSet.add(ip.trim());  // 添加到集合，去除多余的空格
-                }
-                for (InetAddress address : allAddresses) {
-                    if (!excludeIpsSet.contains(address.getHostAddress())) {
-                        validAddresses.add(address);
-                    }
-                }
-                return validAddresses;
-            } catch (Exception e) {
-                return new ArrayList<>();
-            }
-        }
-
-        //简单判断减少开销
-        private boolean isValidIpAddress(String str) {
-            if (str.indexOf('.') > 0) return isValidIPv4(str);
-            return str.indexOf(':') > 0;
-        }
-
-        private boolean isValidIPv4(String str) {
-            String[] parts = str.split("\\.");
-            if (parts.length != 4) return false;
-            for (String part : parts) {
-                try {
-                    Integer.parseInt(part);
-                } catch (NumberFormatException e) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
-
-    static OkHttpClient defaultClient = null;
-    static OkHttpClient noRedirectClient = null;
-
     public static OkHttpClient getDefaultClient() {
         return defaultClient;
     }
@@ -342,6 +256,88 @@ public class OkGoHelper {
             builder.hostnameVerifier(HttpsUtils.UnSafeHostnameVerifier);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    // 自定义 DNS 解析器
+    static class CustomDns implements Dns {
+        private final DnsOverHttps mDnsOverHttps;
+
+        // 接收外部注入的 DoH 实例
+        public CustomDns(DnsOverHttps dnsOverHttps) {
+            this.mDnsOverHttps = dnsOverHttps;
+        }
+
+        @NonNull
+        @Override
+        public List<InetAddress> lookup(@NonNull String hostname) throws UnknownHostException {
+            if (myHosts == null) {
+                myHosts = ApiConfig.get().getMyHost(); //确保只获取一次减少消耗
+            }
+            if (!myHosts.isEmpty() && myHosts.containsKey(hostname)) {
+                hostname = myHosts.get(hostname);
+            }
+            assert hostname != null;
+            if (isValidIpAddress(hostname)) {
+                return Collections.singletonList(InetAddress.getByName(hostname));
+            } else {
+                return mDnsOverHttps.lookup(hostname);
+            }
+        }
+
+        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
+        public synchronized void mapHosts(Map<String, String> hosts) throws UnknownHostException {
+            ConcurrentHashMap<String, List<InetAddress>> map = new ConcurrentHashMap<>();
+            for (Map.Entry<String, String> entry : hosts.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                if (isValidIpAddress(value)) {
+                    map.put(key, Collections.singletonList(InetAddress.getByName(value)));
+                } else {
+                    map.put(key, getAllByName(value));
+                }
+            }
+        }
+
+        private List<InetAddress> getAllByName(String host) {
+            try {
+                // 获取所有与主机名关联的 IP 地址
+                InetAddress[] allAddresses = InetAddress.getAllByName(host);
+                String excludeIps = "2409:8087:6c02:14:100::14,2409:8087:6c02:14:100::18,39.134.108.253,39.134.108.245";
+                // 创建一个列表用于存储有效的 IP 地址
+                List<InetAddress> validAddresses = new ArrayList<>();
+                Set<String> excludeIpsSet = new HashSet<>();
+                for (String ip : excludeIps.split(",")) {
+                    excludeIpsSet.add(ip.trim());  // 添加到集合，去除多余的空格
+                }
+                for (InetAddress address : allAddresses) {
+                    if (!excludeIpsSet.contains(address.getHostAddress())) {
+                        validAddresses.add(address);
+                    }
+                }
+                return validAddresses;
+            } catch (Exception e) {
+                return new ArrayList<>();
+            }
+        }
+
+        //简单判断减少开销
+        private boolean isValidIpAddress(String str) {
+            if (str.indexOf('.') > 0) return isValidIPv4(str);
+            return str.indexOf(':') > 0;
+        }
+
+        private boolean isValidIPv4(String str) {
+            String[] parts = str.split("\\.");
+            if (parts.length != 4) return false;
+            for (String part : parts) {
+                try {
+                    Integer.parseInt(part);
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

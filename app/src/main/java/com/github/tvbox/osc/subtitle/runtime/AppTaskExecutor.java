@@ -36,10 +36,16 @@ import java.util.concurrent.Executor;
 
 public class AppTaskExecutor extends TaskExecutor {
 
-    private TaskExecutor mDelegate;
-    private TaskExecutor mDefaultTaskExecutor;
-
     private static AppTaskExecutor sInstance;
+    private static final Executor sDeskIO = command -> getInstance().executeOnDeskIO(command);
+    private static final Executor sMainThread = command -> getInstance().executeOnMainThread(command);
+    private TaskExecutor mDelegate;
+    private final TaskExecutor mDefaultTaskExecutor;
+
+    private AppTaskExecutor() {
+        mDefaultTaskExecutor = new DefaultTaskExecutor();
+        mDelegate = mDefaultTaskExecutor;
+    }
 
     @NonNull
     public static TaskExecutor getInstance() {
@@ -51,9 +57,12 @@ public class AppTaskExecutor extends TaskExecutor {
         return sInstance;
     }
 
-    private AppTaskExecutor() {
-        mDefaultTaskExecutor = new DefaultTaskExecutor();
-        mDelegate = mDefaultTaskExecutor;
+    public static Executor deskIO() {
+        return sDeskIO;
+    }
+
+    public static Executor mainThread() {
+        return sMainThread;
     }
 
     public void setDelegate(final TaskExecutor taskExecutor) {
@@ -78,27 +87,5 @@ public class AppTaskExecutor extends TaskExecutor {
     @Override
     public boolean isMainThread() {
         return mDelegate.isMainThread();
-    }
-
-    private static Executor sDeskIO = new Executor() {
-        @Override
-        public void execute(@NonNull final Runnable command) {
-            getInstance().executeOnDeskIO(command);
-        }
-    };
-
-    private static Executor sMainThread = new Executor() {
-        @Override
-        public void execute(@NonNull final Runnable command) {
-            getInstance().executeOnMainThread(command);
-        }
-    };
-
-    public static Executor deskIO() {
-        return sDeskIO;
-    }
-
-    public static Executor mainThread() {
-        return sMainThread;
     }
 }

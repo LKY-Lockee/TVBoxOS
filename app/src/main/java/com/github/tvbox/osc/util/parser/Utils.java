@@ -1,17 +1,15 @@
 package com.github.tvbox.osc.util.parser;
 
-import android.annotation.TargetApi;
-import android.os.Build;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
-@TargetApi(Build.VERSION_CODES.KITKAT)
 public class Utils {
 
     public static final Pattern RULE = Pattern.compile("http((?!http).){12,}?\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a|mp3)\\?.*|http((?!http).){12,}\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a|mp3)|http((?!http).)*?video/tos*");
@@ -46,16 +44,12 @@ public class Utils {
     }
 
     public static void loadUrl(WebView webView, String script, ValueCallback<String> callback) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) webView.evaluateJavascript(script, callback);
-        else webView.loadUrl(script);
+        webView.evaluateJavascript(script, callback);
     }
 
 
-
     public static boolean isBlackVodUrl(String input, String url) {
-        if (url.contains("973973.xyz") || url.contains(".fit:"))
-            return true;
-        return false;
+        return url.contains("973973.xyz") || url.contains(".fit:");
     }
 
     public static JSONObject fixJsonVodHeader(JSONObject headers, String input, String url) throws JSONException {
@@ -98,11 +92,11 @@ public class Utils {
         }
         JSONObject headers = new JSONObject();
         String ua = jsonPlayData.optString("user-agent", "");
-        if (ua.trim().length() > 0) {
+        if (!ua.trim().isEmpty()) {
             headers.put("User-Agent", " " + ua);
         }
         String referer = jsonPlayData.optString("referer", "");
-        if (referer.trim().length() > 0) {
+        if (!referer.trim().isEmpty()) {
             headers.put("Referer", " " + referer);
         }
 

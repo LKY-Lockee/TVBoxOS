@@ -81,7 +81,7 @@ public class Movie implements Serializable {
 
                 public static class InfoBean implements Serializable {
                     public String name;
-                    public String url;
+                    public final String url;
 
                     public InfoBean(String name, String url) {
                         this.name = name;

@@ -18,6 +18,10 @@ public class Spider {
 
     protected static Context mContext;
 
+    public static Dns safeDns() {
+        return OkGoHelper.dnsOverHttps;
+    }
+
     public void init(Context context) {
         mContext = context;
     }
@@ -111,14 +115,11 @@ public class Spider {
 
     /**
      * 直播list
+     *
      * @return
      */
     public String liveContent(String url) {
         return "";
-    }
-
-    public static Dns safeDns() {
-        return OkGoHelper.dnsOverHttps;
     }
 
     /**
@@ -131,14 +132,16 @@ public class Spider {
     /**
      * 销毁
      */
-    public void destroy() {}
+    public void destroy() {
+    }
 
     /**
      * 爬虫代理
+     *
      * @param params
      * @return
      */
-    public Object[] proxyLocal(Map< String, String > params) {
+    public Object[] proxyLocal(Map<String, String> params) {
         return null;
     }
 }

@@ -56,15 +56,16 @@ import java.util.List;
  * @description:
  */
 public class UserFragment extends BaseLazyFragment implements View.OnClickListener {
-    private LinearLayout tvLive;
-    private LinearLayout tvSearch;
-    private LinearLayout tvSetting;
-    private LinearLayout tvHistory;
-    private LinearLayout tvCollect;
-    private LinearLayout tvPush;
     public static HomeHotVodAdapter homeHotVodAdapter;
-    private List<Movie.Video> homeSourceRec;
     public static TvRecyclerView tvHotList;
+    private List<Movie.Video> homeSourceRec;
+    private ImgUtil.Style style;
+    private final View.OnFocusChangeListener focusChangeListener = (v, hasFocus) -> {
+        if (hasFocus)
+            v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+        else
+            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+    };
 
     public static UserFragment newInstance() {
         return new UserFragment();
@@ -86,7 +87,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
             tvHotList.setVisibility(View.VISIBLE);
             tvHotList.setHasFixedSize(true);
             int spanCount = 5;
-            if(style!=null && Hawk.get(HawkConfig.HOME_REC, 0) == 1)spanCount=ImgUtil.spanCountByStyle(style,spanCount);
+            if (style != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) spanCount = ImgUtil.spanCountByStyle(style, spanCount);
             tvHotList.setLayoutManager(new V7GridLayoutManager(this.mContext, spanCount));
             int paddingLeft = getResources().getDimensionPixelSize(R.dimen.vs_15);
             int paddingTop = getResources().getDimensionPixelSize(R.dimen.vs_10);
@@ -124,27 +125,27 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         return R.layout.fragment_user;
     }
 
-    private void jumpSearch(Movie.Video vod){
+    private void jumpSearch(Movie.Video vod) {
         Intent newIntent;
-        if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)){
+        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)) {
             newIntent = new Intent(mContext, FastSearchActivity.class);
-        }else {
+        } else {
             newIntent = new Intent(mContext, SearchActivity.class);
         }
         newIntent.putExtra("title", vod.name);
         newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         mActivity.startActivity(newIntent);
     }
-    private ImgUtil.Style style;
+
     @Override
     protected void init() {
         EventBus.getDefault().register(this);
-        tvLive = findViewById(R.id.tvLive);
-        tvSearch = findViewById(R.id.tvSearch);
-        tvSetting = findViewById(R.id.tvSetting);
-        tvCollect = findViewById(R.id.tvFavorite);
-        tvHistory = findViewById(R.id.tvHistory);
-        tvPush = findViewById(R.id.tvPush);
+        LinearLayout tvLive = findViewById(R.id.tvLive);
+        LinearLayout tvSearch = findViewById(R.id.tvSearch);
+        LinearLayout tvSetting = findViewById(R.id.tvSetting);
+        LinearLayout tvCollect = findViewById(R.id.tvFavorite);
+        LinearLayout tvHistory = findViewById(R.id.tvHistory);
+        LinearLayout tvPush = findViewById(R.id.tvPush);
         tvLive.setOnClickListener(this);
         tvSearch.setOnClickListener(this);
         tvSetting.setOnClickListener(this);
@@ -158,46 +159,43 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         tvPush.setOnFocusChangeListener(focusChangeListener);
         tvCollect.setOnFocusChangeListener(focusChangeListener);
         tvHotList = findViewById(R.id.tvHotList);
-        if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && homeSourceRec!=null) {
-            style=ImgUtil.initStyle();
+        if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && homeSourceRec != null) {
+            style = ImgUtil.initStyle();
         }
-        String tvRate="";
-        if(Hawk.get(HawkConfig.HOME_REC, 0) == 0){
-            tvRate="豆瓣热播";
-        }else if(Hawk.get(HawkConfig.HOME_REC, 0) == 1){
-          tvRate= homeSourceRec!=null?"站点推荐":"豆瓣热播";
+        String tvRate = "";
+        if (Hawk.get(HawkConfig.HOME_REC, 0) == 0) {
+            tvRate = "豆瓣热播";
+        } else if (Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
+            tvRate = homeSourceRec != null ? "站点推荐" : "豆瓣热播";
         }
-        homeHotVodAdapter = new HomeHotVodAdapter(style,tvRate);
-        homeHotVodAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                if (ApiConfig.get().getSourceBeanList().isEmpty())
-                    return;
-                Movie.Video vod = ((Movie.Video) adapter.getItem(position));
-                
-                if ((vod.id != null && !vod.id.isEmpty()) && (Hawk.get(HawkConfig.HOME_REC, 0) == 2) && HawkConfig.hotVodDelete) {
-                    homeHotVodAdapter.remove(position);
-                    VodInfo vodInfo = RoomDataManger.getVodInfo(vod.sourceKey, vod.id);
-                    assert vodInfo != null;
-                    RoomDataManger.deleteVodRecord(vod.sourceKey, vodInfo);
-                    Toast.makeText(mContext, "已删除当前记录", Toast.LENGTH_SHORT).show();
-               } else if (vod.id != null && !vod.id.isEmpty()) {
-                    Bundle bundle = new Bundle();
-                    bundle.putString("id", vod.id);
-                    bundle.putString("sourceKey", vod.sourceKey);
-                    SourceBean sourceBean = ApiConfig.get().getSource(vod.sourceKey);
-                    if(sourceBean!=null){
-                        bundle.putString("picture", vod.pic);
-                        jumpActivity(DetailActivity.class, bundle);
-                    }else {
-                        jumpSearch(vod);
-                    }
+        homeHotVodAdapter = new HomeHotVodAdapter(style, tvRate);
+        homeHotVodAdapter.setOnItemClickListener((adapter, view, position) -> {
+            if (ApiConfig.get().getSourceBeanList().isEmpty())
+                return;
+            Movie.Video vod = ((Movie.Video) adapter.getItem(position));
+
+            if ((vod.id != null && !vod.id.isEmpty()) && (Hawk.get(HawkConfig.HOME_REC, 0) == 2) && HawkConfig.hotVodDelete) {
+                homeHotVodAdapter.remove(position);
+                VodInfo vodInfo = RoomDataManger.getVodInfo(vod.sourceKey, vod.id);
+                assert vodInfo != null;
+                RoomDataManger.deleteVodRecord(vod.sourceKey, vodInfo);
+                Toast.makeText(mContext, "已删除当前记录", Toast.LENGTH_SHORT).show();
+            } else if (vod.id != null && !vod.id.isEmpty()) {
+                Bundle bundle = new Bundle();
+                bundle.putString("id", vod.id);
+                bundle.putString("sourceKey", vod.sourceKey);
+                SourceBean sourceBean = ApiConfig.get().getSource(vod.sourceKey);
+                if (sourceBean != null) {
+                    bundle.putString("picture", vod.pic);
+                    jumpActivity(DetailActivity.class, bundle);
                 } else {
                     jumpSearch(vod);
                 }
+            } else {
+                jumpSearch(vod);
             }
         });
-        
+
         homeHotVodAdapter.setOnItemLongClickListener(new BaseQuickAdapter.OnItemLongClickListener() {
             @SuppressLint("NotifyDataSetChanged")
             @Override
@@ -212,10 +210,10 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
                 } else {
                     Bundle bundle = new Bundle();
                     bundle.putString("title", vod.name);
-                    jumpActivity(FastSearchActivity.class, bundle);                    
+                    jumpActivity(FastSearchActivity.class, bundle);
                 }
                 return true;
-            }    
+            }
         });
 
         tvHotList.setOnItemListener(new TvRecyclerView.OnItemListener() {
@@ -263,7 +261,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
                 String json = Hawk.get("home_hot", "");
                 if (!json.isEmpty()) {
                     ArrayList<Movie.Video> hotMovies = loadHots(json);
-                    if (hotMovies != null && hotMovies.size() > 0) {
+                    if (!hotMovies.isEmpty()) {
                         adapter.setNewData(hotMovies);
                         return;
                     }
@@ -278,12 +276,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
                             String netJson = response.body();
                             Hawk.put("home_hot_day", today);
                             Hawk.put("home_hot", netJson);
-                            mActivity.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    adapter.setNewData(loadHots(netJson));
-                                }
-                            });
+                            mActivity.runOnUiThread(() -> adapter.setNewData(loadHots(netJson)));
                         }
 
                         @Override
@@ -315,33 +308,23 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
 
                 result.add(vod);
             }
-        } catch (Throwable th) {
+        } catch (Throwable ignored) {
 
         }
         return result;
     }
 
-    private View.OnFocusChangeListener focusChangeListener = new View.OnFocusChangeListener() {
-        @Override
-        public void onFocusChange(View v, boolean hasFocus) {
-            if (hasFocus)
-                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            else
-                v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-        }
-    };
-
     @Override
     public void onClick(View v) {
-    	
-    	// takagen99: Remove Delete Mode
+
+        // takagen99: Remove Delete Mode
         HawkConfig.hotVodDelete = false;
-    
+
         FastClickCheckUtil.check(v);
         if (v.getId() == R.id.tvLive) {
-            if(Hawk.get(HawkConfig.LIVE_GROUP_LIST,new JsonArray()).isEmpty()){
+            if (Hawk.get(HawkConfig.LIVE_GROUP_LIST, new JsonArray()).isEmpty()) {
                 Toast.makeText(mContext, "直播源为空", Toast.LENGTH_SHORT).show();
-            }else {
+            } else {
                 jumpActivity(LivePlayActivity.class);
             }
         } else if (v.getId() == R.id.tvSearch) {
@@ -359,8 +342,6 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void server(ServerEvent event) {
-        if (event.type == ServerEvent.SERVER_CONNECTION) {
-        }
     }
 
     @Override

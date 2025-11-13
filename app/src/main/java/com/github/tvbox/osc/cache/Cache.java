@@ -14,7 +14,7 @@ import java.io.Serializable;
  */
 @Entity(tableName = "cache")
 public class Cache implements Serializable {
-    @PrimaryKey(autoGenerate = false)
+    @PrimaryKey()
     @NonNull
     public String key;
     public byte[] data;

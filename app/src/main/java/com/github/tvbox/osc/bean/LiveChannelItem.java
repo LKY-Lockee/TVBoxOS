@@ -9,6 +9,9 @@ import java.util.Objects;
  * @description:
  */
 public class LiveChannelItem {
+    public int sourceIndex = 0;
+    public int sourceNum = 0;
+    public boolean include_back = false;
     /**
      * channelIndex : 频道索引号
      * channelNum : 频道名称
@@ -22,9 +25,6 @@ public class LiveChannelItem {
     private String channelName;
     private ArrayList<String> channelSourceNames;
     private ArrayList<String> channelUrls;
-    public int sourceIndex = 0;
-    public int sourceNum = 0;
-    public boolean include_back = false;
 
     public void setinclude_back(boolean include_back) {
         this.include_back = include_back;
@@ -34,28 +34,28 @@ public class LiveChannelItem {
         return include_back;
     }
 
-    public void setChannelIndex(int channelIndex) {
-        this.channelIndex = channelIndex;
-    }
-
     public int getChannelIndex() {
         return channelIndex;
     }
 
-    public void setChannelNum(int channelNum) {
-        this.channelNum = channelNum;
+    public void setChannelIndex(int channelIndex) {
+        this.channelIndex = channelIndex;
     }
 
     public int getChannelNum() {
         return channelNum;
     }
 
-    public void setChannelName(String channelName) {
-        this.channelName = channelName;
+    public void setChannelNum(int channelNum) {
+        this.channelNum = channelNum;
     }
 
     public String getChannelName() {
         return channelName;
+    }
+
+    public void setChannelName(String channelName) {
+        this.channelName = channelName;
     }
 
     public ArrayList<String> getChannelUrls() {
@@ -66,21 +66,23 @@ public class LiveChannelItem {
         this.channelUrls = channelUrls;
         sourceNum = channelUrls.size();
     }
+
     public void preSource() {
         sourceIndex--;
         if (sourceIndex < 0) sourceIndex = sourceNum - 1;
     }
+
     public void nextSource() {
         sourceIndex++;
         if (sourceIndex == sourceNum) sourceIndex = 0;
     }
 
-    public void setSourceIndex(int sourceIndex) {
-        this.sourceIndex = sourceIndex;
-    }
-
     public int getSourceIndex() {
         return sourceIndex;
+    }
+
+    public void setSourceIndex(int sourceIndex) {
+        this.sourceIndex = sourceIndex;
     }
 
     public String getUrl() {

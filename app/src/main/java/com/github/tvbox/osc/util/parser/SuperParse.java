@@ -9,6 +9,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 public class SuperParse {
-    public static HashMap<String, ArrayList<String>> flagWebJx = new HashMap<>();
+    public static final HashMap<String, ArrayList<String>> flagWebJx = new HashMap<>();
     static HashMap<String, ArrayList<String>> configs = null;
     static LinkedHashMap<String, String> jsonJx = null;
     static ArrayList<String> webJx = null;
@@ -45,11 +46,7 @@ public class SuperParse {
                             JSONArray flagsArray = new JSONObject(ext).getJSONArray("flag");
                             for (int j = 0; j < flagsArray.length(); j++) {
                                 String flagKey = flagsArray.getString(j);
-                                ArrayList<String> flagJx = configs.get(flagKey);
-                                if (flagJx == null) {
-                                    flagJx = new ArrayList<>();
-                                    configs.put(flagKey, flagJx);
-                                }
+                                ArrayList<String> flagJx = configs.computeIfAbsent(flagKey, k -> new ArrayList<>());
                                 flagJx.add(key);
                             }
                         } catch (Exception e) {
@@ -123,27 +120,27 @@ public class SuperParse {
                 return webResult;
             }
         } catch (Exception e) {
-            LOG.i("echo-result"+e.getMessage());
+            LOG.i("echo-result" + e.getMessage());
         }
         return new JSONObject();
     }
 
-    public static JSONObject doJsonJx(LinkedHashMap<String, String>json_jxs,String url){
-        LOG.i("echo-jsonJx1"+json_jxs.toString());
+    public static JSONObject doJsonJx(LinkedHashMap<String, String> json_jxs, String url) {
+        LOG.i("echo-jsonJx1" + json_jxs.toString());
         return JsonParallel.parse(json_jxs, url);
     }
 
-    public static JSONObject doJsonJx(String url){
-        LOG.i("echo-jsonJx2"+jsonJx.toString());
+    public static JSONObject doJsonJx(String url) {
+        LOG.i("echo-jsonJx2" + jsonJx.toString());
         return JsonParallel.parse(jsonJx, url);
     }
 
-    public static void stopJsonJx(){
+    public static void stopJsonJx() {
         JsonParallel.cancelTasks();
     }
 
     private static String mixUrl(String url, String ext) {
-        if (ext.trim().length() > 0) {
+        if (!ext.trim().isEmpty()) {
             int idx = url.indexOf("?");
             if (idx > 0) {
                 return url.substring(0, idx + 1) + "cat_ext=" + Base64.encodeToString(ext.getBytes(), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP) + "&" + url.substring(idx + 1);
@@ -154,7 +151,7 @@ public class SuperParse {
 
     public static Object[] loadHtml(String flag, String url) {
         try {
-            url = new String(Base64.decode(url, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), "UTF-8");
+            url = new String(Base64.decode(url, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), StandardCharsets.UTF_8);
             String html = "\n" +
                     "<!doctype html>\n" +
                     "<html>\n" +
@@ -195,7 +192,7 @@ public class SuperParse {
             Object[] result = new Object[3];
             result[0] = 200;
             result[1] = "text/html; charset=\"UTF-8\"";
-            ByteArrayInputStream baos = new ByteArrayInputStream(html.toString().getBytes("UTF-8"));
+            ByteArrayInputStream baos = new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8));
             result[2] = baos;
             return result;
         } catch (Throwable th) {

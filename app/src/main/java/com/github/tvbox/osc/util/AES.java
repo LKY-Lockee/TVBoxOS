@@ -11,18 +11,18 @@ import javax.crypto.spec.SecretKeySpec;
 public class AES {
 
     public static String rightPadding(String key, String replace, int Length) {
-        String strReturn = "";
-        String strtemp = "";
-        int curLength = key .trim().length();
-        if (key  != null && curLength > Length) {
-            strReturn = key .trim().substring(0, Length);
-        } else if (key  != null && curLength == Length) {
-            strReturn = key .trim();
+        String strReturn;
+        StringBuilder strtemp = new StringBuilder();
+        int curLength = key.trim().length();
+        if (curLength > Length) {
+            strReturn = key.trim().substring(0, Length);
+        } else if (curLength == Length) {
+            strReturn = key.trim();
         } else {
             for (int i = 0; i < (Length - curLength); i++) {
-                strtemp = strtemp + replace;
+                strtemp.append(replace);
             }
-            strReturn = key .trim() + strtemp;
+            strReturn = key.trim() + strtemp;
         }
         return strReturn;
     }

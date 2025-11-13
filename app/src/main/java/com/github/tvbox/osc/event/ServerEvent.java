@@ -9,7 +9,7 @@ public class ServerEvent {
     public static final int SERVER_SUCCESS = 0;
     public static final int SERVER_CONNECTION = 1;
     public static final int SERVER_SEARCH = 2;
-    public int type;
+    public final int type;
     public Object obj;
 
     public ServerEvent(int type) {

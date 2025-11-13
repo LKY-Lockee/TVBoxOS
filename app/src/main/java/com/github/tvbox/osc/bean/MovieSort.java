@@ -28,10 +28,10 @@ public class MovieSort implements Serializable {
         @XStreamAsAttribute
         public String id;
         public String name;
-        public int sort = -1;
-        public boolean select = false;
+        public final int sort = -1;
+        public final boolean select = false;
         public ArrayList<SortFilter> filters = new ArrayList<>();
-        public HashMap<String, String> filterSelect = new HashMap<>();
+        public final HashMap<String, String> filterSelect = new HashMap<>();
         public String flag; // 类型
 
         public SortData() {
@@ -43,9 +43,6 @@ public class MovieSort implements Serializable {
         }
 
         public int filterSelectCount() {
-            if (filterSelect == null) {
-                return 0;
-            }
             int count = 0;
             for (String filter : filterSelect.values()) {
                 if (filter != null && !filter.isEmpty()) {
@@ -57,7 +54,7 @@ public class MovieSort implements Serializable {
 
         @Override
         public int compareTo(SortData o) {
-            return this.sort - o.sort;
+            return 0;
         }
 
         @Override

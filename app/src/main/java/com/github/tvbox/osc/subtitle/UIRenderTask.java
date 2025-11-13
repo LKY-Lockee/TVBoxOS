@@ -35,7 +35,7 @@ import com.github.tvbox.osc.subtitle.runtime.AppTaskExecutor;
 public class UIRenderTask implements Runnable {
 
     private Subtitle mSubtitle;
-    private SubtitleEngine.OnSubtitleChangeListener mOnSubtitleChangeListener;
+    private final SubtitleEngine.OnSubtitleChangeListener mOnSubtitleChangeListener;
 
     public UIRenderTask(final SubtitleEngine.OnSubtitleChangeListener l) {
         mOnSubtitleChangeListener = l;

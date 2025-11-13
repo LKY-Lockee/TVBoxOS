@@ -27,10 +27,10 @@ package com.github.tvbox.osc.subtitle;
 
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Message;
-import androidx.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.Log;
+
+import androidx.annotation.Nullable;
 
 import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.cache.CacheManager;
@@ -55,7 +55,7 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
     private static final String TAG = DefaultSubtitleEngine.class.getSimpleName();
     private static final int MSG_REFRESH = 0x888;
     private static final int REFRESH_INTERVAL = 100;
-
+    private static String playSubtitleCacheKey;
     @Nullable
     private HandlerThread mHandlerThread;
     @Nullable
@@ -97,10 +97,6 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
                     return;
                 }
                 final TreeMap<Integer, Subtitle> captions = subtitleLoadSuccessResult.timedTextObject.captions;
-                if (captions == null) {
-                    Log.d(TAG, "onSuccess: captions is null.");
-                    return;
-                }
                 mSubtitles = new ArrayList<>(captions.values());
                 setSubtitleDelay(SubtitleHelper.getTimeDelay());
                 notifyPrepared();
@@ -135,7 +131,7 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
         if (milliseconds == 0) {
             return;
         }
-        if (mSubtitles == null || mSubtitles.size() == 0) {
+        if (mSubtitles == null || mSubtitles.isEmpty()) {
             return;
         }
         List<Subtitle> thisSubtitles = mSubtitles;
@@ -158,13 +154,12 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
         mSubtitles = thisSubtitles;
     }
 
-    private static String playSubtitleCacheKey;
-    public void setPlaySubtitleCacheKey(String cacheKey) {
-        playSubtitleCacheKey = cacheKey;
-    }
-
     public String getPlaySubtitleCacheKey() {
         return playSubtitleCacheKey;
+    }
+
+    public void setPlaySubtitleCacheKey(String cacheKey) {
+        playSubtitleCacheKey = cacheKey;
     }
 
     @Override
@@ -221,28 +216,25 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
         stopWorkThread();
         mHandlerThread = new HandlerThread("SubtitleFindThread");
         mHandlerThread.start();
-        mWorkHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
-            @Override
-            public boolean handleMessage(final Message msg) {
-                try {
-                    long delay = REFRESH_INTERVAL;
-                    if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
-                        long position = mMediaPlayer.getCurrentPosition();
-                        Subtitle subtitle = SubtitleFinder.find(position, mSubtitles);
-                        notifyRefreshUI(subtitle);
-                        if (subtitle != null) {
-                            delay = subtitle.end.mseconds - position;
-                        }
+        mWorkHandler = new Handler(mHandlerThread.getLooper(), msg -> {
+            try {
+                long delay = REFRESH_INTERVAL;
+                if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
+                    long position = mMediaPlayer.getCurrentPosition();
+                    Subtitle subtitle = SubtitleFinder.find(position, mSubtitles);
+                    notifyRefreshUI(subtitle);
+                    if (subtitle != null) {
+                        delay = subtitle.end.mseconds - position;
+                    }
 
-                    }
-                    if (mWorkHandler != null) {
-                        mWorkHandler.sendEmptyMessageDelayed(MSG_REFRESH, delay);
-                    }
-                } catch (Exception e) {
-                    // ignored
                 }
-                return true;
+                if (mWorkHandler != null) {
+                    mWorkHandler.sendEmptyMessageDelayed(MSG_REFRESH, delay);
+                }
+            } catch (Exception e) {
+                // ignored
             }
+            return true;
         });
     }
 

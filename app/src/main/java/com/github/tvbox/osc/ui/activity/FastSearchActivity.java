@@ -12,7 +12,6 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.github.catvod.crawler.JsLoader;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
@@ -42,6 +41,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -52,14 +52,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @description:
  */
 public class FastSearchActivity extends BaseActivity {
-    private LinearLayout llLayout;
+    private final List<String> quickSearchWord = new ArrayList<>();
+    private final AtomicInteger allRunCount = new AtomicInteger(0);
+    SourceViewModel sourceViewModel;
     private TextView mSearchTitle;
     private TvRecyclerView mGridView;
     private TvRecyclerView mGridViewFilter;
-    private TvRecyclerView mGridViewWord;
-    private TvRecyclerView mGridViewWordFenci;
-    SourceViewModel sourceViewModel;
-
     private SearchWordAdapter searchWordAdapter;
     private FastSearchAdapter searchAdapter;
     private FastSearchAdapter searchAdapterFilter;
@@ -69,9 +67,6 @@ public class FastSearchActivity extends BaseActivity {
     private boolean isFilterMode = false;
     private String searchFilterKey = "";    // 过滤的key
     private HashMap<String, ArrayList<Movie.Video>> resultVods; // 搜索结果
-    private final List<String> quickSearchWord = new ArrayList<>();
-    private HashMap<String, String> mCheckSources = null;
-
     private final View.OnFocusChangeListener focusChangeListener = new View.OnFocusChangeListener() {
         @Override
         public void onFocusChange(View itemView, boolean hasFocus) {
@@ -91,6 +86,9 @@ public class FastSearchActivity extends BaseActivity {
 
         }
     };
+    private HashMap<String, String> mCheckSources = null;
+    private List<Runnable> pauseRunnable = null;
+    private ExecutorService searchExecutorService = null;
 
     @Override
     protected int getLayoutResID() {
@@ -99,19 +97,17 @@ public class FastSearchActivity extends BaseActivity {
 
     @Override
     protected void init() {
-        spNames = new HashMap<String, String>();
-        resultVods = new HashMap<String, ArrayList<Movie.Video>>();
+        spNames = new HashMap<>();
+        resultVods = new HashMap<>();
         initView();
         initViewModel();
         initData();
     }
 
-    private List<Runnable> pauseRunnable = null;
-
     @Override
     protected void onResume() {
         super.onResume();
-        if (pauseRunnable != null && pauseRunnable.size() > 0) {
+        if (pauseRunnable != null && !pauseRunnable.isEmpty()) {
             searchExecutorService = Executors.newFixedThreadPool(5);
             allRunCount.set(pauseRunnable.size());
             for (Runnable runnable : pauseRunnable) {
@@ -124,10 +120,10 @@ public class FastSearchActivity extends BaseActivity {
 
     private void initView() {
         EventBus.getDefault().register(this);
-        llLayout = findViewById(R.id.llLayout);
+        LinearLayout llLayout = findViewById(R.id.llLayout);
         mSearchTitle = findViewById(R.id.mSearchTitle);
         mGridView = findViewById(R.id.mGridView);
-        mGridViewWord = findViewById(R.id.mGridViewWord);
+        TvRecyclerView mGridViewWord = findViewById(R.id.mGridViewWord);
         mGridViewFilter = findViewById(R.id.mGridViewFilter);
 
         mGridViewWord.setHasFixedSize(true);
@@ -152,12 +148,9 @@ public class FastSearchActivity extends BaseActivity {
             }
         });
 
-        spListAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                String spName = spListAdapter.getItem(position);
-                filterResult(spName);
-            }
+        spListAdapter.setOnItemClickListener((adapter, view, position) -> {
+            String spName = spListAdapter.getItem(position);
+            filterResult(spName);
         });
 
         mGridView.setHasFixedSize(true);
@@ -166,26 +159,23 @@ public class FastSearchActivity extends BaseActivity {
         searchAdapter = new FastSearchAdapter();
         mGridView.setAdapter(searchAdapter);
 
-        searchAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                FastClickCheckUtil.check(view);
-                Movie.Video video = searchAdapter.getData().get(position);
-                if (video != null) {
-                    try {
-                        if (searchExecutorService != null) {
-                            pauseRunnable = searchExecutorService.shutdownNow();
-                            searchExecutorService = null;
-                            JsLoader.stopAll();
-                        }
-                    } catch (Throwable th) {
-                        th.printStackTrace();
+        searchAdapter.setOnItemClickListener((adapter, view, position) -> {
+            FastClickCheckUtil.check(view);
+            Movie.Video video = searchAdapter.getData().get(position);
+            if (video != null) {
+                try {
+                    if (searchExecutorService != null) {
+                        pauseRunnable = searchExecutorService.shutdownNow();
+                        searchExecutorService = null;
+                        JsLoader.stopAll();
                     }
-                    Bundle bundle = new Bundle();
-                    bundle.putString("id", video.id);
-                    bundle.putString("sourceKey", video.sourceKey);
-                    jumpActivity(DetailActivity.class, bundle);
+                } catch (Throwable th) {
+                    th.printStackTrace();
                 }
+                Bundle bundle = new Bundle();
+                bundle.putString("id", video.id);
+                bundle.putString("sourceKey", video.sourceKey);
+                jumpActivity(DetailActivity.class, bundle);
             }
         });
 
@@ -193,26 +183,23 @@ public class FastSearchActivity extends BaseActivity {
         mGridViewFilter.setLayoutManager(new V7GridLayoutManager(this.mContext, 5));
         searchAdapterFilter = new FastSearchAdapter();
         mGridViewFilter.setAdapter(searchAdapterFilter);
-        searchAdapterFilter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                FastClickCheckUtil.check(view);
-                Movie.Video video = searchAdapterFilter.getData().get(position);
-                if (video != null) {
-                    try {
-                        if (searchExecutorService != null) {
-                            pauseRunnable = searchExecutorService.shutdownNow();
-                            searchExecutorService = null;
-                            JsLoader.stopAll();
-                        }
-                    } catch (Throwable th) {
-                        th.printStackTrace();
+        searchAdapterFilter.setOnItemClickListener((adapter, view, position) -> {
+            FastClickCheckUtil.check(view);
+            Movie.Video video = searchAdapterFilter.getData().get(position);
+            if (video != null) {
+                try {
+                    if (searchExecutorService != null) {
+                        pauseRunnable = searchExecutorService.shutdownNow();
+                        searchExecutorService = null;
+                        JsLoader.stopAll();
                     }
-                    Bundle bundle = new Bundle();
-                    bundle.putString("id", video.id);
-                    bundle.putString("sourceKey", video.sourceKey);
-                    jumpActivity(DetailActivity.class, bundle);
+                } catch (Throwable th) {
+                    th.printStackTrace();
                 }
+                Bundle bundle = new Bundle();
+                bundle.putString("id", video.id);
+                bundle.putString("sourceKey", video.sourceKey);
+                jumpActivity(DetailActivity.class, bundle);
             }
         });
 
@@ -220,15 +207,12 @@ public class FastSearchActivity extends BaseActivity {
 
         // 分词
         searchWordAdapter = new SearchWordAdapter();
-        mGridViewWordFenci = findViewById(R.id.mGridViewWordFenci);
+        TvRecyclerView mGridViewWordFenci = findViewById(R.id.mGridViewWordFenci);
         mGridViewWordFenci.setAdapter(searchWordAdapter);
         mGridViewWordFenci.setLayoutManager(new V7LinearLayoutManager(this.mContext, 0, false));
-        searchWordAdapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                String str = searchWordAdapter.getData().get(position);
-                search(str);
-            }
+        searchWordAdapter.setOnItemClickListener((adapter, view, position) -> {
+            String str = searchWordAdapter.getData().get(position);
+            search(str);
         });
         searchWordAdapter.setNewData(new ArrayList<>());
     }
@@ -248,7 +232,7 @@ public class FastSearchActivity extends BaseActivity {
         String key = spNames.get(spName);
         if (key.isEmpty()) return;
 
-        if (searchFilterKey == key) return;
+        if (Objects.equals(searchFilterKey, key)) return;
         searchFilterKey = key;
 
         List<Movie.Video> list = resultVods.get(key);
@@ -361,9 +345,6 @@ public class FastSearchActivity extends BaseActivity {
         searchResult();
     }
 
-    private ExecutorService searchExecutorService = null;
-    private final AtomicInteger allRunCount = new AtomicInteger(0);
-
     private void searchResult() {
         try {
             if (searchExecutorService != null) {
@@ -379,8 +360,7 @@ public class FastSearchActivity extends BaseActivity {
             allRunCount.set(0);
         }
         searchExecutorService = Executors.newFixedThreadPool(5);
-        List<SourceBean> searchRequestList = new ArrayList<>();
-        searchRequestList.addAll(ApiConfig.get().getSourceBeanList());
+        List<SourceBean> searchRequestList = new ArrayList<>(ApiConfig.get().getSourceBeanList());
         SourceBean home = ApiConfig.get().getHomeSourceBean();
         searchRequestList.remove(home);
         searchRequestList.add(0, home);
@@ -404,14 +384,11 @@ public class FastSearchActivity extends BaseActivity {
         }
 
         for (String key : siteKey) {
-            searchExecutorService.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        sourceViewModel.getSearch(key, searchTitle);
-                    } catch (Exception e) {
+            searchExecutorService.execute(() -> {
+                try {
+                    sourceViewModel.getSearch(key, searchTitle);
+                } catch (Exception ignored) {
 
-                    }
                 }
             });
         }
@@ -422,15 +399,15 @@ public class FastSearchActivity extends BaseActivity {
         try {
             String name = "";
             for (String n : spNames.keySet()) {
-                if (spNames.get(n) == key) {
+                if (Objects.equals(spNames.get(n), key)) {
                     name = n;
                 }
             }
-            if (name == "") return key;
+            if (Objects.equals(name, "")) return key;
 
             List<String> names = spListAdapter.getData();
             for (int i = 0; i < names.size(); ++i) {
-                if (name == names.get(i)) {
+                if (Objects.equals(name, names.get(i))) {
                     return key;
                 }
             }
@@ -447,7 +424,7 @@ public class FastSearchActivity extends BaseActivity {
         searchTitle = searchTitle.trim();
         String[] arr = searchTitle.split("\\s+");
         int matchNum = 0;
-        for(String one : arr) {
+        for (String one : arr) {
             if (name.contains(one)) matchNum++;
         }
         return matchNum == arr.length;
@@ -456,21 +433,21 @@ public class FastSearchActivity extends BaseActivity {
     private void searchData(AbsXml absXml) {
         String lastSourceKey = "";
 
-        if (absXml != null && absXml.movie != null && absXml.movie.videoList != null && absXml.movie.videoList.size() > 0) {
+        if (absXml != null && absXml.movie != null && absXml.movie.videoList != null && !absXml.movie.videoList.isEmpty()) {
             List<Movie.Video> data = new ArrayList<>();
             for (Movie.Video video : absXml.movie.videoList) {
                 if (!matchSearchResult(video.name, searchTitle)) continue;
                 data.add(video);
                 if (!resultVods.containsKey(video.sourceKey)) {
-                    resultVods.put(video.sourceKey, new ArrayList<Movie.Video>());
+                    resultVods.put(video.sourceKey, new ArrayList<>());
                 }
                 resultVods.get(video.sourceKey).add(video);
-                if (video.sourceKey != lastSourceKey) {
+                if (!Objects.equals(video.sourceKey, lastSourceKey)) {
                     lastSourceKey = this.addWordAdapterIfNeed(video.sourceKey);
                 }
             }
 
-            if (searchAdapter.getData().size() > 0) {
+            if (!searchAdapter.getData().isEmpty()) {
                 searchAdapter.addData(data);
             } else {
                 showSuccess();
@@ -482,7 +459,7 @@ public class FastSearchActivity extends BaseActivity {
 
         int count = allRunCount.decrementAndGet();
         if (count <= 0) {
-            if (searchAdapter.getData().size() == 0) {
+            if (searchAdapter.getData().isEmpty()) {
                 showEmpty();
             }
             cancel();

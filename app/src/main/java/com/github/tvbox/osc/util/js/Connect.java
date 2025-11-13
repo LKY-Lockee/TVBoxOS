@@ -122,7 +122,7 @@ public class Connect {
             }
             OkGo.getInstance().cancelTag(tag);
             OkHttpUtil.cancel(tag);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 }

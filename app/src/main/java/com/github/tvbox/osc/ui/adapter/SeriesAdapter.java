@@ -19,7 +19,8 @@ import java.util.ArrayList;
  * @description:
  */
 public class SeriesAdapter extends BaseQuickAdapter<VodInfo.VodSeries, BaseViewHolder> {
-    private V7GridLayoutManager mGridLayoutManager;
+    private final V7GridLayoutManager mGridLayoutManager;
+
     public SeriesAdapter(V7GridLayoutManager gridLayoutManager) {
         super(R.layout.item_series, new ArrayList<>());
         this.mGridLayoutManager = gridLayoutManager;
@@ -40,7 +41,7 @@ public class SeriesAdapter extends BaseQuickAdapter<VodInfo.VodSeries, BaseViewH
         }
 
         View mSeriesGroupTv = ((Activity) helper.itemView.getContext()).findViewById(R.id.mSeriesGroupTv);
-        if (getData().size()>1 && mSeriesGroupTv != null && mSeriesGroupTv.getVisibility() == View.VISIBLE) {
+        if (getData().size() > 1 && mSeriesGroupTv != null && mSeriesGroupTv.getVisibility() == View.VISIBLE) {
             int spanCount = mGridLayoutManager.getSpanCount();
             int position = helper.getLayoutPosition();
             if (position < spanCount) {

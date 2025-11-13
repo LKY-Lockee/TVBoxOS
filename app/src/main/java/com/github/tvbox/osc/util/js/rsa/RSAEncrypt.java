@@ -3,6 +3,7 @@ package com.github.tvbox.osc.util.js.rsa;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -131,17 +132,17 @@ public class RSAEncrypt {
 
     public static String encryptByPublicKey(String data, String pubKey, String config, int mlong, boolean block) {
         try {
-            byte[] bytes = data.getBytes("UTF-8");
+            byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
             // 创建 Cipher 对象
             Cipher cipher = Cipher.getInstance(config);
             // 初始化 Cipher 对象，加密模式
             RSAPublicKey rSAPublicKey = (RSAPublicKey) getPublicKey(pubKey);
             cipher.init(Cipher.ENCRYPT_MODE, rSAPublicKey);
-            if(mlong == 1){
+            if (mlong == 1) {
                 return DataUtils.base64Encode(cipher.doFinal(bytes));
             }
             int bitLength = MAX_ENCRYPT_BLOCK;
-            if(block){
+            if (block) {
                 bitLength = rSAPublicKey.getModulus().bitLength() / 8 - 11;
             }
             int inputLen = bytes.length;
@@ -174,7 +175,6 @@ public class RSAEncrypt {
     /**
      * 使用私钥将加密后的 Base64 字符串进行分段解密
      *
-     *
      * @param encryptBase64Data 加密后的 Base64 字符串
      * @param prvKey            私钥 Base64 字符串，PKCS8 格式
      * @return 解密后的明文，解密失败返回 null
@@ -192,11 +192,11 @@ public class RSAEncrypt {
             // 初始化 Cipher 对象，解密模式
             RSAPrivateKey rSAPrivateKey = (RSAPrivateKey) getPrivateKey(prvKey);
             cipher.init(Cipher.DECRYPT_MODE, rSAPrivateKey);
-            if(mlong == 1){
+            if (mlong == 1) {
                 return new String(cipher.doFinal(encryptedData));
             }
             int bitLength = MAX_DECRYPT_BLOCK;
-            if(block){
+            if (block) {
                 bitLength = rSAPrivateKey.getModulus().bitLength() / 8;
             }
             int inputLen = encryptedData.length;
@@ -239,17 +239,17 @@ public class RSAEncrypt {
 
     public static String encryptByPrivateKey(String data, String prvKey, String config, int mlong, boolean block) {
         try {
-            byte[] bytes = data.getBytes("UTF-8");
+            byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
             // 创建 Cipher 对象
             Cipher cipher = Cipher.getInstance(config);
             // 初始化 Cipher 对象，加密模式
             RSAPrivateKey rSAPrivateKey = (RSAPrivateKey) getPrivateKey(prvKey);
             cipher.init(Cipher.ENCRYPT_MODE, rSAPrivateKey);
-            if(mlong == 1){
+            if (mlong == 1) {
                 return DataUtils.base64Encode(cipher.doFinal(bytes));
             }
             int bitLength = MAX_ENCRYPT_BLOCK;
-            if(block){
+            if (block) {
                 bitLength = rSAPrivateKey.getModulus().bitLength() / 8 - 11;
             }
             int inputLen = bytes.length;
@@ -290,6 +290,7 @@ public class RSAEncrypt {
     public static String decryptByPublicKey(String encryptBase64Data, String pubKey, int mlong, boolean block) {
         return decryptByPublicKey(encryptBase64Data, pubKey, ECB_PKCS1_PADDING, mlong, block);
     }
+
     public static String decryptByPublicKey(String encryptBase64Data, String pubKey, String config, int mlong, boolean block) {
         try {
             // 将要解密的数据，进行 Base64 解码
@@ -299,11 +300,11 @@ public class RSAEncrypt {
             // 初始化 Cipher 对象，解密模式
             RSAPublicKey rSAPublicKey = (RSAPublicKey) getPublicKey(pubKey);
             cipher.init(Cipher.DECRYPT_MODE, rSAPublicKey);
-            if(mlong == 1){
+            if (mlong == 1) {
                 return new String(cipher.doFinal(encryptedData));
             }
             int bitLength = MAX_DECRYPT_BLOCK;
-            if(block){
+            if (block) {
                 bitLength = rSAPublicKey.getModulus().bitLength() / 8;
             }
             int inputLen = encryptedData.length;

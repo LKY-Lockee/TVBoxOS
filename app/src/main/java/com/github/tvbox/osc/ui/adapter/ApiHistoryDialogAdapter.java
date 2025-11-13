@@ -19,25 +19,9 @@ import java.util.List;
 
 public class ApiHistoryDialogAdapter extends ListAdapter<String, ApiHistoryDialogAdapter.SelectViewHolder> {
 
-    class SelectViewHolder extends RecyclerView.ViewHolder {
-
-        public SelectViewHolder(@NonNull @NotNull View itemView) {
-            super(itemView);
-        }
-    }
-
-    public interface SelectDialogInterface {
-        void click(String value);
-
-        void del(String value, ArrayList<String> data);
-    }
-
-
-    private ArrayList<String> data = new ArrayList<>();
-
+    private final ArrayList<String> data = new ArrayList<>();
     private String select = "";
-
-    private SelectDialogInterface dialogInterface = null;
+    private final SelectDialogInterface dialogInterface;
 
     public ApiHistoryDialogAdapter(SelectDialogInterface dialogInterface) {
         super(new DiffUtil.ItemCallback<String>() {
@@ -66,7 +50,6 @@ public class ApiHistoryDialogAdapter extends ListAdapter<String, ApiHistoryDialo
         return data.size();
     }
 
-
     @Override
     public ApiHistoryDialogAdapter.SelectViewHolder onCreateViewHolder(@NonNull @NotNull ViewGroup parent, int viewType) {
         return new ApiHistoryDialogAdapter.SelectViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.item_dialog_api_history, parent, false));
@@ -79,26 +62,34 @@ public class ApiHistoryDialogAdapter extends ListAdapter<String, ApiHistoryDialo
         if (select.equals(value))
             name = "√ " + name;
         ((TextView) holder.itemView.findViewById(R.id.tvName)).setText(name);
-        holder.itemView.findViewById(R.id.tvName).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (select.equals(value))
-                    return;
-                notifyItemChanged(data.indexOf(select));
-                select = value;
-                notifyItemChanged(data.indexOf(value));
-                dialogInterface.click(value);
-            }
+        holder.itemView.findViewById(R.id.tvName).setOnClickListener(v -> {
+            if (select.equals(value))
+                return;
+            notifyItemChanged(data.indexOf(select));
+            select = value;
+            notifyItemChanged(data.indexOf(value));
+            dialogInterface.click(value);
         });
-        holder.itemView.findViewById(R.id.tvDel).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (select.equals(value))
-                    return;
-                notifyItemRemoved(data.indexOf(value));
-                data.remove(value);
-                dialogInterface.del(value, data);
-            }
+        holder.itemView.findViewById(R.id.tvDel).setOnClickListener(v -> {
+            if (select.equals(value))
+                return;
+            notifyItemRemoved(data.indexOf(value));
+            data.remove(value);
+            dialogInterface.del(value, data);
         });
+    }
+
+
+    public interface SelectDialogInterface {
+        void click(String value);
+
+        void del(String value, ArrayList<String> data);
+    }
+
+    public class SelectViewHolder extends RecyclerView.ViewHolder {
+
+        public SelectViewHolder(@NonNull @NotNull View itemView) {
+            super(itemView);
+        }
     }
 }

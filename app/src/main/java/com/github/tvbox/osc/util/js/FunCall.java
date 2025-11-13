@@ -12,10 +12,12 @@ public class FunCall implements Callable<Object> {
     private final Object[] args;
     private final String name;
     private Object result;
-
-    public static FunCall call(JSObject jsObject, String name, Object... args) {
-        return new FunCall(jsObject, name, args);
-    }
+    private final JSCallFunction jsCallFunction = new JSCallFunction() {
+        @Override
+        public Object call(Object... args) {
+            return result = args[0];
+        }
+    };
 
     private FunCall(JSObject jsObject, String name, Object... args) {
         this.jsObject = jsObject;
@@ -23,8 +25,12 @@ public class FunCall implements Callable<Object> {
         this.args = args;
     }
 
+    public static FunCall call(JSObject jsObject, String name, Object... args) {
+        return new FunCall(jsObject, name, args);
+    }
+
     @Override
-    public Object call() throws Exception {
+    public Object call() {
         result = jsObject.getJSFunction(name).call(args);
         if (!(result instanceof JSObject)) return result;
         JSObject promise = (JSObject) result;
@@ -32,11 +38,4 @@ public class FunCall implements Callable<Object> {
         if (then != null) then.call(jsCallFunction);
         return result;
     }
-
-    private final JSCallFunction jsCallFunction = new JSCallFunction() {
-        @Override
-        public Object call(Object... args) {
-            return result = args[0];
-        }
-    };
 }

@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.regex.Matcher;
@@ -29,10 +28,10 @@ public class TxtSubscribe {
         try {
             BufferedReader bufferedReader = new BufferedReader(new StringReader(str));
             LinkedHashMap<String, ArrayList<String>> linkedHashMap2 = new LinkedHashMap<>();
-            LinkedHashMap<String, ArrayList<String>> channelTemp = linkedHashMap2;
+            LinkedHashMap<String, ArrayList<String>> channelTemp;
             String line;
             while ((line = bufferedReader.readLine()) != null) {
-                if (line.equals("")) continue;
+                if (line.isEmpty()) continue;
                 if (line.startsWith("#EXTM3U")) continue;
                 if (isSetting(line)) continue;
                 if (line.startsWith("#EXTINF") || line.contains("#EXTINF")) {
@@ -63,6 +62,7 @@ public class TxtSubscribe {
             e.printStackTrace();
         }
     }
+
     private static String getStrByRegex(Pattern pattern, String line) {
         Matcher matcher = pattern.matcher(line);
         if (matcher.find()) return matcher.group(1);
@@ -90,9 +90,7 @@ public class TxtSubscribe {
                     readLine = bufferedReader.readLine();
                 } else {
                     String[] split = readLine.split(",");
-                    if (split.length < 2) {
-                        readLine = bufferedReader.readLine();
-                    } else {
+                    if (split.length >= 2) {
                         if (readLine.contains("#genre#")) {
                             String trim = split[0].trim();
                             if (!linkedHashMap.containsKey(trim)) {
@@ -118,8 +116,8 @@ public class TxtSubscribe {
                                 }
                             }
                         }
-                        readLine = bufferedReader.readLine();
                     }
+                    readLine = bufferedReader.readLine();
                 }
             }
             bufferedReader.close();
@@ -127,7 +125,7 @@ public class TxtSubscribe {
                 return;
             }
             linkedHashMap.put("未分组", linkedHashMap2);
-        } catch (Throwable unused) {
+        } catch (Throwable ignored) {
         }
     }
 
@@ -148,7 +146,7 @@ public class TxtSubscribe {
                         try {
                             jsonobj.addProperty("name", str2);
                             jsonobj.add("urls", jsonarr3);
-                        } catch (Throwable e) {
+                        } catch (Throwable ignored) {
                         }
                         jsonarr2.add(jsonobj);
                     }
@@ -157,7 +155,7 @@ public class TxtSubscribe {
                 try {
                     jsonobj2.addProperty("group", str);
                     jsonobj2.add("channels", jsonarr2);
-                } catch (Throwable e) {
+                } catch (Throwable ignored) {
                 }
                 jsonarr.add(jsonobj2);
             }

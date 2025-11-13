@@ -15,9 +15,16 @@ import xyz.doikki.videoplayer.render.IRenderView;
 import xyz.doikki.videoplayer.render.MeasureHelper;
 
 public class SurfaceRenderView extends SurfaceView implements IRenderView, SurfaceHolder.Callback {
-    private MeasureHelper mMeasureHelper;
+    private final MeasureHelper mMeasureHelper;
 
     private AbstractPlayer mMediaPlayer;
+
+    {
+        mMeasureHelper = new MeasureHelper();
+        SurfaceHolder surfaceHolder = getHolder();
+        surfaceHolder.addCallback(this);
+        surfaceHolder.setFormat(PixelFormat.RGBA_8888);
+    }
 
     public SurfaceRenderView(Context context) {
         super(context);
@@ -29,13 +36,6 @@ public class SurfaceRenderView extends SurfaceView implements IRenderView, Surfa
 
     public SurfaceRenderView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-    }
-
-    {
-        mMeasureHelper = new MeasureHelper();
-        SurfaceHolder surfaceHolder = getHolder();
-        surfaceHolder.addCallback(this);
-        surfaceHolder.setFormat(PixelFormat.RGBA_8888);
     }
 
     @Override

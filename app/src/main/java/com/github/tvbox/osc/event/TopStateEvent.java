@@ -7,7 +7,7 @@ package com.github.tvbox.osc.event;
  */
 public class TopStateEvent {
     public final static int TYPE_TOP = 0;
-    public int type;
+    public final int type;
 
     public TopStateEvent(int type) {
         this.type = type;

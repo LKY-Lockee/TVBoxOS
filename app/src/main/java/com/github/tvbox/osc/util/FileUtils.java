@@ -17,13 +17,14 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,11 +36,15 @@ import java.util.regex.Pattern;
 
 public class FileUtils {
 
+    //JS  工具方法
+    private static final Pattern URL_JOIN = Pattern.compile("^http.*\\.(js|txt|json)", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
+    private static final Map<String, Set<String>> cachedDirFiles = new HashMap<>();
+
     public static boolean writeSimple(byte[] data, File dst) {
         try {
             if (dst.exists())
                 dst.delete();
-            BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(dst));
+            BufferedOutputStream bos = new BufferedOutputStream(Files.newOutputStream(dst.toPath()));
             bos.write(data);
             bos.close();
             return true;
@@ -51,7 +56,7 @@ public class FileUtils {
 
     public static byte[] readSimple(File src) {
         try {
-            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(src));
+            BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(src.toPath()));
             int len = bis.available();
             byte[] data = new byte[len];
             bis.read(data);
@@ -86,28 +91,19 @@ public class FileUtils {
 
     public static String readFileToString(String path, String charsetName) {
         // 定义返回结果
-        String jsonString = "";
+        StringBuilder jsonString = new StringBuilder();
 
-        BufferedReader in = null;
-        try {
-            in = new BufferedReader(new InputStreamReader(new FileInputStream(new File(path)), charsetName));// 读取文件
-            String thisLine = null;
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(Files.newInputStream(Paths.get(path)), charsetName))) {
+            // 读取文件
+            String thisLine;
             while ((thisLine = in.readLine()) != null) {
-                jsonString += thisLine;
+                jsonString.append(thisLine);
             }
-            in.close();
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException el) {
-                }
-            }
         }
         // 返回拼接好的JSON String
-        return jsonString;
+        return jsonString.toString();
     }
 
     public static String getRootPath() {
@@ -125,6 +121,7 @@ public class FileUtils {
     public static String getCachePath() {
         return getCacheDir().getAbsolutePath();
     }
+
     public static String getFilePath() {
         return App.getInstance().getFilesDir().getAbsolutePath();
     }
@@ -132,8 +129,8 @@ public class FileUtils {
     public static void cleanDirectory(File dir) {
         if (!dir.exists()) return;
         File[] files = dir.listFiles();
-        if (files == null || files.length == 0) return;
-        for(File one : files) {
+        if (files == null) return;
+        for (File one : files) {
             try {
                 deleteFile(one);
             } catch (Exception e) {
@@ -142,8 +139,7 @@ public class FileUtils {
         }
     }
 
-    public static boolean isWeekAgo(File file)
-    {
+    public static boolean isWeekAgo(File file) {
         long oneWeekMillis = 3L * 24 * 60 * 60 * 1000;
         long timeDiff = System.currentTimeMillis() - file.lastModified();
         return timeDiff > oneWeekMillis;
@@ -161,11 +157,10 @@ public class FileUtils {
                 if (file.canWrite()) file.delete();
                 return;
             }
-            for(File one : files) {
+            for (File one : files) {
                 deleteFile(one);
             }
         }
-        return;
     }
 
     public static void cleanPlayerCache() {
@@ -187,7 +182,7 @@ public class FileUtils {
 
     public static String read(String path) {
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(getLocal(path))));
+            BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(getLocal(path).toPath())));
             StringBuilder sb = new StringBuilder();
             String text;
             while ((text = br.readLine()) != null) sb.append(text).append("\n");
@@ -198,30 +193,29 @@ public class FileUtils {
         }
     }
 
-    public static String getFileName(String filePath){
-        if(TextUtils.isEmpty(filePath)) return "";
+    public static String getFileName(String filePath) {
+        if (TextUtils.isEmpty(filePath)) return "";
         String fileName = filePath;
         int p = fileName.lastIndexOf(File.separatorChar);
-        if(p != -1){
+        if (p != -1) {
             fileName = fileName.substring(p + 1);
         }
         return fileName;
     }
 
-    public static String getFileNameWithoutExt(String filePath){
-        if(TextUtils.isEmpty(filePath)) return "";
+    public static String getFileNameWithoutExt(String filePath) {
+        if (TextUtils.isEmpty(filePath)) return "";
         String fileName = filePath;
         int p = fileName.lastIndexOf(File.separatorChar);
-        if(p != -1){
+        if (p != -1) {
             fileName = fileName.substring(p + 1);
         }
         p = fileName.indexOf('.');
-        if(p != -1){
+        if (p != -1) {
             fileName = fileName.substring(0, p);
         }
         return fileName;
     }
-
 
     public static boolean hasExtension(String path) {
         int lastDotIndex = path.lastIndexOf(".");
@@ -230,7 +224,7 @@ public class FileUtils {
         return lastDotIndex > lastSlashIndex && lastDotIndex < path.length() - 1;
     }
 
-    public static void saveCache(File cache,String json){
+    public static void saveCache(File cache, String json) {
         try {
             File cacheDir = cache.getParentFile();
             if (!cacheDir.exists())
@@ -238,7 +232,7 @@ public class FileUtils {
             if (cache.exists())
                 cache.delete();
             FileOutputStream fos = new FileOutputStream(cache);
-            fos.write(json.getBytes("UTF-8"));
+            fos.write(json.getBytes(StandardCharsets.UTF_8));
             fos.flush();
             fos.close();
         } catch (Throwable th) {
@@ -246,12 +240,6 @@ public class FileUtils {
         }
     }
 
-
-
-
-
-    //JS  工具方法
-    private static final Pattern URL_JOIN = Pattern.compile("^http.*\\.(js|txt|json)", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
     public static String loadModule(String name) {
         String rel = null;
         try {
@@ -262,37 +250,37 @@ public class FileUtils {
             } else if (name.contains("cat.js")) {
                 name = "cat.js";
             }
-            LOG.i("echo-loadModule "+name);
+            LOG.i("echo-loadModule " + name);
             Matcher m = URL_JOIN.matcher(name);
             if (m.find()) {
                 if (!Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
                     String cache = getCache(MD5.encode(name));
-                    rel= cache;
+                    rel = cache;
                     if (StringUtils.isEmpty(cache)) {
                         String netStr = get(name);
                         if (!TextUtils.isEmpty(netStr)) {
                             setCache(604800, MD5.encode(name), netStr);
                         }
-                        rel= netStr;
+                        rel = netStr;
                     }
                 } else {
-                    rel= get(name);
+                    rel = get(name);
                 }
             } else if (name.startsWith("assets://")) {
-                rel= getAsOpen(name.substring(9));
+                rel = getAsOpen(name.substring(9));
             } else if (isAsFile(name, "js/lib")) {
-                rel=getAsOpen("js/lib/" + name);
+                rel = getAsOpen("js/lib/" + name);
             } else if (name.startsWith("file://")) {
-                rel=get(ControlManager.get()
+                rel = get(ControlManager.get()
                         .getAddress(true) + "file/" + name.replace("file:///", "")
                         .replace("file://", ""));
             } else if (name.startsWith("clan://localhost/")) {
-                rel=get(ControlManager.get()
+                rel = get(ControlManager.get()
                         .getAddress(true) + "file/" + name.replace("clan://localhost/", ""));
             } else if (name.startsWith("clan://")) {
                 String substring = name.substring(7);
                 int indexOf = substring.indexOf(47);
-                rel=get("http://" + substring.substring(0, indexOf) + "/file/" + substring.substring(indexOf + 1));
+                rel = get("http://" + substring.substring(0, indexOf) + "/file/" + substring.substring(indexOf + 1));
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -300,9 +288,7 @@ public class FileUtils {
         return rel;
     }
 
-
-    private static final Map<String, Set<String>> cachedDirFiles = new HashMap<>();
-    public static boolean isAsFile(String name,String dir) {
+    public static boolean isAsFile(String name, String dir) {
         // 1. 先从缓存里取目录列表
         Set<String> files = cachedDirFiles.get(dir);
         if (files == null) {
@@ -324,7 +310,7 @@ public class FileUtils {
             InputStream is = App.getInstance().getAssets().open(name);
             byte[] data = new byte[is.available()];
             is.read(data);
-            return new String(data, "UTF-8");
+            return new String(data, StandardCharsets.UTF_8);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -370,8 +356,8 @@ public class FileUtils {
         }
     }
 
-    public static byte[] byteMerger(byte[] bt1, byte[] bt2){
-        byte[] bt3 = new byte[bt1.length+bt2.length];
+    public static byte[] byteMerger(byte[] bt1, byte[] bt2) {
+        byte[] bt3 = new byte[bt1.length + bt2.length];
         System.arraycopy(bt1, 0, bt3, 0, bt1.length);
         System.arraycopy(bt2, 0, bt3, bt1.length, bt2.length);
         return bt3;
@@ -383,18 +369,19 @@ public class FileUtils {
 
     public static String get(String str, Map<String, String> headerMap) {
         if (headerMap == null) {
-            headerMap=new HashMap<>();
-            headerMap.put("User-Agent",str.startsWith("https://gitcode.net/") ? UA.random() : "okhttp/3.15");
+            headerMap = new HashMap<>();
+            headerMap.put("User-Agent", str.startsWith("https://gitcode.net/") ? UA.random() : "okhttp/3.15");
         }
-        return OkHttpUtil.string(str,headerMap);
+        return OkHttpUtil.string(str, headerMap);
     }
 
     public static File open(String str) {
         return new File(getExternalCachePath() + "/qjscache_" + str + ".js");
     }
+
     public static String getExternalCachePath() {
         File externalCacheDir = App.getInstance().getExternalCacheDir();
-        if (externalCacheDir == null){
+        if (externalCacheDir == null) {
             return getCachePath();
         }
         return externalCacheDir.getAbsolutePath();

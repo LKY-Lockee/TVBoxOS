@@ -15,17 +15,6 @@ public class VlcPlayer {
 
     private static final String PACKAGE_NAME = "org.videolan.vlc";
     private static final String PLAYBACK_ACTIVITY = "org.videolan.vlc.gui.video.VideoPlayerActivity";
-
-    private static class VlcPackageInfo {
-        final String packageName;
-        final String activityName;
-
-        VlcPackageInfo(String packageName, String activityName) {
-            this.packageName = packageName;
-            this.activityName = activityName;
-        }
-    }
-
     private static final VlcPackageInfo[] PACKAGES = {
             new VlcPackageInfo(PACKAGE_NAME, PLAYBACK_ACTIVITY),
     };
@@ -71,6 +60,16 @@ public class VlcPlayer {
         } catch (ActivityNotFoundException ex) {
             Log.e(TAG, "Can't run VLC Player(Pro)", ex);
             return false;
+        }
+    }
+
+    public static class VlcPackageInfo {
+        final String packageName;
+        final String activityName;
+
+        VlcPackageInfo(String packageName, String activityName) {
+            this.packageName = packageName;
+            this.activityName = activityName;
         }
     }
 }

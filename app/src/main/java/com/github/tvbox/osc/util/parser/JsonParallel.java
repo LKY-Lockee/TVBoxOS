@@ -1,13 +1,16 @@
 package com.github.tvbox.osc.util.parser;
+
 import android.util.Base64;
+
 import com.github.catvod.crawler.SpiderDebug;
+
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -25,12 +28,13 @@ import okhttp3.Response;
  */
 public class JsonParallel {
 
+    private static final List<Future<JSONObject>> futures = new ArrayList<>();
     private static OkHttpClient client;
     private static ExecutorService executorService;
-    private static final List<Future<JSONObject>> futures = new ArrayList<>();
+
     public static JSONObject parse(LinkedHashMap<String, String> jx, String url) {
         try {
-            if (jx != null && jx.size() > 0) {
+            if (jx != null && !jx.isEmpty()) {
                 client = new OkHttpClient();
                 // 使用线程池并发处理任务
                 executorService = Executors.newFixedThreadPool(5);
@@ -40,32 +44,29 @@ public class JsonParallel {
                 // 遍历所有的解析配置
                 for (final String jxName : jx.keySet()) {
                     final String parseUrl = jx.get(jxName);
-                    futures.add(completionService.submit(new Callable<JSONObject>() {
-                        @Override
-                        public JSONObject call() {
-                            try {
-                                // 获取请求头，并从中取出实际url
-                                HashMap<String, String> reqHeaders = JsonParallel.getReqHeader(parseUrl);
-                                String realUrl = reqHeaders.get("url");
-                                reqHeaders.remove("url");
-                                Headers headers = Headers.of(reqHeaders);
-                                Request request = new Request.Builder()
-                                        .url(realUrl + url)
-                                        .headers(headers)
-                                        .tag("ParseTag")
-                                        .build();
+                    futures.add(completionService.submit(() -> {
+                        try {
+                            // 获取请求头，并从中取出实际url
+                            HashMap<String, String> reqHeaders = JsonParallel.getReqHeader(parseUrl);
+                            String realUrl = reqHeaders.get("url");
+                            reqHeaders.remove("url");
+                            Headers headers = Headers.of(reqHeaders);
+                            Request request = new Request.Builder()
+                                    .url(realUrl + url)
+                                    .headers(headers)
+                                    .tag("ParseTag")
+                                    .build();
 
-                                Call call = client.newCall(request);
-                                Response response = call.execute();
-                                String json = response.body().string();
+                            Call call = client.newCall(request);
+                            Response response = call.execute();
+                            String json = response.body().string();
 
-                                JSONObject taskResult = Utils.jsonParse(url, json);
-                                taskResult.put("jxFrom", jxName);
-                                return taskResult;
-                            } catch (Throwable th) {
-                                // 输出日志
-                                return null;
-                            }
+                            JSONObject taskResult = Utils.jsonParse(url, json);
+                            taskResult.put("jxFrom", jxName);
+                            return taskResult;
+                        } catch (Throwable th) {
+                            // 输出日志
+                            return null;
                         }
                     }));
                 }
@@ -105,19 +106,18 @@ public class JsonParallel {
         if (client != null) {
             client.dispatcher().cancelAll();
         }
-        if (futures != null) {
-            for (Future<JSONObject> future : futures) {
-                try {
-                    future.cancel(true);
-                } catch (Throwable t) {
-                }
+        for (Future<JSONObject> future : futures) {
+            try {
+                future.cancel(true);
+            } catch (Throwable ignored) {
             }
-            futures.clear();
         }
+        futures.clear();
         if (executorService != null) {
             executorService.shutdownNow();
         }
     }
+
     public static HashMap<String, String> getReqHeader(String url) {
         HashMap<String, String> reqHeaders = new HashMap<>();
         reqHeaders.put("url", url);
@@ -138,7 +138,7 @@ public class JsonParallel {
                     }
                 }
                 reqHeaders.put("url", newUrl);
-            } catch (Throwable th) {
+            } catch (Throwable ignored) {
 
             }
         }

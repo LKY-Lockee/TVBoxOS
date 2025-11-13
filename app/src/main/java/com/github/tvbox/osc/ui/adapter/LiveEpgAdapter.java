@@ -2,38 +2,36 @@ package com.github.tvbox.osc.ui.adapter;
 
 import android.annotation.SuppressLint;
 import android.graphics.Color;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.ui.tv.widget.AudioWaveView;
 import com.github.tvbox.osc.bean.Epginfo;
+import com.github.tvbox.osc.ui.tv.widget.AudioWaveView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 public class LiveEpgAdapter extends BaseQuickAdapter<Epginfo, BaseViewHolder> {
-    private int selectedEpgIndex = -1;
-    private int focusedEpgIndex = -1;
     public static float fontSize = 20;
     private final int defaultShiyiSelection = 0;
-    private boolean ShiyiSelection = false;
-    private String shiyiDate = null;
     private final String currentEpgDate = null;
     private final int focusSelection = -1;
+    final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd");
+    private int selectedEpgIndex = -1;
+    private int focusedEpgIndex = -1;
+    private boolean ShiyiSelection = false;
+    private String shiyiDate = null;
     private boolean source_include_back = false;
 
-    SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd");
     public LiveEpgAdapter() {
         super(R.layout.epglist_item, new ArrayList<>());
     }
 
-    public void CanBack( Boolean source_include_back){
+    public void CanBack(Boolean source_include_back) {
         this.source_include_back = source_include_back;
     }
 
@@ -48,7 +46,7 @@ public class LiveEpgAdapter extends BaseQuickAdapter<Epginfo, BaseViewHolder> {
         if (value.index == selectedEpgIndex && value.index != focusedEpgIndex && (value.currentEpgDate.equals(shiyiDate) || value.currentEpgDate.equals(timeFormat.format(new Date())))) {
             textview.setTextColor(mContext.getResources().getColor(R.color.color_1890FF));
             timeview.setTextColor(mContext.getResources().getColor(R.color.color_1890FF));
-        }else {
+        } else {
             textview.setTextColor(Color.WHITE);
             timeview.setTextColor(Color.WHITE);
         }
@@ -57,7 +55,7 @@ public class LiveEpgAdapter extends BaseQuickAdapter<Epginfo, BaseViewHolder> {
             shiyi.setBackgroundColor(Color.YELLOW);
             shiyi.setText("直播中");
             shiyi.setTextColor(Color.RED);
-        } else if (new Date().compareTo(value.enddateTime) > 0 && source_include_back ) {
+        } else if (new Date().compareTo(value.enddateTime) > 0 && source_include_back) {
             shiyi.setVisibility(View.VISIBLE);
             shiyi.setBackgroundColor(Color.BLUE);
             shiyi.setTextColor(Color.WHITE);
@@ -101,6 +99,7 @@ public class LiveEpgAdapter extends BaseQuickAdapter<Epginfo, BaseViewHolder> {
         }
 
     }
+
     public void setShiyiSelection(int i, boolean t, String currentEpgDate) {
         this.selectedEpgIndex = i;
         this.shiyiDate = t ? currentEpgDate : null;
@@ -108,6 +107,7 @@ public class LiveEpgAdapter extends BaseQuickAdapter<Epginfo, BaseViewHolder> {
         notifyItemChanged(this.selectedEpgIndex);
 
     }
+
     public int getSelectedIndex() {
         return selectedEpgIndex;
     }

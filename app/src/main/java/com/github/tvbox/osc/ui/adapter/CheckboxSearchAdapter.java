@@ -6,8 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
-
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
@@ -16,7 +14,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.bean.SourceBean;
-import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.SearchHelper;
 
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +23,9 @@ import java.util.HashMap;
 import java.util.List;
 
 public class CheckboxSearchAdapter extends ListAdapter<SourceBean, CheckboxSearchAdapter.ViewHolder> {
+
+    public HashMap<String, String> mCheckedSources = new HashMap<>();
+    private final ArrayList<SourceBean> data = new ArrayList<>();
 
     public CheckboxSearchAdapter(DiffUtil.ItemCallback<SourceBean> diffCallback) {
         super(diffCallback);
@@ -40,9 +40,6 @@ public class CheckboxSearchAdapter extends ListAdapter<SourceBean, CheckboxSearc
         mCheckedSources = checkedSources;
     }
 
-    private ArrayList<SourceBean> data = new ArrayList<>();
-    public HashMap<String, String> mCheckedSources = new HashMap<>();
-
     @SuppressLint("NotifyDataSetChanged")
     public void setData(List<SourceBean> newData, HashMap<String, String> checkedSources) {
         data.clear();
@@ -53,7 +50,7 @@ public class CheckboxSearchAdapter extends ListAdapter<SourceBean, CheckboxSearc
 
     public void setMCheckedSources() {
 //        LOG.i(data.size()+"size----size"+mCheckedSources.size());
-        SearchHelper.putCheckedSources(mCheckedSources,data.size()==mCheckedSources.size());
+        SearchHelper.putCheckedSources(mCheckedSources, data.size() == mCheckedSources.size());
     }
 
     @Override
@@ -71,26 +68,23 @@ public class CheckboxSearchAdapter extends ListAdapter<SourceBean, CheckboxSearc
             holder.oneSearchSource.setChecked(mCheckedSources.containsKey(sourceBean.getKey()));
         }
         holder.oneSearchSource.setTag(sourceBean);
-        holder.oneSearchSource.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    mCheckedSources.put(sourceBean.getKey(), "1");
-                } else {
-                    mCheckedSources.remove(sourceBean.getKey());
-                }
-                notifyItemChanged(pos);
+        holder.oneSearchSource.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                mCheckedSources.put(sourceBean.getKey(), "1");
+            } else {
+                mCheckedSources.remove(sourceBean.getKey());
             }
+            notifyItemChanged(pos);
         });
 
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        public CheckBox oneSearchSource;
+        public final CheckBox oneSearchSource;
 
         public ViewHolder(View view) {
             super(view);
-            oneSearchSource = (CheckBox) view.findViewById(R.id.oneSearchSource);
+            oneSearchSource = view.findViewById(R.id.oneSearchSource);
         }
     }
 

@@ -12,24 +12,24 @@ public class Subtitle {
         return isZip;
     }
 
-    public String getName() {
-        return name;
+    public void setIsZip(boolean zip) {
+        isZip = zip;
     }
 
-    public String getUrl() {
-        return url;
+    public String getName() {
+        return name;
     }
 
     public void setName(String name) {
         this.name = name;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public String getUrl() {
+        return url;
     }
 
-    public void setIsZip(boolean zip) {
-        isZip = zip;
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     @Override

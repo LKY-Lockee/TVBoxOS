@@ -13,7 +13,7 @@ import androidx.annotation.Nullable;
  */
 
 @SuppressLint("AppCompatCustomView")
-public class MarqueeTextView extends TextView{
+public class MarqueeTextView extends TextView {
     public MarqueeTextView(Context context) {
         this(context, null);
     }

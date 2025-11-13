@@ -3,7 +3,6 @@ package com.github.tvbox.osc.ui.dialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,8 +25,15 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
 
-public class SearchRemoteTvDialog extends BaseDialog{
+public class SearchRemoteTvDialog extends BaseDialog {
 
+
+    private LoadService<?> mLoadService;
+
+    public SearchRemoteTvDialog(@NonNull @NotNull Context context) {
+        super(context);
+        setContentView(R.layout.dialog_search_remotetv);
+    }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void refresh(RefreshEvent event) {
@@ -35,12 +41,6 @@ public class SearchRemoteTvDialog extends BaseDialog{
             showRemoteTvDialog(ModelSettingFragment.foundRemoteTv);
         }
     }
-
-    public SearchRemoteTvDialog(@NonNull @NotNull Context context) {
-        super(context);
-        setContentView(R.layout.dialog_search_remotetv);
-    }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,16 +96,9 @@ public class SearchRemoteTvDialog extends BaseDialog{
         dialog.show();
     }
 
-
-
-    private LoadService mLoadService;
-
     protected void setLoadSir(View view) {
         if (mLoadService == null) {
-            mLoadService = LoadSir.getDefault().register(view, new Callback.OnReloadListener() {
-                @Override
-                public void onReload(View v) {
-                }
+            mLoadService = LoadSir.getDefault().register(view, (Callback.OnReloadListener) v -> {
             });
         }
     }
