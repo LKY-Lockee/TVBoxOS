@@ -38,6 +38,17 @@ import java.util.TreeMap;
 
 public class TimedTextObject {
 
+    public final String language = "";
+    //list of layouts (id, reference)
+    public final Hashtable<String, Region> layout;
+    //list of captions (begin time, reference)
+    //represented by a tree map to maintain order
+    public final TreeMap<Integer, Subtitle> captions;
+    //**** OPTIONS *****
+    //to know whether file should be saved as .ASS or .SSA
+    public final boolean useASSInsteadOfSSA = true;
+    //to delay or advance the subtitles, parsed into +/- milliseconds
+    public final int offset = 0;
     /*
      * Attributes
      *
@@ -48,27 +59,10 @@ public class TimedTextObject {
     public String copyrigth = "";
     public String author = "";
     public String fileName = "";
-    public final String language = "";
-
     //list of styles (id, reference)
     public Hashtable<String, Style> styling;
-
-    //list of layouts (id, reference)
-    public final Hashtable<String, Region> layout;
-
-    //list of captions (begin time, reference)
-    //represented by a tree map to maintain order
-    public final TreeMap<Integer, Subtitle> captions;
-
     //to store non fatal errors produced during parsing
     public String warnings;
-
-    //**** OPTIONS *****
-    //to know whether file should be saved as .ASS or .SSA
-    public final boolean useASSInsteadOfSSA = true;
-    //to delay or advance the subtitles, parsed into +/- milliseconds
-    public final int offset = 0;
-
     //to know if a parsing method has been applied
     public boolean built = false;
 

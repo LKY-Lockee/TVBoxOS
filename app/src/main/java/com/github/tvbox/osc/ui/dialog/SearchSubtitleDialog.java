@@ -30,15 +30,14 @@ import java.util.List;
 public class SearchSubtitleDialog extends BaseDialog {
 
     private final Context mContext;
+    private final int maxPage = 5;
     private TvRecyclerView mGridView;
     private SearchSubtitleAdapter searchAdapter;
-
     private EditText subtitleSearchEt;
     private SubtitleLoader mSubtitleLoader;
     private ProgressBar loadingBar;
     private SubtitleViewModel subtitleViewModel;
     private int page = 1;
-    private final int maxPage = 5;
     private String searchWord = "";
 
     private List<Subtitle> zipSubtitles = new ArrayList<>();

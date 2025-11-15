@@ -33,19 +33,15 @@ import java.util.List;
  */
 public class SettingActivity extends BaseActivity {
     public static DevModeCallback callback = null;
+    private final List<BaseLazyFragment> fragments = new ArrayList<>();
+    private final Handler mHandler = new Handler();
     String devMode = "";
+    private final Runnable mDevModeRun = () -> devMode = "";
     private ViewPager mViewPager;
     private SettingMenuAdapter sortAdapter;
-    private final List<BaseLazyFragment> fragments = new ArrayList<>();
     private boolean sortChange = false;
     private int defaultSelected = 0;
     private int sortFocused = 0;
-    private final Handler mHandler = new Handler();
-    private String homeSourceKey;
-    private String currentApi;
-    private int homeRec;
-    private int dnsOpt;
-    private String currentLiveApi;
     private final Runnable mDataRunnable = new Runnable() {
         @Override
         public void run() {
@@ -58,7 +54,11 @@ public class SettingActivity extends BaseActivity {
             }
         }
     };
-    private final Runnable mDevModeRun = () -> devMode = "";
+    private String homeSourceKey;
+    private String currentApi;
+    private int homeRec;
+    private int dnsOpt;
+    private String currentLiveApi;
 
     @Override
     protected int getLayoutResID() {

@@ -82,6 +82,7 @@ import me.jessyan.autosize.utils.AutoSizeUtils;
  */
 
 public class DetailActivity extends BaseActivity {
+    final boolean showPreview = Hawk.get(HawkConfig.SHOW_PREVIEW, true);
     private final ArrayList<String> seriesGroupOptions = new ArrayList<>();
     private final List<Movie.Video> quickSearchData = new ArrayList<>();
     private final List<String> quickSearchWord = new ArrayList<>();
@@ -89,7 +90,6 @@ public class DetailActivity extends BaseActivity {
     public String sourceKey;
     public String firstsourceKey;
     boolean seriesSelect = false;
-    final boolean showPreview = Hawk.get(HawkConfig.SHOW_PREVIEW, true);
     // preview
     VodInfo previewVodInfo = null;
     boolean fullWindows = false;

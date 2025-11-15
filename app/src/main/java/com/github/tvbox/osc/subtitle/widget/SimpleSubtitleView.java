@@ -59,10 +59,10 @@ public class SimpleSubtitleView extends TextView
         SubtitleEngine.OnSubtitlePreparedListener {
 
     private static final String EMPTY_TEXT = "";
+    private final TextView backGroundText;//用于描边的TextView
     public boolean isInternal = false;
     public boolean hasInternal = false;
     private SubtitleEngine mSubtitleEngine;
-    private final TextView backGroundText;//用于描边的TextView
 
     public SimpleSubtitleView(final Context context) {
         super(context);

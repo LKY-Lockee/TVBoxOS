@@ -18,8 +18,8 @@ import org.jetbrains.annotations.NotNull;
  * @since 2020/12/27
  */
 public class LivePasswordDialog extends BaseDialog {
-    OnListener listener = null;
     private final EditText inputPassword;
+    OnListener listener = null;
 
     public LivePasswordDialog(@NonNull @NotNull Context context) {
         super(context);

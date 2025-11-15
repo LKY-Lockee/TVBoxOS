@@ -35,8 +35,8 @@ public class SelectDialogAdapter<T> extends ListAdapter<T, SelectDialogAdapter.S
         }
     };
     private final ArrayList<T> data = new ArrayList<>();
-    private int select = 0;
     private final SelectDialogInterface dialogInterface;
+    private int select = 0;
 
     public SelectDialogAdapter(SelectDialogInterface dialogInterface, DiffUtil.ItemCallback diffCallback) {
         super(diffCallback);

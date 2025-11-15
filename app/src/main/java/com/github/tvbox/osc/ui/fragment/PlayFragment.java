@@ -1,14 +1,12 @@
 package com.github.tvbox.osc.ui.fragment;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.http.SslError;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -832,35 +830,26 @@ public class PlayFragment extends BaseLazyFragment {
             requireActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
             mController.mLandscapePortraitBtn.setText("竖屏");
         }
-        if (mController.onBackPressed()) {
-            return true;
-        }
-        return false;
+        return mController.onBackPressed();
     }
 
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event != null) {
-            if (mController.onKeyEvent(event)) {
-                return true;
-            }
+            return mController.onKeyEvent(event);
         }
         return false;
     }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (event != null) {
-            if (mController.onKeyDown(keyCode, event)) {
-                return true;
-            }
+            return mController.onKeyDown(keyCode, event);
         }
         return false;
     }
 
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (event != null) {
-            if (mController.onKeyUp(keyCode, event)) {
-                return true;
-            }
+            return mController.onKeyUp(keyCode, event);
         }
         return false;
     }
@@ -1581,11 +1570,7 @@ public class PlayFragment extends BaseLazyFragment {
         settings.setJavaScriptEnabled(true);
 
         settings.setMediaPlaybackRequiresUserGesture(false);
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            settings.setBlockNetworkImage(false);
-        } else {
-            settings.setBlockNetworkImage(true);
-        }
+        settings.setBlockNetworkImage(!Hawk.get(HawkConfig.DEBUG_OPEN, false));
         settings.setUseWideViewPort(true);
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -1652,11 +1637,7 @@ public class PlayFragment extends BaseLazyFragment {
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptEnabled(true);
 
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            settings.setBlockNetworkImage(false);
-        } else {
-            settings.setBlockNetworkImage(true);
-        }
+        settings.setBlockNetworkImage(!Hawk.get(HawkConfig.DEBUG_OPEN, false));
 
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUseWideViewPort(true);
@@ -1822,7 +1803,7 @@ public class PlayFragment extends BaseLazyFragment {
             LOG.i("echo-shouldInterceptRequest url:" + url);
             HashMap<String, String> webHeaders = new HashMap<>();
             Map<String, String> hds = request.getRequestHeaders();
-            if (hds != null && hds.keySet().size() > 0) {
+            if (hds != null && hds.size() > 0) {
                 for (String k : hds.keySet()) {
                     if (k.equalsIgnoreCase("user-agent")
                             || k.equalsIgnoreCase("referer")
@@ -1898,7 +1879,7 @@ public class PlayFragment extends BaseLazyFragment {
                 if (checkVideoFormat(url)) {
                     HashMap<String, String> webHeaders = new HashMap<>();
                     Map<String, String> hds = request.getRequestHeaders();
-                    if (hds != null && hds.keySet().size() > 0) {
+                    if (hds != null && hds.size() > 0) {
                         for (String k : hds.keySet()) {
                             if (k.equalsIgnoreCase("user-agent")
                                     || k.equalsIgnoreCase("referer")

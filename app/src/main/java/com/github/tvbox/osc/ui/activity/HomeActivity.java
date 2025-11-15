@@ -1,10 +1,6 @@
 package com.github.tvbox.osc.ui.activity;
 
 import android.Manifest;
-import android.animation.Animator;
-import android.animation.AnimatorSet;
-import android.animation.IntEvaluator;
-import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
@@ -13,18 +9,12 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
-import android.view.animation.BounceInterpolator;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
 
 import com.github.tvbox.osc.R;
@@ -46,31 +36,26 @@ import com.github.tvbox.osc.ui.fragment.UserFragment;
 import com.github.tvbox.osc.ui.tv.widget.DefaultTransformer;
 import com.github.tvbox.osc.ui.tv.widget.FixedSpeedScroller;
 import com.github.tvbox.osc.ui.tv.widget.NoScrollViewPager;
-import com.github.tvbox.osc.ui.tv.widget.ViewObj;
 import com.github.tvbox.osc.util.AppManager;
 import com.github.tvbox.osc.util.DefaultConfig;
-import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.LOG;
-import com.github.tvbox.osc.util.MD5;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.tabs.TabLayout;
 import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
-import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
-import java.io.File;
 import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
@@ -78,11 +63,6 @@ public class HomeActivity extends BaseActivity {
     private static final long LONG_PRESS_THRESHOLD = 2000; // 设置长按的阈值，单位是毫秒
     private final List<BaseLazyFragment> fragments = new ArrayList<>();
     private final Handler mHandler = new Handler();
-    public View sortFocusView = null;
-    boolean useCacheConfig = false;
-    byte topHide = 0;
-    private LinearLayout topLayout;
-    private TextView tvDate;
     private final Runnable mRunnable = new Runnable() {
         @SuppressLint({"DefaultLocale", "SetTextI18n"})
         @Override
@@ -90,17 +70,18 @@ public class HomeActivity extends BaseActivity {
             Date date = new Date();
             @SuppressLint("SimpleDateFormat")
             SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
-            tvDate.setText(timeFormat.format(date));
             mHandler.postDelayed(this, 1000);
         }
     };
-    private TextView tvName;
-    private TvRecyclerView mGridView;
+    private final boolean isDownOrUp = false;
+    public View sortFocusView = null;
+    boolean useCacheConfig = false;
+    byte topHide = 0;
+    private TabLayout mTabLayout;
     private NoScrollViewPager mViewPager;
     private SourceViewModel sourceViewModel;
     private SortAdapter sortAdapter;
     private View currentView;
-    private boolean isDownOrUp = false;
     private boolean sortChange = false;
     private int currentSelected = 0;
     private int sortFocused = 0;
@@ -112,7 +93,6 @@ public class HomeActivity extends BaseActivity {
                 if (sortFocused != currentSelected) {
                     currentSelected = sortFocused;
                     mViewPager.setCurrentItem(sortFocused, false);
-                    changeTop(sortFocused != 0);
                 }
             }
         }
@@ -145,135 +125,46 @@ public class HomeActivity extends BaseActivity {
     }
 
     private void initView() {
-        this.topLayout = findViewById(R.id.topLayout);
-        this.tvDate = findViewById(R.id.tvDate);
-        this.tvName = findViewById(R.id.tvName);
-        LinearLayout contentLayout = findViewById(R.id.contentLayout);
-        this.mGridView = findViewById(R.id.mGridView);
+        MaterialToolbar topAppBar = findViewById(R.id.appBar);
+
+        View contentLayout = findViewById(R.id.contentLayout);
+        this.mTabLayout = findViewById(R.id.mTabLayout);
         this.mViewPager = findViewById(R.id.mViewPager);
         this.sortAdapter = new SortAdapter();
-        this.mGridView.setLayoutManager(new V7LinearLayoutManager(this.mContext, 0, false));
-        this.mGridView.setSpacingWithMargins(0, AutoSizeUtils.dp2px(this.mContext, 10.0f));
-        this.mGridView.setAdapter(this.sortAdapter);
-        sortAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+
+        // 设置TabLayout监听器
+        this.mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
-            public void onChanged() {
-                mGridView.post(() -> {
-                    View firstChild = Objects.requireNonNull(mGridView.getLayoutManager()).findViewByPosition(0);
-                    if (firstChild != null) {
-                        mGridView.setSelectedPosition(0);
-                        firstChild.requestFocus();
-                    }
-                });
-            }
-        });
-        this.mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
-            public void onItemPreSelected(TvRecyclerView tvRecyclerView, View view, int position) {
-                if (view != null && !HomeActivity.this.isDownOrUp) {
-                    mHandler.postDelayed(new Runnable() {
-                        public final int p = position;
-
-                        @Override
-                        public void run() {
-                            TextView textView = view.findViewById(R.id.tvTitle);
-                            textView.getPaint().setFakeBoldText(false);
-                            if (sortFocused == p) {
-                                view.animate().scaleX(1.1f).scaleY(1.1f).setInterpolator(new BounceInterpolator()).setDuration(300).start();
-                                textView.setTextColor(HomeActivity.this.getResources().getColor(R.color.color_FFFFFF));
-                            } else {
-                                view.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).start();
-                                textView.setTextColor(HomeActivity.this.getResources().getColor(R.color.color_BBFFFFFF));
-                                view.findViewById(R.id.tvFilter).setVisibility(View.GONE);
-                                view.findViewById(R.id.tvFilterColor).setVisibility(View.GONE);
-                            }
-                            textView.invalidate();
-                        }
-                    }, 10);
-                }
-            }
-
-            public void onItemSelected(TvRecyclerView tvRecyclerView, View view, int position) {
-                if (view != null) {
-                    HomeActivity.this.currentView = view;
-                    HomeActivity.this.isDownOrUp = false;
-                    HomeActivity.this.sortChange = true;
-                    view.animate().scaleX(1.1f).scaleY(1.1f).setInterpolator(new BounceInterpolator()).setDuration(300).start();
-                    TextView textView = view.findViewById(R.id.tvTitle);
-                    textView.getPaint().setFakeBoldText(true);
-                    textView.setTextColor(HomeActivity.this.getResources().getColor(R.color.color_FFFFFF));
-                    textView.invalidate();
-                    MovieSort.SortData sortData = sortAdapter.getItem(position);
-                    if (!sortData.filters.isEmpty()) {
-                        showFilterIcon(sortData.filterSelectCount());
-                    }
-                    HomeActivity.this.sortFocusView = view;
-                    HomeActivity.this.sortFocused = position;
-                    mHandler.removeCallbacks(mDataRunnable);
-                    mHandler.postDelayed(mDataRunnable, 200);
-                }
+            public void onTabSelected(TabLayout.Tab tab) {
+                int position = tab.getPosition();
+                currentSelected = position;
+                sortFocused = position;
+                mViewPager.setCurrentItem(position, true);
             }
 
             @Override
-            public void onItemClick(TvRecyclerView parent, View itemView, int position) {
-                if (itemView != null && currentSelected == position) {
-                    BaseLazyFragment baseLazyFragment = fragments.get(currentSelected);
-                    if ((baseLazyFragment instanceof GridFragment) && !sortAdapter.getItem(position).filters.isEmpty()) {// 弹出筛选
-                        ((GridFragment) baseLazyFragment).showFilter();
-                    } else if (baseLazyFragment instanceof UserFragment) {
-                        showSiteSwitch();
-                    }
-                }
+            public void onTabUnselected(TabLayout.Tab tab) {
             }
-        });
 
-        this.mGridView.setOnInBorderKeyEventListener((direction, view) -> {
-            if (direction == View.FOCUS_UP) {
-                BaseLazyFragment baseLazyFragment = fragments.get(sortFocused);
-                if ((baseLazyFragment instanceof GridFragment)) {
-                    ((GridFragment) baseLazyFragment).forceRefresh();
-                }
-            }
-            if (direction != View.FOCUS_DOWN) {
-                return false;
-            }
-            BaseLazyFragment baseLazyFragment = fragments.get(sortFocused);
-            if (!(baseLazyFragment instanceof GridFragment)) {
-                return false;
-            }
-            return !((GridFragment) baseLazyFragment).isLoad();
-        });
-        tvName.setOnClickListener(v -> {
-            FastClickCheckUtil.check(v);
-            if (dataInitOk && jarInitOk) {
-                String cspCachePath = FileUtils.getFilePath() + "/csp/";
-                String jar = ApiConfig.get().getHomeSourceBean().getJar();
-                String jarUrl = !jar.isEmpty() ? jar : ApiConfig.get().getSpider();
-                File cspCacheDir = new File(cspCachePath + MD5.string2MD5(jarUrl) + ".jar");
-                Toast.makeText(mContext, "jar缓存已清除", Toast.LENGTH_LONG).show();
-                if (!cspCacheDir.exists()) {
-                    refreshHome();
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                // 当重新点击当前选中的tab时
+                int position = tab.getPosition();
+                if (position < 0 || position >= fragments.size()) {
                     return;
                 }
-                new Thread(() -> {
-                    try {
-                        FileUtils.deleteFile(cspCacheDir);
-                        ApiConfig.get().clearJarLoader();
-                        refreshHome();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }).start();
-
-            } else {
-                jumpActivity(SettingActivity.class);
+                BaseLazyFragment baseLazyFragment = fragments.get(position);
+                if ((baseLazyFragment instanceof GridFragment) && position < sortAdapter.getData().size()
+                        && !sortAdapter.getItem(position).filters.isEmpty()) {
+                    // 弹出筛选
+                    ((GridFragment) baseLazyFragment).showFilter();
+                } else if (baseLazyFragment instanceof UserFragment) {
+                    showSiteSwitch();
+                }
             }
         });
-        tvName.setOnLongClickListener(v -> {
-            jumpActivity(SettingActivity.class);
-            return true;
-        });
+
         setLoadSir(contentLayout);
-        //mHandler.postDelayed(mFindFocus, 500);
     }
 
     private void initViewModel() {
@@ -289,10 +180,12 @@ public class HomeActivity extends BaseActivity {
             } else {
                 sortAdapter.setNewData(DefaultConfig.adjustSort(ApiConfig.get().getHomeSourceBean().getKey(), new ArrayList<>(), true));
             }
+
+            // 更新TabLayout
+            updateTabLayout();
+
             initViewPager(absXml);
             SourceBean home = ApiConfig.get().getHomeSourceBean();
-            if (home != null && home.getName() != null && !home.getName().isEmpty()) tvName.setText(home.getName());
-            tvName.clearAnimation();
         });
     }
 
@@ -309,7 +202,6 @@ public class HomeActivity extends BaseActivity {
             }
             return;
         }
-        tvNameAnimation();
         showLoading();
         if (dataInitOk && !jarInitOk) {
             if (!ApiConfig.get().getSpider().isEmpty()) {
@@ -406,7 +298,33 @@ public class HomeActivity extends BaseActivity {
         }, this);
     }
 
+    private void updateTabLayout() {
+        // 清空现有的Tab
+        mTabLayout.removeAllTabs();
+
+        // 根据sortAdapter的数据创建Tab
+        List<MovieSort.SortData> sortList = sortAdapter.getData();
+        if (sortList != null && !sortList.isEmpty()) {
+            for (MovieSort.SortData sortData : sortList) {
+                TabLayout.Tab tab = mTabLayout.newTab();
+                tab.setText(sortData.name);
+                mTabLayout.addTab(tab);
+            }
+
+            // 设置默认选中项
+            if (currentSelected < mTabLayout.getTabCount()) {
+                TabLayout.Tab tab = mTabLayout.getTabAt(currentSelected);
+                if (tab != null) {
+                    tab.select();
+                }
+            }
+        }
+    }
+
     private void initViewPager(AbsSortXml absXml) {
+        // 清空之前的fragments
+        fragments.clear();
+
         if (!sortAdapter.getData().isEmpty()) {
             for (MovieSort.SortData data : sortAdapter.getData()) {
                 if (data.id.equals("my0")) {
@@ -462,20 +380,22 @@ public class HomeActivity extends BaseActivity {
             if (grid.restoreView()) {
                 return;
             }
-            // 如果 sortFocusView 存在且没有获取焦点，则请求焦点
-            if (this.sortFocusView != null && !this.sortFocusView.isFocused()) {
-                this.sortFocusView.requestFocus();
-            }
-            // 如果当前不是第一个界面，则将列表设置到第一项
-            else if (this.sortFocused != 0) {
-                this.mGridView.setSelection(0);
+            // 如果当前不是第一个界面，则将TabLayout设置到第一项
+            if (this.sortFocused != 0) {
+                TabLayout.Tab firstTab = mTabLayout.getTabAt(0);
+                if (firstTab != null) {
+                    firstTab.select();
+                }
             } else {
                 doExit();
             }
         } else if (baseLazyFragment instanceof UserFragment && UserFragment.tvHotList.canScrollVertically(-1)) {
             // 如果 UserFragment 列表可以向上滚动，则滚动到顶部
             UserFragment.tvHotList.scrollToPosition(0);
-            this.mGridView.setSelection(0);
+            TabLayout.Tab firstTab = mTabLayout.getTabAt(0);
+            if (firstTab != null) {
+                firstTab.select();
+            }
         } else {
             doExit();
         }
@@ -527,9 +447,21 @@ public class HomeActivity extends BaseActivity {
     }
 
     private void showFilterIcon(int count) {
+        // 使用TabLayout时，可以在Tab的标题中添加筛选标记
         boolean visible = count > 0;
-        currentView.findViewById(R.id.tvFilterColor).setVisibility(visible ? View.VISIBLE : View.GONE);
-        currentView.findViewById(R.id.tvFilter).setVisibility(visible ? View.GONE : View.VISIBLE);
+        if (currentSelected < 0 || currentSelected >= mTabLayout.getTabCount()
+                || currentSelected >= sortAdapter.getData().size()) {
+            return;
+        }
+        TabLayout.Tab currentTab = mTabLayout.getTabAt(currentSelected);
+        if (currentTab != null) {
+            MovieSort.SortData sortData = sortAdapter.getItem(currentSelected);
+            if (visible) {
+                currentTab.setText(sortData.name + " (" + count + ")");
+            } else {
+                currentTab.setText(sortData.name);
+            }
+        }
     }
 
     @Override
@@ -550,55 +482,6 @@ public class HomeActivity extends BaseActivity {
             }
         }
         return super.dispatchKeyEvent(event);
-    }
-
-    private void changeTop(boolean hide) {
-        ViewObj viewObj = new ViewObj(topLayout, (ViewGroup.MarginLayoutParams) topLayout.getLayoutParams());
-        AnimatorSet animatorSet = new AnimatorSet();
-        animatorSet.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animation) {
-
-            }
-
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                topHide = (byte) (hide ? 1 : 0);
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animation) {
-
-            }
-        });
-        if (hide && topHide == 0) {
-            animatorSet.playTogether(ObjectAnimator.ofObject(viewObj, "marginTop", new IntEvaluator(),
-                            AutoSizeUtils.mm2px(this.mContext, 10.0f),
-                            AutoSizeUtils.mm2px(this.mContext, 0.0f)),
-                    ObjectAnimator.ofObject(viewObj, "height", new IntEvaluator(),
-                            AutoSizeUtils.mm2px(this.mContext, 50.0f),
-                            AutoSizeUtils.mm2px(this.mContext, 1.0f)),
-                    ObjectAnimator.ofFloat(this.topLayout, "alpha", 1.0f, 0.0f));
-            animatorSet.setDuration(200);
-            animatorSet.start();
-            return;
-        }
-        if (!hide && topHide == 1) {
-            animatorSet.playTogether(ObjectAnimator.ofObject(viewObj, "marginTop", new IntEvaluator(),
-                            AutoSizeUtils.mm2px(this.mContext, 0.0f),
-                            AutoSizeUtils.mm2px(this.mContext, 10.0f)),
-                    ObjectAnimator.ofObject(viewObj, "height", new IntEvaluator(),
-                            AutoSizeUtils.mm2px(this.mContext, 1.0f),
-                            AutoSizeUtils.mm2px(this.mContext, 50.0f)),
-                    ObjectAnimator.ofFloat(this.topLayout, "alpha", 0.0f, 1.0f));
-            animatorSet.setDuration(200);
-            animatorSet.start();
-        }
     }
 
     @Override
@@ -666,15 +549,5 @@ public class HomeActivity extends BaseActivity {
         showSuccess();
         sortAdapter.setNewData(DefaultConfig.adjustSort(ApiConfig.get().getHomeSourceBean().getKey(), new ArrayList<>(), true));
         initViewPager(null);
-        tvName.clearAnimation();
-    }
-
-    private void tvNameAnimation() {
-        AlphaAnimation blinkAnimation = new AlphaAnimation(0.0f, 1.0f);
-        blinkAnimation.setDuration(500);
-        blinkAnimation.setStartOffset(20);
-        blinkAnimation.setRepeatMode(Animation.REVERSE);
-        blinkAnimation.setRepeatCount(Animation.INFINITE);
-        tvName.startAnimation(blinkAnimation);
     }
 }

@@ -14,11 +14,9 @@ import java.util.List;
  */
 public class CustomWebReceiver extends BroadcastReceiver {
     public static final String action = "android.content.movie.custom.web.Action";
-
-    public static String REFRESH_SOURCE = "source";
     public static final String REFRESH_LIVE = "live";
     public static final String REFRESH_PARSE = "parse";
-
+    public static String REFRESH_SOURCE = "source";
     public static List<Callback> callback = new ArrayList<>();
 
     @Override

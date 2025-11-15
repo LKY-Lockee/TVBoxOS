@@ -4,8 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
-import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.DisplayMetrics;
@@ -19,12 +17,13 @@ import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.callback.EmptyCallback;
 import com.github.tvbox.osc.callback.LoadingCallback;
 import com.github.tvbox.osc.util.AppManager;
+import com.google.android.material.appbar.AppBarLayout;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.kingja.loadsir.callback.Callback;
 import com.kingja.loadsir.core.LoadService;
 import com.kingja.loadsir.core.LoadSir;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -38,7 +37,6 @@ import xyz.doikki.videoplayer.util.CutoutUtil;
  * @description:
  */
 public abstract class BaseActivity extends AppCompatActivity implements CustomAdapt {
-    protected static BitmapDrawable globalWp = null;
     private static float screenRatio = -100.0f;
     protected Context mContext;
     private LoadService<?> mLoadService;
@@ -59,27 +57,43 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
         super.onCreate(savedInstanceState);
         setContentView(getLayoutResID());
         mContext = this;
-        CutoutUtil.adaptCutoutAboveAndroidP(mContext, true);//设置刘海
+        CutoutUtil.adaptCutoutAboveAndroidP(mContext, true);
         AppManager.getInstance().addActivity(this);
+        setupAppBarTransparency();
         init();
+    }
+
+    /**
+     * 自动为 AppBarLayout 设置透明度渐变效果
+     * 当标题栏向上收起时，透明度会逐渐降低，避免与状态栏内容重叠
+     */
+    private void setupAppBarTransparency() {
+        try {
+            AppBarLayout appBarLayout = findViewById(R.id.appBarLayout);
+            MaterialToolbar appBar = findViewById(R.id.appBar);
+
+            if (appBarLayout != null && appBar != null) {
+                appBarLayout.addOnOffsetChangedListener(
+                        (appBarLayout1, verticalOffset) -> {
+                            int totalScrollRange = appBarLayout1.getTotalScrollRange();
+                            if (totalScrollRange == 0) return;
+
+                            // 计算滚动进度（0.0 = 完全展开，1.0 = 完全收起）
+                            float scrollProgress = Math.abs(verticalOffset) / (float) totalScrollRange;
+
+                            // 设置标题栏透明度（收起时变透明）
+                            appBar.setAlpha(1.0f - scrollProgress);
+                        }
+                );
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        hideSysBar();
-        changeWallpaper(false);
-    }
-
-    public void hideSysBar() {
-        int uiOptions = getWindow().getDecorView().getSystemUiVisibility();
-        uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
-        uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
-        uiOptions |= View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-        uiOptions |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
-        uiOptions |= View.SYSTEM_UI_FLAG_FULLSCREEN;
-        uiOptions |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-        getWindow().getDecorView().setSystemUiVisibility(uiOptions);
     }
 
     @Override
@@ -177,45 +191,5 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
     @Override
     public boolean isBaseOnWidth() {
         return !(screenRatio >= 4.0f);
-    }
-
-    public void changeWallpaper(boolean force) {
-        if (!force && globalWp != null)
-            getWindow().setBackgroundDrawable(globalWp);
-        try {
-            File wp = new File(getFilesDir().getAbsolutePath() + "/wp");
-            if (wp.exists()) {
-                BitmapFactory.Options opts = new BitmapFactory.Options();
-                opts.inJustDecodeBounds = true;
-                BitmapFactory.decodeFile(wp.getAbsolutePath(), opts);
-                // 从Options中获取图片的分辨率
-                int imageHeight = opts.outHeight;
-                int imageWidth = opts.outWidth;
-                int picHeight = 720;
-                int picWidth = 1080;
-                int scaleX = imageWidth / picWidth;
-                int scaleY = imageHeight / picHeight;
-                int scale = 1;
-                if (scaleX > scaleY && scaleY >= 1) {
-                    scale = scaleX;
-                }
-                if (scaleX < scaleY && scaleX >= 1) {
-                    scale = scaleY;
-                }
-                opts.inJustDecodeBounds = false;
-                // 采样率
-                opts.inSampleSize = scale;
-                globalWp = new BitmapDrawable(BitmapFactory.decodeFile(wp.getAbsolutePath(), opts));
-            } else {
-                globalWp = null;
-            }
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
-            globalWp = null;
-        }
-        if (globalWp != null)
-            getWindow().setBackgroundDrawable(globalWp);
-        else
-            getWindow().setBackgroundDrawableResource(R.drawable.app_bg);
     }
 }

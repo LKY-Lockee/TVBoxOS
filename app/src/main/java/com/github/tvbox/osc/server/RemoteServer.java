@@ -58,10 +58,10 @@ public class RemoteServer extends NanoHTTPD {
     public static int serverPort = 9978;
     public static String m3u8Content;
     private final Context mContext;
-    private boolean isStarted = false;
-    private DataReceiver mDataReceiver;
     private final ArrayList<RequestProcess> getRequestList = new ArrayList<>();
     private final ArrayList<RequestProcess> postRequestList = new ArrayList<>();
+    private boolean isStarted = false;
+    private DataReceiver mDataReceiver;
 
     public RemoteServer(int port, Context context) {
         super(port);

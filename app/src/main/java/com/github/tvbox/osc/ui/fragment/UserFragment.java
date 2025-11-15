@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.BounceInterpolator;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.chad.library.adapter.base.BaseQuickAdapter;
@@ -17,14 +16,9 @@ import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.cache.RoomDataManger;
 import com.github.tvbox.osc.event.ServerEvent;
-import com.github.tvbox.osc.ui.activity.CollectActivity;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
-import com.github.tvbox.osc.ui.activity.HistoryActivity;
-import com.github.tvbox.osc.ui.activity.LivePlayActivity;
-import com.github.tvbox.osc.ui.activity.PushActivity;
 import com.github.tvbox.osc.ui.activity.SearchActivity;
-import com.github.tvbox.osc.ui.activity.SettingActivity;
 import com.github.tvbox.osc.ui.adapter.HomeHotVodAdapter;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
@@ -57,14 +51,14 @@ import java.util.List;
 public class UserFragment extends BaseLazyFragment implements View.OnClickListener {
     public static HomeHotVodAdapter homeHotVodAdapter;
     public static TvRecyclerView tvHotList;
-    private List<Movie.Video> homeSourceRec;
-    private ImgUtil.Style style;
     private final View.OnFocusChangeListener focusChangeListener = (v, hasFocus) -> {
         if (hasFocus)
             v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
         else
             v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
     };
+    private List<Movie.Video> homeSourceRec;
+    private ImgUtil.Style style;
 
     public static UserFragment newInstance() {
         return new UserFragment();
@@ -125,24 +119,24 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     @Override
     protected void init() {
         EventBus.getDefault().register(this);
-        LinearLayout tvLive = findViewById(R.id.tvLive);
-        LinearLayout tvSearch = findViewById(R.id.tvSearch);
-        LinearLayout tvSetting = findViewById(R.id.tvSetting);
-        LinearLayout tvCollect = findViewById(R.id.tvFavorite);
-        LinearLayout tvHistory = findViewById(R.id.tvHistory);
-        LinearLayout tvPush = findViewById(R.id.tvPush);
-        tvLive.setOnClickListener(this);
-        tvSearch.setOnClickListener(this);
-        tvSetting.setOnClickListener(this);
-        tvHistory.setOnClickListener(this);
-        tvPush.setOnClickListener(this);
-        tvCollect.setOnClickListener(this);
-        tvLive.setOnFocusChangeListener(focusChangeListener);
-        tvSearch.setOnFocusChangeListener(focusChangeListener);
-        tvSetting.setOnFocusChangeListener(focusChangeListener);
-        tvHistory.setOnFocusChangeListener(focusChangeListener);
-        tvPush.setOnFocusChangeListener(focusChangeListener);
-        tvCollect.setOnFocusChangeListener(focusChangeListener);
+        //LinearLayout tvLive = findViewById(R.id.tvLive);
+        //LinearLayout tvSearch = findViewById(R.id.tvSearch);
+        //LinearLayout tvSetting = findViewById(R.id.tvSetting);
+        //LinearLayout tvCollect = findViewById(R.id.tvFavorite);
+        //LinearLayout tvHistory = findViewById(R.id.tvHistory);
+        //LinearLayout tvPush = findViewById(R.id.tvPush);
+        //tvLive.setOnClickListener(this);
+        //tvSearch.setOnClickListener(this);
+        //tvSetting.setOnClickListener(this);
+        //tvHistory.setOnClickListener(this);
+        //tvPush.setOnClickListener(this);
+        //tvCollect.setOnClickListener(this);
+        //tvLive.setOnFocusChangeListener(focusChangeListener);
+        //tvSearch.setOnFocusChangeListener(focusChangeListener);
+        //tvSetting.setOnFocusChangeListener(focusChangeListener);
+        //tvHistory.setOnFocusChangeListener(focusChangeListener);
+        //tvPush.setOnFocusChangeListener(focusChangeListener);
+        //tvCollect.setOnFocusChangeListener(focusChangeListener);
         tvHotList = findViewById(R.id.tvHotList);
         if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && homeSourceRec != null) {
             style = ImgUtil.initStyle();
@@ -306,7 +300,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         HawkConfig.hotVodDelete = false;
 
         FastClickCheckUtil.check(v);
-        if (v.getId() == R.id.tvLive) {
+        /*if (v.getId() == R.id.tvLive) {
             if (Hawk.get(HawkConfig.LIVE_GROUP_LIST, new JsonArray()).isEmpty()) {
                 Toast.makeText(mContext, "直播源为空", Toast.LENGTH_SHORT).show();
             } else {
@@ -322,7 +316,7 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
             jumpActivity(PushActivity.class);
         } else if (v.getId() == R.id.tvFavorite) {
             jumpActivity(CollectActivity.class);
-        }
+        }*/
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

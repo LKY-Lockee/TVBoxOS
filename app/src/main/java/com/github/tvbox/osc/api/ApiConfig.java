@@ -78,7 +78,6 @@ public class ApiConfig {
     private final String userAgent = "okhttp/3.15";
     private final String requestAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
     private final List<LiveSettingGroup> liveSettingGroupList = new ArrayList<>();
-    public String wallpaper = "";
     private SourceBean mHomeSource;
     private ParseBean mDefaultParse;
     private List<String> vipParseFlags;
@@ -431,8 +430,6 @@ public class ApiConfig {
         // spider
         spider = DefaultConfig.safeJsonString(infoJson, "spider", "");
         jarCache = DefaultConfig.safeJsonString(infoJson, "jarCache", "true");
-        // wallpaper
-        wallpaper = DefaultConfig.safeJsonString(infoJson, "wallpaper", "");
         // 远端站点源
         SourceBean firstSite = null;
         for (JsonElement opt : infoJson.get("sites").getAsJsonArray()) {

@@ -80,8 +80,8 @@ public class Movie implements Serializable {
                 public List<InfoBean> beanList;
 
                 public static class InfoBean implements Serializable {
-                    public String name;
                     public final String url;
+                    public String name;
 
                     public InfoBean(String name, String url) {
                         this.name = name;

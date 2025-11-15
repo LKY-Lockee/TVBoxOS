@@ -22,8 +22,8 @@ import java.util.Hashtable;
 
 public class EpgNameFuzzyMatch {
 
-    private static JsonObject epgNameDoc = null;
     private static final Hashtable<String, JsonObject> hsEpgName = new Hashtable<>();
+    private static JsonObject epgNameDoc = null;
 
     public static void init() {
         if (epgNameDoc != null)

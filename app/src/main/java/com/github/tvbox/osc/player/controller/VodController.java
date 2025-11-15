@@ -75,6 +75,8 @@ import xyz.doikki.videoplayer.player.VideoView;
 public class VodController extends BaseController {
     private static final long LONG_PRESS_DELAY = 800;
     private static int switchPlayerCount = 0;
+    final LockRunnable lockRunnable = new LockRunnable();
+    final int myHandleSeconds = 10000;//闲置多少毫秒秒关闭底栏  默认6秒
     private final Handler mmHandler = new Handler();
     public TextView mPlayerSpeedBtn;
     public TextView mPlayerTimeStartEndText;
@@ -137,11 +139,8 @@ public class VodController extends BaseController {
             mHandler.postDelayed(this, 1000);
         }
     };
-    final LockRunnable lockRunnable = new LockRunnable();
     Handler myHandle;
     Runnable myRunnable;
-    final int myHandleSeconds = 10000;//闲置多少毫秒秒关闭底栏  默认6秒
-
     int videoPlayState = 0;
     private View backBtn;//返回键
     private boolean isClickBackBtn;

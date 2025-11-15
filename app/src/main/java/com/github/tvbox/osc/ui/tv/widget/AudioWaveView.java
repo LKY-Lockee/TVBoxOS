@@ -18,6 +18,12 @@ public class AudioWaveView extends View {
      * 条间距
      */
     private final int space = 8;
+    private final Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            invalidate();
+        }
+    };
     private Paint paint;
     private RectF rectF1;
     private RectF rectF2;
@@ -30,12 +36,6 @@ public class AudioWaveView extends View {
      */
     private int rectWidth;
     private Random random;
-    private final Handler handler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            invalidate();
-        }
-    };
 
     public AudioWaveView(Context context) {
         super(context);

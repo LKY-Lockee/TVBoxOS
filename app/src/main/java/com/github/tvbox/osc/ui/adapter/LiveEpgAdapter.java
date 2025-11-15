@@ -17,10 +17,10 @@ import java.util.Date;
 
 public class LiveEpgAdapter extends BaseQuickAdapter<Epginfo, BaseViewHolder> {
     public static float fontSize = 20;
+    final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd");
     private final int defaultShiyiSelection = 0;
     private final String currentEpgDate = null;
     private final int focusSelection = -1;
-    final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd");
     private int selectedEpgIndex = -1;
     private int focusedEpgIndex = -1;
     private boolean ShiyiSelection = false;

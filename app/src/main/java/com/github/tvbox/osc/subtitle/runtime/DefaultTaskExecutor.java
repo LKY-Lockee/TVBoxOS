@@ -40,9 +40,9 @@ import java.util.concurrent.Executors;
 public class DefaultTaskExecutor extends TaskExecutor {
 
     private final Object mLock = new Object();
+    private final ExecutorService mDeskIO = Executors.newFixedThreadPool(3);
     @Nullable
     private Handler mMainHandler;
-    private final ExecutorService mDeskIO = Executors.newFixedThreadPool(3);
 
     @Override
     public void executeOnDeskIO(final Runnable task) {

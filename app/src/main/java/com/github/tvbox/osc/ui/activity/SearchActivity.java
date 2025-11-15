@@ -69,6 +69,7 @@ public class SearchActivity extends BaseActivity {
     private static Boolean hasKeyBoard;
     private static Boolean isSearchBack;
     private static ArrayList<String> hots;
+    private final AtomicInteger allRunCount = new AtomicInteger(0);
     SourceViewModel sourceViewModel;
     private TvRecyclerView mGridView;
     private TvRecyclerView mGridViewWord;
@@ -82,7 +83,6 @@ public class SearchActivity extends BaseActivity {
     private TextView wordsSwitch;
     private List<Runnable> pauseRunnable = null;
     private ExecutorService searchExecutorService = null;
-    private final AtomicInteger allRunCount = new AtomicInteger(0);
 
     public static void setCheckedSourcesForSearch(HashMap<String, String> checkedSources) {
         mCheckSources = checkedSources;

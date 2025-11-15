@@ -28,9 +28,9 @@ import me.jessyan.autosize.utils.AutoSizeUtils;
  * @version 1.0.0 <br/>
  */
 public class ImgUtil {
-    private static final Map<String, Drawable> drawableCache = new HashMap<>();
     public static final int defaultWidth = 244;
     public static final int defaultHeight = 320;
+    private static final Map<String, Drawable> drawableCache = new HashMap<>();
 
     public static boolean isBase64Image(String picUrl) {
         return picUrl.startsWith("data:image");

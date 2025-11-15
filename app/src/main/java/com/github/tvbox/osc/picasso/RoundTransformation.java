@@ -25,13 +25,13 @@ import java.lang.annotation.Target;
  * @since 2020/12/22
  */
 public class RoundTransformation implements Transformation {
+    private final String key;
     private int viewWidth, viewHeight, bottomShapeHeight = 0;
     @RoundType
     private int mRoundType = RoundType.NONE;
     private int diameter;
     private int radius;
     private boolean isCenterCorp = true;//垂直方向不是中间裁剪，就是顶部
-    private final String key;
 
     public RoundTransformation(String key) {
         this.key = key;

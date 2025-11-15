@@ -25,11 +25,11 @@ public class IpScanning {
      * 最大线程数
      */
     final int maximumPoolSize = 10;
-    private List<IpScanningVo> ipScanningVos = new ArrayList<>();
     private final ThreadPoolExecutor threadPool =
             new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 3,
                     TimeUnit.NANOSECONDS, new LinkedBlockingQueue<>(10),
                     new ThreadPoolExecutor.CallerRunsPolicy());
+    private List<IpScanningVo> ipScanningVos = new ArrayList<>();
 
     /**
      * 通过IP扫描对应网段中可以使用的网段

@@ -39,11 +39,11 @@ import me.jessyan.autosize.utils.AutoSizeUtils;
  * @since 2020/12/27
  */
 public class ApiDialog extends BaseDialog {
-    OnListener listener = null;
     private final ImageView ivQRCode;
     private final TextView tvAddress;
     private final EditText inputApi;
     private final EditText inputApiLive;
+    OnListener listener = null;
 
     public ApiDialog(@NonNull @NotNull Context context) {
         super(context);

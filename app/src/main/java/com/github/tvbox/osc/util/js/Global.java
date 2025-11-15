@@ -23,8 +23,8 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 public class Global {
-    private final Timer timer;
     public final ExecutorService executor;
+    private final Timer timer;
     private QuickJSContext runtime;
 
     public Global(ExecutorService executor) {

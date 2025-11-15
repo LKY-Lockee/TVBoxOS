@@ -39,8 +39,8 @@ public class AppTaskExecutor extends TaskExecutor {
     private static AppTaskExecutor sInstance;
     private static final Executor sDeskIO = command -> getInstance().executeOnDeskIO(command);
     private static final Executor sMainThread = command -> getInstance().executeOnMainThread(command);
-    private TaskExecutor mDelegate;
     private final TaskExecutor mDefaultTaskExecutor;
+    private TaskExecutor mDelegate;
 
     private AppTaskExecutor() {
         mDefaultTaskExecutor = new DefaultTaskExecutor();

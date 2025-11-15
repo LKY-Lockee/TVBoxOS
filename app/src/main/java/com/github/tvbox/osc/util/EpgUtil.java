@@ -16,8 +16,8 @@ import java.util.HashMap;
 
 public class EpgUtil {
 
-    private static JsonObject epgDoc = null;
     private static final HashMap<String, JsonObject> epgHashMap = new HashMap<>();
+    private static JsonObject epgDoc = null;
 
     public static void init() {
         if (epgDoc != null)

@@ -45,13 +45,12 @@
             android:largeHeap="true"
             android:networkSecurityConfig="@xml/network_security_config"
             android:supportsRtl="true"
-            android:theme="@style/AppTheme.NoActionBar"
+            android:theme="@style/AppTheme"
             android:usesCleartextTraffic="true">
 
         <activity
                 android:name=".ui.activity.HomeActivity"
-                android:exported="true"
-                android:screenOrientation="sensorLandscape">
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -105,14 +104,6 @@
                 <action android:name="android.content.movie.custom.web.Action" />
             </intent-filter>
         </receiver>
-
-        <!-- Isolated Loader Service - 每次在独立的临时进程中执行危险的 classLoader.loadClass 操作 -->
-        <!-- 即使发生 native 崩溃，也只会杀死这个临时进程，不影响主进程 -->
-        <service
-                android:name="com.github.catvod.crawler.IsolatedLoaderService"
-                android:enabled="true"
-                android:exported="false"
-                android:process=":isolated_loader" />
 
         <provider
                 android:name="androidx.core.content.FileProvider"

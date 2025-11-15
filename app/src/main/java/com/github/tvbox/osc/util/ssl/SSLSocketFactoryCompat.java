@@ -19,11 +19,11 @@ import javax.net.ssl.X509TrustManager;
  * @since 2021/1/10
  */
 public class SSLSocketFactoryCompat extends SSLSocketFactory {
+    static final String[] cipherSuites = null;
     // Android 5.0+ (API level21) provides reasonable default settings
     // but it still allows SSLv3
     // https://developer.android.com/about/versions/android-5.0-changes.html#ssl
     static String[] protocols = null;
-    static final String[] cipherSuites = null;
 
     static {
         try {

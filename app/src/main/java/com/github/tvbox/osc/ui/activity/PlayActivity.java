@@ -1,14 +1,12 @@
 package com.github.tvbox.osc.ui.activity;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.http.SslError;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -112,6 +110,9 @@ import xyz.doikki.videoplayer.player.AbstractPlayer;
 import xyz.doikki.videoplayer.player.ProgressManager;
 
 public class PlayActivity extends BaseActivity {
+    private final long videoDuration = -1;
+    private final Map<String, Boolean> loadedUrls = new HashMap<>();
+    private final AtomicInteger loadFoundCount = new AtomicInteger(0);
     ExecutorService parseThreadPool;
     private MyVideoView mVideoView;
     private TextView mPlayLoadTip;
@@ -120,7 +121,6 @@ public class PlayActivity extends BaseActivity {
     private VodController mController;
     private SourceViewModel sourceViewModel;
     private Handler mHandler;
-    private final long videoDuration = -1;
     private VodInfo mVodInfo;
     private JSONObject mVodPlayerCfg;
     private String sourceKey;
@@ -141,10 +141,8 @@ public class PlayActivity extends BaseActivity {
     private XWalkWebClient mX5WebClient;
     private WebView mSysWebView;
     private SysWebClient mSysWebClient;
-    private final Map<String, Boolean> loadedUrls = new HashMap<>();
     private LinkedList<String> loadFoundVideoUrls = new LinkedList<>();
     private HashMap<String, HashMap<String, String>> loadFoundVideoUrlsHeader = new HashMap<>();
-    private final AtomicInteger loadFoundCount = new AtomicInteger(0);
 
     @Override
     protected int getLayoutResID() {
@@ -166,7 +164,7 @@ public class PlayActivity extends BaseActivity {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        long skip = st * 1000;
+        long skip = st * 1000L;
         if (CacheManager.getCache(MD5.string2MD5(url)) == null) {
             return skip;
         }
@@ -1509,11 +1507,7 @@ public class PlayActivity extends BaseActivity {
         settings.setJavaScriptEnabled(true);
 
         settings.setMediaPlaybackRequiresUserGesture(false);
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            settings.setBlockNetworkImage(false);
-        } else {
-            settings.setBlockNetworkImage(true);
-        }
+        settings.setBlockNetworkImage(!Hawk.get(HawkConfig.DEBUG_OPEN, false));
         settings.setUseWideViewPort(true);
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -1579,11 +1573,7 @@ public class PlayActivity extends BaseActivity {
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptEnabled(true);
 
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            settings.setBlockNetworkImage(false);
-        } else {
-            settings.setBlockNetworkImage(true);
-        }
+        settings.setBlockNetworkImage(!Hawk.get(HawkConfig.DEBUG_OPEN, false));
 
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUseWideViewPort(true);
@@ -1747,7 +1737,7 @@ public class PlayActivity extends BaseActivity {
             LOG.i("echo-shouldInterceptRequest url:" + url);
             HashMap<String, String> webHeaders = new HashMap<>();
             Map<String, String> hds = request.getRequestHeaders();
-            if (hds != null && hds.keySet().size() > 0) {
+            if (hds != null && hds.size() > 0) {
                 for (String k : hds.keySet()) {
                     if (k.equalsIgnoreCase("user-agent")
                             || k.equalsIgnoreCase("referer")
@@ -1823,7 +1813,7 @@ public class PlayActivity extends BaseActivity {
                 if (checkVideoFormat(url)) {
                     HashMap<String, String> webHeaders = new HashMap<>();
                     Map<String, String> hds = request.getRequestHeaders();
-                    if (hds != null && hds.keySet().size() > 0) {
+                    if (hds != null && hds.size() > 0) {
                         for (String k : hds.keySet()) {
                             if (k.equalsIgnoreCase("user-agent")
                                     || k.equalsIgnoreCase("referer")

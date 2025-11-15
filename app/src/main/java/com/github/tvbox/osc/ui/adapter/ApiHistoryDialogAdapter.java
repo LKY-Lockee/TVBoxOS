@@ -20,8 +20,8 @@ import java.util.List;
 public class ApiHistoryDialogAdapter extends ListAdapter<String, ApiHistoryDialogAdapter.SelectViewHolder> {
 
     private final ArrayList<String> data = new ArrayList<>();
-    private String select = "";
     private final SelectDialogInterface dialogInterface;
+    private String select = "";
 
     public ApiHistoryDialogAdapter(SelectDialogInterface dialogInterface) {
         super(new DiffUtil.ItemCallback<String>() {

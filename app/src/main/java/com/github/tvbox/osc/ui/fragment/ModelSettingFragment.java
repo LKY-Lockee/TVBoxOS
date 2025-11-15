@@ -11,7 +11,6 @@ import androidx.recyclerview.widget.DiffUtil;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BaseActivity;
 import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.IJKCode;
 import com.github.tvbox.osc.bean.SourceBean;
@@ -34,10 +33,6 @@ import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.HistoryHelper;
 import com.github.tvbox.osc.util.OkGoHelper;
 import com.github.tvbox.osc.util.PlayerHelper;
-import com.lzy.okgo.OkGo;
-import com.lzy.okgo.callback.FileCallback;
-import com.lzy.okgo.model.Progress;
-import com.lzy.okgo.model.Response;
 import com.orhanobut.hawk.Hawk;
 
 import org.greenrobot.eventbus.EventBus;
@@ -153,36 +148,6 @@ public class ModelSettingFragment extends BaseLazyFragment {
             AboutDialog dialog = new AboutDialog(mActivity);
             dialog.show();
         });
-        findViewById(R.id.llWp).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                FastClickCheckUtil.check(v);
-                if (!ApiConfig.get().wallpaper.isEmpty())
-                    OkGo.<File>get(ApiConfig.get().wallpaper).execute(new FileCallback(requireActivity().getFilesDir().getAbsolutePath(), "wp") {
-                        @Override
-                        public void onSuccess(Response<File> response) {
-                            ((BaseActivity) requireActivity()).changeWallpaper(true);
-                        }
-
-                        @Override
-                        public void onError(Response<File> response) {
-                            super.onError(response);
-                        }
-
-                        @Override
-                        public void downloadProgress(Progress progress) {
-                            super.downloadProgress(progress);
-                        }
-                    });
-            }
-        });
-        findViewById(R.id.llWpRecovery).setOnClickListener(v -> {
-            FastClickCheckUtil.check(v);
-            File wp = new File(requireActivity().getFilesDir().getAbsolutePath() + "/wp");
-            if (wp.exists())
-                wp.delete();
-            ((BaseActivity) requireActivity()).changeWallpaper(true);
-        });
         findViewById(R.id.llHomeApi).setOnClickListener(v -> {
             FastClickCheckUtil.check(v);
             List<SourceBean> sites = ApiConfig.get().getSwitchSourceBeanList();
@@ -264,10 +229,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 Hawk.put(HawkConfig.API_URL, api);
                 tvApi.setText(api);
             });
-            dialog.setOnDismissListener(dialog1 -> {
-                ((BaseActivity) mActivity).hideSysBar();
-                EventBus.getDefault().unregister(dialog1);
-            });
+            dialog.setOnDismissListener(dialog1 -> EventBus.getDefault().unregister(dialog1));
             dialog.show();
         });
 

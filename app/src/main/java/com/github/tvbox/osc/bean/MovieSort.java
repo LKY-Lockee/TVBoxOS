@@ -25,13 +25,13 @@ public class MovieSort implements Serializable {
     @XStreamAlias("ty")
     @XStreamConverter(value = ToAttributedValueConverter.class, strings = {"name"})
     public static class SortData implements Serializable, Comparable<SortData> {
+        public final int sort = -1;
+        public final boolean select = false;
+        public final HashMap<String, String> filterSelect = new HashMap<>();
         @XStreamAsAttribute
         public String id;
         public String name;
-        public final int sort = -1;
-        public final boolean select = false;
         public ArrayList<SortFilter> filters = new ArrayList<>();
-        public final HashMap<String, String> filterSelect = new HashMap<>();
         public String flag; // 类型
 
         public SortData() {

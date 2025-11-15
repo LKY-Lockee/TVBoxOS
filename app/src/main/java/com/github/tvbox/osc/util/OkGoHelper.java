@@ -43,7 +43,7 @@ import xyz.doikki.videoplayer.exo.ExoMediaSourceHelper;
 
 public class OkGoHelper {
     public static final long DEFAULT_MILLISECONDS = 10000;      //默认的超时时间
-
+    public static final ArrayList<String> dnsHttpsList = new ArrayList<>();
     // 内置doh json
     private static final String dnsConfigJson = "["
             + "{\"name\": \"腾讯\", \"url\": \"https://doh.pub/dns-query\"},"
@@ -51,7 +51,6 @@ public class OkGoHelper {
             + "{\"name\": \"360\", \"url\": \"https://doh.360.cn/dns-query\"}"
             + "]";
     public static DnsOverHttps dnsOverHttps = null;
-    public static final ArrayList<String> dnsHttpsList = new ArrayList<>();
     public static boolean is_doh = false;
     public static Map<String, String> myHosts = null;
     static OkHttpClient ItvClient = null;

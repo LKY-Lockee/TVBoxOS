@@ -35,8 +35,8 @@ public class IjkMediaPlayer extends IjkPlayer {
     private static final int M3U8 = 3;
     private static final int OTHER = 0;
     private static AudioTrackMemory memory;
-    protected String currentPlayPath;
     private final IJKCode codec;
+    protected String currentPlayPath;
 
     public IjkMediaPlayer(Context context, IJKCode codec) {
         super(context);
