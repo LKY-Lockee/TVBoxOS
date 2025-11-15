@@ -1,188 +1,216 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <!-- 将外层容器高度改为 wrap_content，避免内部控件溢出 -->
-    <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:background="@drawable/shape_dialog_bg_main"
-            android:orientation="horizontal"
-            android:padding="@dimen/vs_30">
-
-        <ImageView
-                android:id="@+id/ivQRCode"
-                android:layout_width="@dimen/vs_300"
-                android:layout_height="@dimen/vs_300"
-                android:layout_gravity="center"
-                android:focusable="false" />
+    <!-- 添加ScrollView以支持滚动，避免内容超出屏幕 -->
+    <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
         <LinearLayout
-                android:layout_width="@dimen/vs_520"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/vs_20"
+                android:layout_gravity="center"
+                android:gravity="center"
                 android:orientation="vertical"
-                android:paddingTop="@dimen/vs_20"
-                android:paddingBottom="@dimen/vs_20"
-                android:layout_marginLeft="@dimen/vs_20">
+                android:padding="@dimen/vs_30">
 
-            <TextView
-                    android:id="@+id/tvAddress"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/vs_10"
-                    android:lineSpacingMultiplier="1.5"
-                    android:textColor="@color/color_CC000000"
-                    android:textSize="@dimen/ts_24"
-                    tools:text="1111111111111111111111111111111111111111111111111111" />
-
-            <!-- 配置历史与存储权限 -->
             <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="@dimen/vs_10"
-                    android:orientation="horizontal">
-
-                <TextView
-                        android:id="@+id/apiHistory"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="@dimen/vs_5"
-                        android:background="@drawable/button_dialog_main"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:padding="@dimen/vs_10"
-                        android:text="历史直播"
-                        android:textColor="@color/color_FFFFFF"
-                        android:textSize="@dimen/ts_22"
-                        android:layout_marginRight="@dimen/vs_5" />
-
-                <TextView
-                        android:id="@+id/storagePermission"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="@dimen/vs_5"
-                        android:background="@drawable/button_dialog_main"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:padding="@dimen/vs_10"
-                        android:text="存储权限"
-                        android:textColor="@color/color_FFFFFF"
-                        android:textSize="@dimen/ts_22"
-                        android:layout_marginLeft="@dimen/vs_5" />
-            </LinearLayout>
-
-            <!-- 点播输入区域 -->
-            <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:maxWidth="900dp"
+                    android:background="@drawable/shape_dialog_bg_main"
                     android:orientation="horizontal"
-                    android:layout_marginBottom="@dimen/vs_10">
+                    android:padding="@dimen/vs_30">
 
-                <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:paddingRight="@dimen/vs_5"
-                        android:text="点播"
-                        android:textSize="@dimen/ts_22"
-                        android:paddingEnd="@dimen/vs_5"
-                        android:cursorVisible="false"
-                        tools:ignore="RtlSymmetry,TextViewEdits" />
-
-                <EditText
-                        android:id="@+id/input"
+                <ImageView
+                        android:id="@+id/ivQRCode"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="@drawable/input_dialog_api_input"
-                        android:hint="请输入配置地址"
-                        android:imeOptions="actionDone"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:paddingLeft="@dimen/vs_2"
-                        android:paddingTop="@dimen/vs_10"
-                        android:paddingRight="@dimen/vs_2"
-                        android:paddingBottom="@dimen/vs_10"
-                        android:textColor="@color/color_CC000000"
-                        android:textColorHint="@color/color_6C3D3D3D"
-                        android:textSize="@dimen/ts_26" />
-
-                <TextView
-                        android:id="@+id/inputSubmit"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:maxWidth="@dimen/vs_300"
+                        android:maxHeight="@dimen/vs_300"
+                        android:adjustViewBounds="true"
                         android:layout_gravity="center"
-                        android:layout_marginStart="@dimen/vs_5"
-                        android:background="@drawable/button_dialog_main"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:padding="@dimen/vs_10"
-                        android:text="确定"
-                        android:textColor="@color/color_FFFFFF"
-                        android:textSize="@dimen/ts_22"
-                        android:layout_marginLeft="@dimen/vs_5" />
-            </LinearLayout>
+                        android:contentDescription="@string/app_name"
+                        android:focusable="false" />
 
-            <!-- 直播输入区域 -->
-            <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:paddingRight="@dimen/vs_5"
-                        android:text="直播"
-                        android:textSize="@dimen/ts_22"
-                        android:paddingEnd="@dimen/vs_5"
-                        android:cursorVisible="false"
-                        tools:ignore="RtlSymmetry,TextViewEdits" />
-
-                <EditText
-                        android:id="@+id/inputLive"
+                <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:background="@drawable/input_dialog_api_input"
-                        android:hint="请输入直播地址"
-                        android:imeOptions="actionDone"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:paddingLeft="@dimen/vs_2"
-                        android:paddingTop="@dimen/vs_10"
-                        android:paddingRight="@dimen/vs_2"
-                        android:paddingBottom="@dimen/vs_10"
-                        android:textColor="@color/color_CC000000"
-                        android:textColorHint="@color/color_6C3D3D3D"
-                        android:textSize="@dimen/ts_26" />
+                        android:layout_weight="1.7"
+                        android:minWidth="300dp"
+                        android:layout_marginStart="@dimen/vs_20"
+                        android:orientation="vertical"
+                        android:paddingTop="@dimen/vs_20"
+                        android:paddingBottom="@dimen/vs_20">
 
-                <TextView
-                        android:id="@+id/inputSubmitLive"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:layout_marginStart="@dimen/vs_5"
-                        android:background="@drawable/button_dialog_main"
-                        android:focusable="true"
-                        android:gravity="center"
-                        android:padding="@dimen/vs_10"
-                        android:text="确定"
-                        android:textColor="@color/color_FFFFFF"
-                        android:textSize="@dimen/ts_22"
-                        android:layout_marginLeft="@dimen/vs_5" />
+                    <TextView
+                            android:id="@+id/tvAddress"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/vs_10"
+                            android:lineSpacingMultiplier="1.5"
+                            android:textColor="@color/color_CC000000"
+                            android:textSize="@dimen/ts_24"
+                            android:maxLines="3"
+                            android:ellipsize="end"
+                            android:scrollbars="vertical"
+                            tools:text="1111111111111111111111111111111111111111111111111111" />
+
+                    <!-- 配置历史与存储权限 -->
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/vs_10"
+                            android:orientation="horizontal">
+
+                        <TextView
+                                android:id="@+id/apiHistory"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="@dimen/vs_5"
+                                android:background="@drawable/button_dialog_main"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:padding="@dimen/vs_10"
+                                android:text="历史直播"
+                                android:textColor="@color/color_FFFFFF"
+                                android:textSize="@dimen/ts_22"
+                                tools:ignore="HardcodedText" />
+
+                        <TextView
+                                android:id="@+id/storagePermission"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="@dimen/vs_5"
+                                android:background="@drawable/button_dialog_main"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:padding="@dimen/vs_10"
+                                android:text="存储权限"
+                                android:textColor="@color/color_FFFFFF"
+                                android:textSize="@dimen/ts_22"
+                                tools:ignore="HardcodedText" />
+                    </LinearLayout>
+
+                    <!-- 点播输入区域 -->
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="@dimen/vs_10">
+
+                        <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:paddingEnd="@dimen/vs_5"
+                                android:text="点播"
+                                android:textSize="@dimen/ts_22"
+                                android:cursorVisible="false"
+                                tools:ignore="HardcodedText,RtlSymmetry,TextViewEdits" />
+
+                        <EditText
+                                android:id="@+id/input"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:background="@drawable/input_dialog_api_input"
+                                android:hint="请输入配置地址"
+                                android:imeOptions="actionDone"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:paddingLeft="@dimen/vs_2"
+                                android:paddingTop="@dimen/vs_10"
+                                android:paddingRight="@dimen/vs_2"
+                                android:paddingBottom="@dimen/vs_10"
+                                android:textColor="@color/color_CC000000"
+                                android:textColorHint="@color/color_6C3D3D3D"
+                                android:textSize="@dimen/ts_26"
+                                android:autofillHints="url"
+                                tools:ignore="HardcodedText" />
+
+                        <TextView
+                                android:id="@+id/inputSubmit"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:layout_marginStart="@dimen/vs_5"
+                                android:background="@drawable/button_dialog_main"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:padding="@dimen/vs_10"
+                                android:text="确定"
+                                android:textColor="@color/color_FFFFFF"
+                                android:textSize="@dimen/ts_22"
+                                tools:ignore="HardcodedText" />
+                    </LinearLayout>
+
+                    <!-- 直播输入区域 -->
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                        <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:paddingEnd="@dimen/vs_5"
+                                android:text="直播"
+                                android:textSize="@dimen/ts_22"
+                                android:cursorVisible="false"
+                                tools:ignore="HardcodedText,RtlSymmetry,TextViewEdits" />
+
+                        <EditText
+                                android:id="@+id/inputLive"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:background="@drawable/input_dialog_api_input"
+                                android:hint="请输入直播地址"
+                                android:imeOptions="actionDone"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:paddingLeft="@dimen/vs_2"
+                                android:paddingTop="@dimen/vs_10"
+                                android:paddingRight="@dimen/vs_2"
+                                android:paddingBottom="@dimen/vs_10"
+                                android:textColor="@color/color_CC000000"
+                                android:textColorHint="@color/color_6C3D3D3D"
+                                android:textSize="@dimen/ts_26"
+                                android:autofillHints="url"
+                                tools:ignore="HardcodedText" />
+
+                        <TextView
+                                android:id="@+id/inputSubmitLive"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:layout_marginStart="@dimen/vs_5"
+                                android:background="@drawable/button_dialog_main"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:padding="@dimen/vs_10"
+                                android:text="确定"
+                                android:textColor="@color/color_FFFFFF"
+                                android:textSize="@dimen/ts_22"
+                                tools:ignore="HardcodedText" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </ScrollView>
 </FrameLayout>
+

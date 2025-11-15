@@ -22,7 +22,7 @@
             <TextView
                     android:id="@+id/tvSearchCheckboxBtn"
                     android:layout_width="match_parent"
-                    android:layout_height="28mm"
+                    android:layout_height="28dp"
                     android:background="@drawable/shape_user_focus"
                     android:focusable="true"
                     android:gravity="center"
@@ -54,7 +54,7 @@
 
                 <TextView
                         android:id="@+id/tvSearch"
-                        android:layout_width="0mm"
+                        android:layout_width="0dp"
                         android:layout_height="@dimen/vs_50"
                         android:layout_weight="1"
                         android:background="@drawable/shape_user_focus"
@@ -70,7 +70,7 @@
 
                 <TextView
                         android:id="@+id/tvClear"
-                        android:layout_width="0mm"
+                        android:layout_width="0dp"
                         android:layout_height="@dimen/vs_50"
                         android:layout_weight="1"
                         android:background="@drawable/shape_user_focus"
@@ -106,10 +106,10 @@
 
             <ImageView
                     android:id="@+id/ivQRCode"
-                    android:layout_width="300mm"
-                    android:layout_height="300mm"
+                    android:layout_width="300dp"
+                    android:layout_height="300dp"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="20mm"
+                    android:layout_marginTop="20dp"
                     tools:ignore="InOrMmUsage" />
         </LinearLayout>
     </LinearLayout>
@@ -132,7 +132,7 @@
                 android:textColor="@android:color/white"
                 android:textSize="@dimen/ts_20"
                 android:layout_marginBottom="@dimen/ts_10"
-                android:layout_height="28mm" />
+                android:layout_height="28dp" />
 
         <com.owen.tvrecyclerview.widget.TvRecyclerView
                 android:id="@+id/mGridViewWord"

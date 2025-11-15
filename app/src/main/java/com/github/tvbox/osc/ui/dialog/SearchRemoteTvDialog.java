@@ -14,8 +14,8 @@ import com.github.tvbox.osc.callback.EmptyCallback;
 import com.github.tvbox.osc.callback.LoadingCallback;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox;
+import com.github.tvbox.osc.ui.activity.SettingActivity;
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
-import com.github.tvbox.osc.ui.fragment.ModelSettingFragment;
 import com.kingja.loadsir.callback.Callback;
 import com.kingja.loadsir.core.LoadService;
 import com.kingja.loadsir.core.LoadSir;
@@ -38,7 +38,7 @@ public class SearchRemoteTvDialog extends BaseDialog {
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void refresh(RefreshEvent event) {
         if (event.type == RefreshEvent.TYPE_SETTING_SEARCH_TV) {
-            showRemoteTvDialog(ModelSettingFragment.foundRemoteTv);
+            showRemoteTvDialog(SettingActivity.foundRemoteTv);
         }
     }
 
@@ -55,19 +55,19 @@ public class SearchRemoteTvDialog extends BaseDialog {
 
     private void showRemoteTvDialog(boolean found) {
         if (!found) {
-            if (ModelSettingFragment.loadingSearchRemoteTvDialog != null) {
-                ModelSettingFragment.loadingSearchRemoteTvDialog.showEmpty();
+            if (SettingActivity.loadingSearchRemoteTvDialog != null) {
+                SettingActivity.loadingSearchRemoteTvDialog.showEmpty();
             }
             Toast.makeText(getContext(), "未找到附近TVBox", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (ModelSettingFragment.loadingSearchRemoteTvDialog != null) {
-            ModelSettingFragment.loadingSearchRemoteTvDialog.dismiss();
+        if (SettingActivity.loadingSearchRemoteTvDialog != null) {
+            SettingActivity.loadingSearchRemoteTvDialog.dismiss();
         }
-        if (ModelSettingFragment.remoteTvHostList == null) {
+        if (SettingActivity.remoteTvHostList == null) {
             return;
         }
-        RemoteTVBox.setAvalible(ModelSettingFragment.remoteTvHostList.get(0));
+        RemoteTVBox.setAvalible(SettingActivity.remoteTvHostList.get(0));
         SelectDialog<String> dialog = new SelectDialog<>(getContext());
         dialog.setTip("附近TVBox");
         int defaultPos = 0;
@@ -92,7 +92,7 @@ public class SearchRemoteTvDialog extends BaseDialog {
             public boolean areContentsTheSame(@NonNull @NotNull String oldItem, @NonNull @NotNull String newItem) {
                 return oldItem.equals(newItem);
             }
-        }, ModelSettingFragment.remoteTvHostList, defaultPos);
+        }, SettingActivity.remoteTvHostList, defaultPos);
         dialog.show();
     }
 
