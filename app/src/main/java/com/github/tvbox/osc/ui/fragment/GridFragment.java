@@ -46,18 +46,18 @@ import java.util.Stack;
  * @description:
  */
 public class GridFragment extends BaseLazyFragment {
-    final Stack<GridInfo> mGrids = new Stack<>(); //ui栈
-    protected MovieSort.SortData sortData = null;
-    protected TvRecyclerView mGridView;
-    protected SourceViewModel sourceViewModel;
+    private final Stack<GridInfo> mGrids = new Stack<>(); //ui栈
+    private MovieSort.SortData sortData = null;
+    private TvRecyclerView mGridView;
+    private SourceViewModel sourceViewModel;
     private GridFilterDialog gridFilterDialog;
     protected GridAdapter gridAdapter;
-    protected int page = 1;
-    protected int maxPage = 1;
+    private int page = 1;
+    private int maxPage = 1;
     private boolean isLoad = false;
     private boolean isTop = true;
-    protected View focusedView = null;
-    protected ImgUtil.Style style;
+    private View focusedView = null;
+    private ImgUtil.Style style;
 
     public static GridFragment newInstance(MovieSort.SortData sortData) {
         return new GridFragment().setArguments(sortData);

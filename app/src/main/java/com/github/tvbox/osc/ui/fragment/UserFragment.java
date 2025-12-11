@@ -1,13 +1,9 @@
 package com.github.tvbox.osc.ui.fragment;
 
-import android.content.Intent;
-
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.cache.RoomDataManger;
-import com.github.tvbox.osc.ui.activity.FastSearchActivity;
-import com.github.tvbox.osc.ui.activity.SearchActivity;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.UA;
 import com.google.gson.Gson;
@@ -22,6 +18,7 @@ import com.orhanobut.hawk.Hawk;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * @author pj567
@@ -29,18 +26,9 @@ import java.util.List;
  * @description:
  */
 public class UserFragment extends GridFragment {
-    private List<Movie.Video> homeSourceRec;
-
     public static UserFragment newInstance(MovieSort.SortData sortData) {
         UserFragment fragment = new UserFragment();
         fragment.setArguments(sortData);
-        return fragment;
-    }
-
-    public static UserFragment newInstance(MovieSort.SortData sortData, List<Movie.Video> recVod) {
-        UserFragment fragment = new UserFragment();
-        fragment.setArguments(sortData);
-        fragment.homeSourceRec = recVod;
         return fragment;
     }
 
@@ -65,34 +53,14 @@ public class UserFragment extends GridFragment {
         }
     }
 
-    private void jumpSearch(Movie.Video vod) {
-        Intent newIntent;
-        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)) {
-            newIntent = new Intent(mContext, FastSearchActivity.class);
-        } else {
-            newIntent = new Intent(mContext, SearchActivity.class);
-        }
-        newIntent.putExtra("title", vod.name);
-        newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        mActivity.startActivity(newIntent);
-    }
-
     @Override
     protected void initData() {
-        showSuccess();
-        initHomeHotVod();
-    }
-
-    private void initHomeHotVod() {
         if (Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
-            if (homeSourceRec != null) {
-                gridAdapter.setNewData(homeSourceRec);
-                return;
-            }
-        } else if (Hawk.get(HawkConfig.HOME_REC, 0) == 2) {
-            return;
+            super.initData();
+        } else {
+            showSuccess();
+            setDouBanData();
         }
-        setDouBanData();
     }
 
     private void setDouBanData() {
@@ -101,7 +69,7 @@ public class UserFragment extends GridFragment {
             int year = cal.get(Calendar.YEAR);
             int month = cal.get(Calendar.MONTH) + 1;
             int day = cal.get(Calendar.DATE);
-            String today = String.format("%d%d%d", year, month, day);
+            String today = String.format(Locale.getDefault(), "%d%d%d", year, month, day);
             String requestDay = Hawk.get("home_hot_day", "");
             if (requestDay.equals(today)) {
                 String json = Hawk.get("home_hot", "");
