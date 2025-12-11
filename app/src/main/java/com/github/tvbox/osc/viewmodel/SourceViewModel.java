@@ -328,41 +328,45 @@ public class SourceViewModel extends ViewModel {
                 }
             });
         } else if (type == 0 || type == 1) {
-            OkGo.<String>get(homeSourceBean.getApi())
-                    .tag(homeSourceBean.getApi())
-                    .params("ac", type == 0 ? "videolist" : "detail")
-                    .params("t", sortData.id)
-                    .params("pg", page)
-                    .params(sortData.filterSelect)
-                    .params("f", (sortData.filterSelect == null || sortData.filterSelect.isEmpty()) ? "" : new JSONObject(sortData.filterSelect).toString())
-                    .execute(new AbsCallback<String>() {
+            try {
 
-                        @Override
-                        public String convertResponse(okhttp3.Response response) throws Throwable {
-                            if (response.body() != null) {
-                                return response.body().string();
-                            } else {
-                                throw new IllegalStateException("网络请求错误");
+                OkGo.<String>get(homeSourceBean.getApi())
+                        .tag(homeSourceBean.getApi())
+                        .params("ac", type == 0 ? "videolist" : "detail")
+                        .params("t", sortData.id)
+                        .params("pg", page)
+                        .params(sortData.filterSelect)
+                        .params("f", (sortData.filterSelect == null || sortData.filterSelect.isEmpty()) ? "" : new JSONObject(sortData.filterSelect).toString())
+                        .execute(new AbsCallback<String>() {
+
+                            @Override
+                            public String convertResponse(okhttp3.Response response) throws Throwable {
+                                if (response.body() != null) {
+                                    return response.body().string();
+                                } else {
+                                    throw new IllegalStateException("网络请求错误");
+                                }
                             }
-                        }
 
-                        @Override
-                        public void onSuccess(Response<String> response) {
-                            if (type == 0) {
-                                String xml = response.body();
-                                xml(listResult, xml, homeSourceBean.getKey());
-                            } else {
-                                String json = response.body();
-                                json(listResult, json, homeSourceBean.getKey());
+                            @Override
+                            public void onSuccess(Response<String> response) {
+                                if (type == 0) {
+                                    String xml = response.body();
+                                    xml(listResult, xml, homeSourceBean.getKey());
+                                } else {
+                                    String json = response.body();
+                                    json(listResult, json, homeSourceBean.getKey());
+                                }
                             }
-                        }
 
-                        @Override
-                        public void onError(Response<String> response) {
-                            super.onError(response);
-                            listResult.postValue(null);
-                        }
-                    });
+                            @Override
+                            public void onError(Response<String> response) {
+                                super.onError(response);
+                                listResult.postValue(null);
+                            }
+                        });
+            } catch (Exception ignored) {
+            }
         } else if (type == 4) {
             String ext;
             String extend = homeSourceBean.getExt();

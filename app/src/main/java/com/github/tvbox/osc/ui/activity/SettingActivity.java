@@ -712,11 +712,11 @@ public class SettingActivity extends BaseActivity {
     private String getHomeRecName(int rec) {
         switch (rec) {
             case 1:
-                return "豆瓣推荐";
+                return "站点推荐";
             case 2:
-                return "仅当前源";
+                return "观看历史";
             default:
-                return "推荐+豆瓣";
+                return "豆瓣热播";
         }
     }
 

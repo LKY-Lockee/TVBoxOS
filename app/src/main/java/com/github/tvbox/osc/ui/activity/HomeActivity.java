@@ -33,6 +33,7 @@ import com.github.tvbox.osc.ui.adapter.SortAdapter;
 import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.ui.dialog.TipDialog;
 import com.github.tvbox.osc.ui.fragment.GridFragment;
+import com.github.tvbox.osc.ui.fragment.UserFragment;
 import com.github.tvbox.osc.ui.tv.widget.DefaultTransformer;
 import com.github.tvbox.osc.ui.tv.widget.FixedSpeedScroller;
 import com.github.tvbox.osc.ui.tv.widget.NoScrollViewPager;
@@ -351,7 +352,15 @@ public class HomeActivity extends BaseActivity {
 
         if (!sortAdapter.getData().isEmpty()) {
             for (MovieSort.SortData data : sortAdapter.getData()) {
-                fragments.add(GridFragment.newInstance(data));
+                if (data.id.equals("my0")) {
+                    if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && absXml != null && absXml.videoList != null && !absXml.videoList.isEmpty()) {
+                        fragments.add(UserFragment.newInstance(data, absXml.videoList));
+                    } else {
+                        fragments.add(UserFragment.newInstance(null));
+                    }
+                } else {
+                    fragments.add(GridFragment.newInstance(data));
+                }
             }
             HomePageAdapter pageAdapter = new HomePageAdapter(getSupportFragmentManager(), fragments);
             try {

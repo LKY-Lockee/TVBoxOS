@@ -47,17 +47,17 @@ import java.util.Stack;
  */
 public class GridFragment extends BaseLazyFragment {
     final Stack<GridInfo> mGrids = new Stack<>(); //ui栈
-    private MovieSort.SortData sortData = null;
-    private TvRecyclerView mGridView;
-    private SourceViewModel sourceViewModel;
+    protected MovieSort.SortData sortData = null;
+    protected TvRecyclerView mGridView;
+    protected SourceViewModel sourceViewModel;
     private GridFilterDialog gridFilterDialog;
-    private GridAdapter gridAdapter;
-    private int page = 1;
-    private int maxPage = 1;
+    protected GridAdapter gridAdapter;
+    protected int page = 1;
+    protected int maxPage = 1;
     private boolean isLoad = false;
     private boolean isTop = true;
-    private View focusedView = null;
-    private ImgUtil.Style style;
+    protected View focusedView = null;
+    protected ImgUtil.Style style;
 
     public static GridFragment newInstance(MovieSort.SortData sortData) {
         return new GridFragment().setArguments(sortData);
@@ -234,7 +234,6 @@ public class GridFragment extends BaseLazyFragment {
                         jumpActivity(DetailActivity.class, bundle);
                     }
                 }
-
             }
         });
         gridAdapter.setOnItemLongClickListener((adapter, view, position) -> {
@@ -293,7 +292,7 @@ public class GridFragment extends BaseLazyFragment {
         return isLoad || !mGrids.empty(); //如果有缓存页的话也可以认为是加载了数据的
     }
 
-    private void initData() {
+    protected void initData() {
         showLoading();
         isLoad = false;
         scrollTop();
