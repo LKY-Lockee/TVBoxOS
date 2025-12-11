@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/vs_4"
         android:focusable="true"
@@ -11,17 +11,18 @@
         app:strokeWidth="0dp">
 
     <FrameLayout
-            android:layout_width="@dimen/vs_214"
-            android:layout_height="@dimen/vs_280">
+            android:id="@+id/itemContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
         <!-- 封面图片 -->
-        <ImageView
+        <com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView
                 android:id="@+id/ivThumb"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:scaleType="centerCrop" />
 
-        <!-- 顶部标签（年份、地区、语言） -->
+        <!-- 顶部标签（年份、地区、语言、评分） -->
         <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -61,7 +62,21 @@
                     android:id="@+id/tvLang"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/vs_5"
                     android:background="@drawable/shape_thumb_lang"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:paddingLeft="@dimen/vs_5"
+                    android:paddingRight="@dimen/vs_5"
+                    android:singleLine="true"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/ts_16" />
+
+            <TextView
+                    android:id="@+id/tvRate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/shape_thumb_note"
                     android:ellipsize="end"
                     android:gravity="center"
                     android:paddingLeft="@dimen/vs_5"

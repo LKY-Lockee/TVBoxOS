@@ -25,6 +25,7 @@ import com.github.tvbox.osc.ui.activity.SearchActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog;
+import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
@@ -32,7 +33,6 @@ import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
 import org.greenrobot.eventbus.EventBus;
@@ -169,14 +169,20 @@ public class GridFragment extends BaseLazyFragment {
         if (isFolederMode()) {
             mGridView.setLayoutManager(new V7LinearLayoutManager(this.mContext, 1, false));
         } else {
-            int spanCount = isBaseOnWidth() ? 5 : 6;
+            // 使用自适应网格布局管理器
+            // 竖屏最小列宽 150dp（可显示2列），横屏可显示4-5列
+            int minColumnWidthDp = 150;
             if (style != null) {
-                spanCount = ImgUtil.spanCountByStyle(style, spanCount);
+                // 如果有自定义样式,使用样式定义的宽度
+                int styleWidth = ImgUtil.getStyleDefaultWidth(style);
+                minColumnWidthDp = (int) (styleWidth * 0.7); // 减小系数以允许更多列
             }
-            if (spanCount == 1) {
-                mGridView.setLayoutManager(new V7LinearLayoutManager(mContext, spanCount, false));
+
+            // 对于单列布局(spanCount = 1)使用线性布局,否则使用自适应网格布局
+            if (style != null && ImgUtil.spanCountByStyle(style, isBaseOnWidth() ? 5 : 6) == 1) {
+                mGridView.setLayoutManager(new V7LinearLayoutManager(mContext, 1, false));
             } else {
-                mGridView.setLayoutManager(new V7GridLayoutManager(mContext, spanCount));
+                mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, minColumnWidthDp));
             }
         }
 

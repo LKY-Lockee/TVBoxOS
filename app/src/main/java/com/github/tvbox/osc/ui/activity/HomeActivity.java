@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.lifecycle.ViewModelProvider;
@@ -32,7 +33,6 @@ import com.github.tvbox.osc.ui.adapter.SortAdapter;
 import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.ui.dialog.TipDialog;
 import com.github.tvbox.osc.ui.fragment.GridFragment;
-import com.github.tvbox.osc.ui.fragment.UserFragment;
 import com.github.tvbox.osc.ui.tv.widget.DefaultTransformer;
 import com.github.tvbox.osc.ui.tv.widget.FixedSpeedScroller;
 import com.github.tvbox.osc.ui.tv.widget.NoScrollViewPager;
@@ -122,6 +122,14 @@ public class HomeActivity extends BaseActivity {
             useCacheConfig = bundle.getBoolean("useCache", false);
         }
         initData();
+
+        // Setup back press handler
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
     }
 
     private void initView() {
@@ -160,16 +168,22 @@ public class HomeActivity extends BaseActivity {
             public void onTabReselected(TabLayout.Tab tab) {
                 // 当重新点击当前选中的tab时
                 int position = tab.getPosition();
-                if (position < 0 || position >= fragments.size()) {
+                if (position < 0 || position >= fragments.size() || position >= sortAdapter.getData().size()) {
                     return;
                 }
-                BaseLazyFragment baseLazyFragment = fragments.get(position);
-                if ((baseLazyFragment instanceof GridFragment) && position < sortAdapter.getData().size()
-                        && !sortAdapter.getItem(position).filters.isEmpty()) {
-                    // 弹出筛选
-                    ((GridFragment) baseLazyFragment).showFilter();
-                } else if (baseLazyFragment instanceof UserFragment) {
+                MovieSort.SortData sortData = sortAdapter.getItem(position);
+                if (sortData == null) {
+                    return;
+                }
+                // 如果是主页标签（id为"my0"），弹出站点切换
+                if ("my0".equals(sortData.id)) {
                     showSiteSwitch();
+                    return;
+                }
+                // 如果有筛选项，弹出筛选
+                BaseLazyFragment baseLazyFragment = fragments.get(position);
+                if ((baseLazyFragment instanceof GridFragment) && !sortData.filters.isEmpty()) {
+                    ((GridFragment) baseLazyFragment).showFilter();
                 }
             }
         });
@@ -314,7 +328,7 @@ public class HomeActivity extends BaseActivity {
 
         // 根据sortAdapter的数据创建Tab
         List<MovieSort.SortData> sortList = sortAdapter.getData();
-        if (sortList != null && !sortList.isEmpty()) {
+        if (!sortList.isEmpty()) {
             for (MovieSort.SortData sortData : sortList) {
                 TabLayout.Tab tab = mTabLayout.newTab();
                 tab.setText(sortData.name);
@@ -337,15 +351,7 @@ public class HomeActivity extends BaseActivity {
 
         if (!sortAdapter.getData().isEmpty()) {
             for (MovieSort.SortData data : sortAdapter.getData()) {
-                if (data.id.equals("my0")) {
-                    if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && absXml != null && absXml.videoList != null && !absXml.videoList.isEmpty()) {
-                        fragments.add(UserFragment.newInstance(absXml.videoList));
-                    } else {
-                        fragments.add(UserFragment.newInstance(null));
-                    }
-                } else {
-                    fragments.add(GridFragment.newInstance(data));
-                }
+                fragments.add(GridFragment.newInstance(data));
             }
             HomePageAdapter pageAdapter = new HomePageAdapter(getSupportFragmentManager(), fragments);
             try {
@@ -362,18 +368,15 @@ public class HomeActivity extends BaseActivity {
         }
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    @Override
-    public void onBackPressed() {
+    private void handleBackPress() {
         // 打断加载
         if (isLoading()) {
             refreshEmpty();
             return;
         }
-        // 如果处于 VOD 删除模式，则退出该模式并刷新界面
+        // 如果处于 VOD 删除模式，则退出该模式
         if (HawkConfig.hotVodDelete) {
             HawkConfig.hotVodDelete = false;
-            UserFragment.homeHotVodAdapter.notifyDataSetChanged();
             return;
         }
 
@@ -398,13 +401,6 @@ public class HomeActivity extends BaseActivity {
                 }
             } else {
                 doExit();
-            }
-        } else if (baseLazyFragment instanceof UserFragment && UserFragment.tvHotList.canScrollVertically(-1)) {
-            // 如果 UserFragment 列表可以向上滚动，则滚动到顶部
-            UserFragment.tvHotList.scrollToPosition(0);
-            TabLayout.Tab firstTab = mTabLayout.getTabAt(0);
-            if (firstTab != null) {
-                firstTab.select();
             }
         } else {
             doExit();
@@ -466,10 +462,12 @@ public class HomeActivity extends BaseActivity {
         TabLayout.Tab currentTab = mTabLayout.getTabAt(currentSelected);
         if (currentTab != null) {
             MovieSort.SortData sortData = sortAdapter.getItem(currentSelected);
-            if (visible) {
-                currentTab.setText(sortData.name + " (" + count + ")");
-            } else {
-                currentTab.setText(sortData.name);
+            if (sortData != null) {
+                if (visible) {
+                    currentTab.setText(sortData.name + " (" + count + ")");
+                } else {
+                    currentTab.setText(sortData.name);
+                }
             }
         }
     }

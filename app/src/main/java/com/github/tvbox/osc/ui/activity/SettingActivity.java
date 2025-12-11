@@ -72,7 +72,7 @@ public class SettingActivity extends BaseActivity {
 
     @Override
     protected int getLayoutResID() {
-        return R.layout.activity_setting_m3;
+        return R.layout.activity_settings;
     }
 
     @Override

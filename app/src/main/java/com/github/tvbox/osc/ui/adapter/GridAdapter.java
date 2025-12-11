@@ -2,7 +2,6 @@ package com.github.tvbox.osc.ui.adapter;
 
 import android.text.TextUtils;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -11,6 +10,7 @@ import com.chad.library.adapter.base.BaseViewHolder;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.picasso.RoundTransformation;
+import com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.util.MD5;
@@ -139,17 +139,18 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
     }
 
     /**
-     * 根据传入的 style 动态设置 ImageView 的高度：高度 = 宽度 / ratio
+     * 根据传入的 style 设置图片的宽高比
      */
     private void applyStyleToImage(final ImageView ivThumb) {
-        if (style != null) {
-            ViewGroup container = (ViewGroup) ivThumb.getParent();
-            int width = defaultWidth;
-            int height = (int) (width / style.ratio);
-            ViewGroup.LayoutParams containerParams = container.getLayoutParams();
-            containerParams.height = AutoSizeUtils.mm2px(mContext, height); // 高度
-            containerParams.width = AutoSizeUtils.mm2px(mContext, width); // 宽度
-            container.setLayoutParams(containerParams);
+        if (ivThumb instanceof AspectRatioImageView) {
+            AspectRatioImageView aspectRatioImageView = (AspectRatioImageView) ivThumb;
+            if (style != null) {
+                // 使用样式的宽高比
+                aspectRatioImageView.setAspectRatio(style.ratio);
+            } else {
+                // 使用默认的宽高比 214:280
+                aspectRatioImageView.setAspectRatio(214f / 280f);
+            }
         }
     }
 }
