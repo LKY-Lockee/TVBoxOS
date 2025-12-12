@@ -111,6 +111,12 @@ public class HomeActivity extends BaseActivity {
     }
 
     @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+    }
+
+    @Override
     protected void init() {
         EventBus.getDefault().register(this);
         ControlManager.get().startServer();
@@ -135,6 +141,7 @@ public class HomeActivity extends BaseActivity {
 
     private void initView() {
         MaterialToolbar topAppBar = findViewById(R.id.appBar);
+        View contentLayout = findViewById(R.id.contentLayout);
 
         // 菜单
         topAppBar.inflateMenu(R.menu.home_toolbar_menu);
@@ -146,7 +153,6 @@ public class HomeActivity extends BaseActivity {
             return false;
         });
 
-        View contentLayout = findViewById(R.id.contentLayout);
         this.mTabLayout = findViewById(R.id.mTabLayout);
         this.mViewPager = findViewById(R.id.mViewPager);
         this.sortAdapter = new SortAdapter();
