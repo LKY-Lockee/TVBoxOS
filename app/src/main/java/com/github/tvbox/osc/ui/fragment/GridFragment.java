@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.BounceInterpolator;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -12,6 +11,8 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.base.BaseLazyFragment;
@@ -29,8 +30,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -45,7 +44,7 @@ import java.util.Stack;
 public class GridFragment extends BaseLazyFragment {
     private final Stack<GridInfo> mGrids = new Stack<>(); //ui栈
     private MovieSort.SortData sortData = null;
-    private TvRecyclerView mGridView;
+    private RecyclerView mGridView;
     private SourceViewModel sourceViewModel;
     protected GridAdapter gridAdapter;
     private int page = 1;
@@ -140,8 +139,7 @@ public class GridFragment extends BaseLazyFragment {
         if (mGridView == null) { // 从layout中拿view
             mGridView = findViewById(R.id.mGridView);
         } else { // 复制当前view
-            TvRecyclerView v3 = new TvRecyclerView(this.mContext);
-            v3.setSpacingWithMargins(10, 10);
+            RecyclerView v3 = new RecyclerView(this.mContext);
             v3.setLayoutParams(mGridView.getLayoutParams());
             v3.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), mGridView.getPaddingBottom());
             v3.setClipToPadding(mGridView.getClipToPadding());
@@ -168,7 +166,7 @@ public class GridFragment extends BaseLazyFragment {
 
         mGridView.setAdapter(gridAdapter);
         if (isFolderMode()) {
-            mGridView.setLayoutManager(new V7LinearLayoutManager(this.mContext, 1, false));
+            mGridView.setLayoutManager(new LinearLayoutManager(this.mContext, LinearLayoutManager.VERTICAL, false));
         } else {
             // 使用自适应网格布局管理器
             int minColumnWidthDp = 150;
@@ -179,23 +177,6 @@ public class GridFragment extends BaseLazyFragment {
             gridAdapter.setEnableLoadMore(true);
             sourceViewModel.getList(sortData, page);
         }, mGridView);
-        mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
-            @Override
-            public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            }
-
-            @Override
-            public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            }
-
-            @Override
-            public void onItemClick(TvRecyclerView parent, View itemView, int position) {
-
-            }
-        });
-        mGridView.setOnInBorderKeyEventListener((direction, focused) -> false);
         gridAdapter.setOnItemClickListener((adapter, view, position) -> {
             FastClickCheckUtil.check(view);
             Movie.Video video = gridAdapter.getData().get(position);
@@ -212,6 +193,7 @@ public class GridFragment extends BaseLazyFragment {
                         changeView(video.id, false);
                     }
                 } else {
+                    //noinspection SpellCheckingInspection
                     if (video.id == null || video.id.isEmpty() || video.id.startsWith("msearch:")) {
                         jumpActivity(FastSearchActivity.class, bundle);
                     } else {
@@ -356,7 +338,7 @@ public class GridFragment extends BaseLazyFragment {
         currentExpandedFilter = filter;
 
         currentBottomSheet = new BottomSheetDialog(mContext);
-        View view = LayoutInflater.from(mContext).inflate(R.layout.bottom_sheet_filter_options, null);
+        View view = LayoutInflater.from(mContext).inflate(R.layout.bottom_sheet_filter_options, currentBottomSheet.findViewById(android.R.id.content), false);
 
         TextView titleView = view.findViewById(R.id.filterTitle);
         titleView.setText(filter.name);
@@ -437,7 +419,7 @@ public class GridFragment extends BaseLazyFragment {
 
     private static class GridInfo {
         public String sortID = "";
-        public TvRecyclerView mGridView;
+        public RecyclerView mGridView;
         public GridAdapter gridAdapter;
         public int page = 1;
         public int maxPage = 1;

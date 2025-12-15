@@ -1,8 +1,9 @@
 package com.github.tvbox.osc.ui.fragment;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.view.View;
-import android.view.animation.BounceInterpolator;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
@@ -19,7 +20,6 @@ import com.github.tvbox.osc.ui.dialog.ConfirmClearDialog;
 import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
-import com.owen.tvrecyclerview.widget.TvRecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +81,7 @@ public class HistoryFragment extends BaseLazyFragment implements ToolbarMenuProv
     }
     // ----------------
 
+    @SuppressLint("NotifyDataSetChanged")
     private void toggleDelMode() {
         HawkConfig.hotVodDelete = !HawkConfig.hotVodDelete;
         historyAdapter.notifyDataSetChanged();
@@ -93,26 +94,10 @@ public class HistoryFragment extends BaseLazyFragment implements ToolbarMenuProv
     }
 
     private void initView() {
-        TvRecyclerView mGridView = rootView.findViewById(R.id.mGridView);
+        RecyclerView mGridView = rootView.findViewById(R.id.mGridView);
         mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, 150));
         historyAdapter = new HistoryAdapter();
         mGridView.setAdapter(historyAdapter);
-        mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
-            @Override
-            public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            }
-
-            @Override
-            public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            }
-
-            @Override
-            public void onItemClick(TvRecyclerView parent, View itemView, int position) {
-
-            }
-        });
         historyAdapter.setOnItemClickListener((adapter, view, position) -> {
             FastClickCheckUtil.check(view);
             if (position == -1) return;

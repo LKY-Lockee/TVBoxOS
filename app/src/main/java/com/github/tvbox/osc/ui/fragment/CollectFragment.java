@@ -1,8 +1,10 @@
 package com.github.tvbox.osc.ui.fragment;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-import android.view.View;
-import android.view.animation.BounceInterpolator;
+
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
@@ -16,8 +18,6 @@ import com.github.tvbox.osc.ui.adapter.CollectAdapter;
 import com.github.tvbox.osc.ui.dialog.ConfirmClearDialog;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
-import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,6 +74,7 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
     }
     // ----------------
 
+    @SuppressLint("NotifyDataSetChanged")
     private void toggleDelMode() {
         HawkConfig.hotVodDelete = !HawkConfig.hotVodDelete;
         collectAdapter.notifyDataSetChanged();
@@ -86,27 +87,11 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
     }
 
     private void initView() {
-        TvRecyclerView mGridView = rootView.findViewById(R.id.mGridView);
+        RecyclerView mGridView = rootView.findViewById(R.id.mGridView);
         mGridView.setHasFixedSize(true);
-        mGridView.setLayoutManager(new V7GridLayoutManager(mContext, isBaseOnWidth() ? 5 : 6));
+        mGridView.setLayoutManager(new GridLayoutManager(mContext, isBaseOnWidth() ? 5 : 6));
         collectAdapter = new CollectAdapter();
         mGridView.setAdapter(collectAdapter);
-        mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
-            @Override
-            public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            }
-
-            @Override
-            public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            }
-
-            @Override
-            public void onItemClick(TvRecyclerView parent, View itemView, int position) {
-
-            }
-        });
         collectAdapter.setOnItemClickListener((adapter, view, position) -> {
             FastClickCheckUtil.check(view);
             VodCollect vodInfo = collectAdapter.getData().get(position);
