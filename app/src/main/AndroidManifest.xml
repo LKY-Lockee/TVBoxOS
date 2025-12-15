@@ -76,8 +76,6 @@
                 android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity android:name=".ui.activity.FastSearchActivity" />
         <activity android:name=".ui.activity.SettingActivity" />
-        <activity android:name=".ui.activity.HistoryActivity" />
-        <activity android:name=".ui.activity.CollectActivity" />
 
         <receiver
                 android:name=".receiver.SearchReceiver"

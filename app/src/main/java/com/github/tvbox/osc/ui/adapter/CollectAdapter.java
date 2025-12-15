@@ -13,6 +13,7 @@ import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.cache.VodCollect;
 import com.github.tvbox.osc.picasso.RoundTransformation;
+import com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.MD5;
@@ -60,6 +61,10 @@ public class CollectAdapter extends BaseQuickAdapter<VodCollect, BaseViewHolder>
                     .into(ivThumb);
         } else {
             ivThumb.setImageResource(R.drawable.img_loading_placeholder);
+        }
+        // 动态设置宽高
+        if (ivThumb instanceof AspectRatioImageView) {
+            ((AspectRatioImageView) ivThumb).setAspectRatio(214f / 280f);
         }
     }
 }

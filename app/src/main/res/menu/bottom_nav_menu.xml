@@ -4,7 +4,7 @@
     <item
             android:id="@+id/navigation_main"
             android:title="主页"
-            android:icon="@drawable/icon_collect" />
+            android:icon="@drawable/icon_home" />
     <item
             android:title="历史"
             android:id="@+id/navigation_history"

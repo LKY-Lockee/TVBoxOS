@@ -1,18 +1,17 @@
-package com.github.tvbox.osc.ui.activity;
+package com.github.tvbox.osc.ui.fragment;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.BounceInterpolator;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BaseActivity;
+import com.github.tvbox.osc.base.BackPressProvider;
+import com.github.tvbox.osc.base.BaseLazyFragment;
+import com.github.tvbox.osc.base.ToolbarMenuProvider;
 import com.github.tvbox.osc.cache.RoomDataManger;
 import com.github.tvbox.osc.cache.VodCollect;
-import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.adapter.CollectAdapter;
 import com.github.tvbox.osc.ui.dialog.ConfirmClearDialog;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
@@ -20,23 +19,28 @@ import com.github.tvbox.osc.util.HawkConfig;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
 
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class CollectActivity extends BaseActivity {
+public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProvider, BackPressProvider {
     public static CollectAdapter collectAdapter;
-    private ImageView tvDelete;
-    private ImageView tvClear;
-    private TextView tvDelTip;
     private boolean delMode = false;
 
+    // --- BackPressProvider ---
+    @Override
+    public boolean handleBackPress() {
+        if (delMode) {
+            toggleDelMode();
+            return true;
+        }
+        return false;
+    }
+    // ----------------
+
+    // --- BaseLazyFragment ---
     @Override
     protected int getLayoutResID() {
-        return R.layout.activity_collect;
+        return R.layout.fragment_grid;
     }
 
     @Override
@@ -44,37 +48,49 @@ public class CollectActivity extends BaseActivity {
         initView();
         initData();
     }
+    // ----------------
+
+    // --- ToolbarMenuProvider ---
+    @Override
+    public int getMenuResId() {
+        return R.menu.collect_toolbar_menu;
+    }
+
+    @Override
+    public String getToolbarTitle() {
+        return "收藏";
+    }
+
+    @Override
+    public boolean onMenuItemClick(int itemId) {
+        if (itemId == R.id.action_delete) {
+            toggleDelMode();
+            return true;
+        } else if (itemId == R.id.action_clear) {
+            showClearDialog();
+            return true;
+        }
+        return false;
+    }
+    // ----------------
 
     private void toggleDelMode() {
         HawkConfig.hotVodDelete = !HawkConfig.hotVodDelete;
         collectAdapter.notifyDataSetChanged();
         delMode = !delMode;
-        tvDelTip.setVisibility(delMode ? View.VISIBLE : View.GONE);
+    }
+
+    private void showClearDialog() {
+        ConfirmClearDialog dialog = new ConfirmClearDialog(mContext, "Collect");
+        dialog.show();
     }
 
     private void initView() {
-        EventBus.getDefault().register(this);
-        tvDelete = findViewById(R.id.tvDelete);
-        tvClear = findViewById(R.id.tvClear);
-        tvDelTip = findViewById(R.id.tvDelTip);
-        TvRecyclerView mGridView = findViewById(R.id.mGridView);
+        TvRecyclerView mGridView = rootView.findViewById(R.id.mGridView);
         mGridView.setHasFixedSize(true);
-        mGridView.setLayoutManager(new V7GridLayoutManager(this.mContext, isBaseOnWidth() ? 5 : 6));
+        mGridView.setLayoutManager(new V7GridLayoutManager(mContext, isBaseOnWidth() ? 5 : 6));
         collectAdapter = new CollectAdapter();
         mGridView.setAdapter(collectAdapter);
-        tvDelete.setOnClickListener(v -> toggleDelMode());
-        tvClear.setOnClickListener(v -> {
-            ConfirmClearDialog dialog = new ConfirmClearDialog(mContext, "Collect");
-            dialog.show();
-        });
-        mGridView.setOnInBorderKeyEventListener((direction, focused) -> {
-            if (direction == View.FOCUS_UP) {
-                tvDelete.setFocusable(true);
-                tvClear.setFocusable(true);
-                tvDelete.requestFocus();
-            }
-            return false;
-        });
         mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
@@ -105,21 +121,16 @@ public class CollectActivity extends BaseActivity {
                         bundle.putString("sourceKey", vodInfo.sourceKey);
                         bundle.putString("picture", vodInfo.pic);
                         jumpActivity(DetailActivity.class, bundle);
-                    } else {
+                    } /*else {
                         Intent newIntent = new Intent(mContext, SearchActivity.class);
                         newIntent.putExtra("title", vodInfo.name);
                         newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        startActivity(newIntent);
-                    }
+                        mContext.startActivity(newIntent);
+                    }*/
                 }
             }
         });
         collectAdapter.setOnItemLongClickListener((adapter, view, position) -> {
-//                FastClickCheckUtil.check(view);
-//                VodCollect vodInfo = collectAdapter.getData().get(position);
-//                collectAdapter.remove(position);
-//                RoomDataManger.deleteVodCollect(vodInfo.getId());
-            tvDelete.setFocusable(true);
             toggleDelMode();
             return true;
         });
@@ -130,27 +141,5 @@ public class CollectActivity extends BaseActivity {
         List<VodCollect> vodInfoList = new ArrayList<>(allVodRecord);
         collectAdapter.setNewData(vodInfoList);
     }
-
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void refresh(RefreshEvent event) {
-        if (event.type == RefreshEvent.TYPE_HISTORY_REFRESH) {
-            initData();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        EventBus.getDefault().unregister(this);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (delMode) {
-            toggleDelMode();
-            return;
-        }
-        super.onBackPressed();
-    }
 }
+

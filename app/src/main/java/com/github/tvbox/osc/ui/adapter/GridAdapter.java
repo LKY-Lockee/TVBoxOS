@@ -20,27 +20,12 @@ import java.util.ArrayList;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
-/**
- * GridAdapter 支持传入 style 来设置图片的宽高比例，
- * 如果不传 style 则保留旧的默认风格（XML 中 item_grid.xml 定义的尺寸）。
- */
 public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
-    public final ImgUtil.Style style; // 动态风格，传入时调整图片宽高比
-    private boolean mShowList;
-    private int defaultWidth;
+    private final boolean mShowList;
 
-
-    /**
-     * 如果 style 传 null，则采用 item_grid.xml 中的默认尺寸
-     */
-    public GridAdapter(boolean showList, ImgUtil.Style style) {
+    public GridAdapter(boolean showList) {
         super(showList ? R.layout.item_list : R.layout.item_grid, new ArrayList<>());
         this.mShowList = showList;
-        if (style != null) {
-            if (style.type.equals("list")) this.mShowList = true;
-            this.defaultWidth = ImgUtil.getStyleDefaultWidth(style);
-        }
-        this.style = style;
     }
 
     @Override
@@ -68,7 +53,6 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
                             .into(ivThumb);
                 }
             } else {
-//                ivThumb.setImageResource(R.drawable.img_loading_placeholder);
                 ivThumb.setImageDrawable(ImgUtil.createTextDrawable(item.name));
             }
             return;
@@ -83,20 +67,8 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         }
         TextView tvLang = helper.getView(R.id.tvLang);
         tvLang.setVisibility(View.GONE);
-        /*if (TextUtils.isEmpty(item.lang)) {
-            tvLang.setVisibility(View.GONE);
-        } else {
-            tvLang.setText(item.lang);
-            tvLang.setVisibility(View.VISIBLE);
-        }*/
         TextView tvArea = helper.getView(R.id.tvArea);
         tvArea.setVisibility(View.GONE);
-        /*if (TextUtils.isEmpty(item.area)) {
-            tvArea.setVisibility(View.GONE);
-        } else {
-            tvArea.setText(item.area);
-            tvArea.setVisibility(View.VISIBLE);
-        }*/
         if (TextUtils.isEmpty(item.note)) {
             helper.setVisible(R.id.tvNote, false);
         } else {
@@ -109,10 +81,6 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
 
         int newWidth = ImgUtil.defaultWidth;
         int newHeight = ImgUtil.defaultHeight;
-        if (style != null) {
-            newWidth = defaultWidth;
-            newHeight = (int) (newWidth / style.ratio);
-        }
 
         //由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {
@@ -135,22 +103,9 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         } else {
             ivThumb.setImageDrawable(ImgUtil.createTextDrawable(item.name));
         }
-        applyStyleToImage(ivThumb);//动态设置宽高
-    }
-
-    /**
-     * 根据传入的 style 设置图片的宽高比
-     */
-    private void applyStyleToImage(final ImageView ivThumb) {
-        if (ivThumb instanceof AspectRatioImageView) {
-            AspectRatioImageView aspectRatioImageView = (AspectRatioImageView) ivThumb;
-            if (style != null) {
-                // 使用样式的宽高比
-                aspectRatioImageView.setAspectRatio(style.ratio);
-            } else {
-                // 使用默认的宽高比 214:280
-                aspectRatioImageView.setAspectRatio(214f / 280f);
-            }
+        // 动态设置宽高
+        if (ivThumb instanceof AspectRatioImageView aspectRatioImageView) {
+            aspectRatioImageView.setAspectRatio(214f / 280f);
         }
     }
 }

@@ -1,122 +1,65 @@
 package com.github.tvbox.osc.ui.activity;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.annotation.NonNull;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DiffUtil;
-import androidx.viewpager2.widget.ViewPager2;
+import androidx.fragment.app.Fragment;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
+import com.github.tvbox.osc.base.BackPressProvider;
 import com.github.tvbox.osc.base.BaseActivity;
-import com.github.tvbox.osc.base.BaseLazyFragment;
-import com.github.tvbox.osc.bean.AbsSortXml;
-import com.github.tvbox.osc.bean.MovieSort;
-import com.github.tvbox.osc.bean.SourceBean;
-import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.base.ToolbarMenuProvider;
 import com.github.tvbox.osc.server.ControlManager;
-import com.github.tvbox.osc.ui.adapter.HomePageAdapter;
-import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
-import com.github.tvbox.osc.ui.adapter.SortAdapter;
-import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.ui.dialog.TipDialog;
-import com.github.tvbox.osc.ui.fragment.GridFragment;
-import com.github.tvbox.osc.ui.fragment.UserFragment;
+import com.github.tvbox.osc.ui.fragment.CollectFragment;
+import com.github.tvbox.osc.ui.fragment.HistoryFragment;
+import com.github.tvbox.osc.ui.fragment.HomeFragment;
+import com.github.tvbox.osc.ui.fragment.LiveFragment;
 import com.github.tvbox.osc.util.AppManager;
-import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.LOG;
-import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.orhanobut.hawk.Hawk;
-import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
 
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import me.jessyan.autosize.utils.AutoSizeUtils;
+enum Page {
+    Home,
+    History,
+    Collect,
+    Live
+}
 
 public class HomeActivity extends BaseActivity {
-    private static final long LONG_PRESS_THRESHOLD = 2000; // 设置长按的阈值，单位是毫秒
-    private final List<BaseLazyFragment> fragments = new ArrayList<>();
+    // Fragments
+    private HomeFragment homeFragment;
+    private HistoryFragment historyFragment;
+    private CollectFragment collectFragment;
+    private LiveFragment liveFragment;
+    // ----------------
+
     private final Handler mHandler = new Handler();
-    private final Runnable mRunnable = new Runnable() {
-        @SuppressLint({"DefaultLocale", "SetTextI18n"})
-        @Override
-        public void run() {
-            Date date = new Date();
-            @SuppressLint("SimpleDateFormat")
-            SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
-            mHandler.postDelayed(this, 1000);
-        }
-    };
-    private final boolean isDownOrUp = false;
-    public View sortFocusView = null;
-    boolean useCacheConfig = false;
-    byte topHide = 0;
-    private TabLayout mTabLayout;
-    private ViewPager2 mViewPager;
-    private SourceViewModel sourceViewModel;
-    private SortAdapter sortAdapter;
-    private View currentView;
-    private boolean sortChange = false;
-    private int currentSelected = 0;
-    private int sortFocused = 0;
-    private final Runnable mDataRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (sortChange) {
-                sortChange = false;
-                if (sortFocused != currentSelected) {
-                    currentSelected = sortFocused;
-                    mViewPager.setCurrentItem(sortFocused, false);
-                }
-            }
-        }
-    };
+    private boolean useCacheConfig = false;
+    private BottomNavigationView mBottomNavigation;
+    private Page currentMainPage = Page.Home;
     private long mExitTime = 0;
-    private boolean skipNextUpdate = false;
     private boolean dataInitOk = false;
     private boolean jarInitOk = false;
-    private long menuKeyDownTime = 0;
-    private SelectDialog<SourceBean> mSiteSwitchDialog;
+    private MaterialToolbar topAppBar;
 
+    // --- BaseActivity ---
     @Override
     protected int getLayoutResID() {
         return R.layout.activity_home;
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
-    }
-
-    @Override
     protected void init() {
-        EventBus.getDefault().register(this);
         ControlManager.get().startServer();
         initView();
-        initViewModel();
         useCacheConfig = false;
         Intent intent = getIntent();
         if (intent != null && intent.getExtras() != null) {
@@ -125,7 +68,6 @@ public class HomeActivity extends BaseActivity {
         }
         initData();
 
-        // Setup back press handler
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -134,95 +76,70 @@ public class HomeActivity extends BaseActivity {
         });
     }
 
-    private void initView() {
-        MaterialToolbar topAppBar = findViewById(R.id.appBar);
-        View contentLayout = findViewById(R.id.contentLayout);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        AppManager.getInstance().appExit(0);
+        ControlManager.get().stopServer();
+    }
+    // ----------------
 
+    // --- FragmentActivity ---
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mHandler.removeCallbacksAndMessages(null);
+    }
+    // ----------------
+
+    private void initView() {
         // 菜单
+        topAppBar = findViewById(R.id.appBar);
         topAppBar.inflateMenu(R.menu.home_toolbar_menu);
         topAppBar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_settings) {
+            int itemId = item.getItemId();
+            if (itemId == R.id.action_settings) {
                 jumpActivity(SettingActivity.class);
+                return true;
+            }
+
+            // 将菜单点击事件委托给实现了 ToolbarMenuProvider 的 Fragment
+            Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.contentLayout);
+            if (currentFragment instanceof ToolbarMenuProvider) {
+                return ((ToolbarMenuProvider) currentFragment).onMenuItemClick(itemId);
+            }
+
+            return false;
+        });
+
+        // 设置底部导航栏监听器
+        this.mBottomNavigation = findViewById(R.id.bottom_navigation);
+        this.mBottomNavigation.setOnItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.navigation_main) {
+                showFragment(Page.Home);
+                return true;
+            } else if (itemId == R.id.navigation_history) {
+                showFragment(Page.History);
+                return true;
+            } else if (itemId == R.id.navigation_favourite) {
+                showFragment(Page.Collect);
+                return true;
+            } else if (itemId == R.id.navigation_live) {
+                showFragment(Page.Live);
                 return true;
             }
             return false;
         });
 
-        this.mTabLayout = findViewById(R.id.mTabLayout);
-        this.mViewPager = findViewById(R.id.mViewPager);
-        this.sortAdapter = new SortAdapter();
-
-        // 设置TabLayout监听器
-        this.mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                int position = tab.getPosition();
-                currentSelected = position;
-                sortFocused = position;
-                mViewPager.setCurrentItem(position, true);
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-                // 当重新点击当前选中的tab时
-                int position = tab.getPosition();
-                if (position < 0 || position >= fragments.size() || position >= sortAdapter.getData().size()) {
-                    return;
-                }
-                MovieSort.SortData sortData = sortAdapter.getItem(position);
-                if (sortData == null) {
-                    return;
-                }
-                // 如果是主页标签（id为"my0"），弹出站点切换
-                if ("my0".equals(sortData.id)) {
-                    showSiteSwitch();
-                    return;
-                }
-                // 如果有筛选项，弹出筛选
-                BaseLazyFragment baseLazyFragment = fragments.get(position);
-                if ((baseLazyFragment instanceof GridFragment) && !sortData.filters.isEmpty()) {
-                    ((GridFragment) baseLazyFragment).showFilter();
-                }
-            }
-        });
-
+        View contentLayout = findViewById(R.id.contentLayout);
         setLoadSir(contentLayout);
-    }
-
-    private void initViewModel() {
-        sourceViewModel = new ViewModelProvider(this).get(SourceViewModel.class);
-        sourceViewModel.sortResult.observe(this, absXml -> {
-            if (skipNextUpdate) {
-                skipNextUpdate = false;
-                return;
-            }
-            showSuccess();
-            if (absXml != null && absXml.classes != null && absXml.classes.sortList != null) {
-                sortAdapter.setNewData(DefaultConfig.adjustSort(ApiConfig.get().getHomeSourceBean().getKey(), absXml.classes.sortList, true));
-            } else {
-                sortAdapter.setNewData(DefaultConfig.adjustSort(ApiConfig.get().getHomeSourceBean().getKey(), new ArrayList<>(), true));
-            }
-
-            // 更新TabLayout
-            updateTabLayout();
-
-            initViewPager(absXml);
-            SourceBean home = ApiConfig.get().getHomeSourceBean();
-        });
     }
 
     private void initData() {
         if (dataInitOk && jarInitOk) {
-            sourceViewModel.getSort(ApiConfig.get().getHomeSourceBean().getKey());
-            if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                LOG.e("有");
-            } else {
-                LOG.e("无");
-            }
+            showSuccess();
+            showFragment(Page.Home);
             if (!useCacheConfig && Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) {
                 jumpActivity(LivePlayActivity.class);
             }
@@ -235,10 +152,7 @@ public class HomeActivity extends BaseActivity {
                     @Override
                     public void success() {
                         jarInitOk = true;
-                        mHandler.postDelayed(() -> {
-//                                if (!useCacheConfig) Toast.makeText(HomeActivity.this, "自定义jar加载成功", Toast.LENGTH_SHORT).show();
-                            initData();
-                        }, 50);
+                        mHandler.postDelayed(() -> initData(), 50);
                     }
 
                     @Override
@@ -324,110 +238,83 @@ public class HomeActivity extends BaseActivity {
         }, this);
     }
 
-    private void updateTabLayout() {
-        // 清空现有的Tab
-        mTabLayout.removeAllTabs();
-
-        // 根据sortAdapter的数据创建Tab
-        List<MovieSort.SortData> sortList = sortAdapter.getData();
-        if (!sortList.isEmpty()) {
-            for (MovieSort.SortData sortData : sortList) {
-                TabLayout.Tab tab = mTabLayout.newTab();
-                tab.setText(sortData.name);
-                mTabLayout.addTab(tab);
-            }
-
-            // 设置默认选中项
-            if (currentSelected < mTabLayout.getTabCount()) {
-                TabLayout.Tab tab = mTabLayout.getTabAt(currentSelected);
-                if (tab != null) {
-                    tab.select();
+    private void showFragment(Page page) {
+        currentMainPage = page;
+        Fragment fragment = switch (page) {
+            case Home -> {
+                if (homeFragment == null) {
+                    homeFragment = new HomeFragment();
                 }
+                yield homeFragment;
             }
+            case History -> {
+                if (historyFragment == null) {
+                    historyFragment = new HistoryFragment();
+                }
+                yield historyFragment;
+            }
+            case Collect -> {
+                if (collectFragment == null) {
+                    collectFragment = new CollectFragment();
+                }
+                yield collectFragment;
+            }
+            case Live -> {
+                if (liveFragment == null) {
+                    liveFragment = new LiveFragment();
+                }
+                yield liveFragment;
+            }
+        };
+
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.contentLayout, fragment)
+                .commit();
+
+        // 清除菜单
+        topAppBar.getMenu().clear();
+
+        if (fragment instanceof ToolbarMenuProvider provider) {
+            // 设置标题
+            String title = provider.getToolbarTitle();
+            if (title != null) {
+                topAppBar.setTitle(title);
+            } else {
+                topAppBar.setTitle(R.string.app_name);
+            }
+
+            // 加载 Fragment 特定的菜单（会在设置按钮之前添加）
+            int menuResId = provider.getMenuResId();
+            if (menuResId != 0) {
+                topAppBar.inflateMenu(menuResId);
+            }
+        } else {
+            topAppBar.setTitle(R.string.app_name);
         }
-    }
 
-    private void initViewPager(AbsSortXml absXml) {
-        // 清空之前的fragments
-        fragments.clear();
-
-        if (!sortAdapter.getData().isEmpty()) {
-            for (MovieSort.SortData data : sortAdapter.getData()) {
-                if (data.id.equals("my0")) {
-                    if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && absXml != null && absXml.videoList != null && !absXml.videoList.isEmpty()) {
-                        fragments.add(UserFragment.newInstance(data));
-                    } else {
-                        fragments.add(UserFragment.newInstance(null));
-                    }
-                } else {
-                    fragments.add(GridFragment.newInstance(data));
-                }
-            }
-            HomePageAdapter pageAdapter = new HomePageAdapter(this, fragments);
-            mViewPager.setAdapter(pageAdapter);
-            mViewPager.setCurrentItem(currentSelected, false);
-            mViewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-                @Override
-                public void onPageSelected(int position) {
-                    super.onPageSelected(position);
-                    // 同步更新TabLayout选中状态
-                    if (mTabLayout != null && position >= 0 && position < mTabLayout.getTabCount()) {
-                        TabLayout.Tab tab = mTabLayout.getTabAt(position);
-                        if (tab != null && !tab.isSelected()) {
-                            tab.select();
-                        }
-                        currentSelected = position;
-                        sortFocused = position;
-                    }
-                }
-            });
-        }
+        // 加载通用菜单
+        topAppBar.inflateMenu(R.menu.home_toolbar_menu);
     }
 
     private void handleBackPress() {
-        // 打断加载
-        if (isLoading()) {
-            refreshEmpty();
-            return;
-        }
-        // 如果处于 VOD 删除模式，则退出该模式
-        if (HawkConfig.hotVodDelete) {
-            HawkConfig.hotVodDelete = false;
-            return;
-        }
-
-        // 检查 fragments 状态
-        if (this.fragments.isEmpty() || this.sortFocused >= this.fragments.size() || this.sortFocused < 0) {
-            doExit();
-            return;
-        }
-
-        BaseLazyFragment baseLazyFragment = this.fragments.get(this.sortFocused);
-        if (baseLazyFragment instanceof GridFragment) {
-            GridFragment grid = (GridFragment) baseLazyFragment;
-            // 如果当前 Fragment 能恢复之前保存的 UI 状态，则直接返回
-            if (grid.restoreView()) {
+        // 检查当前页面是否有自定义返回处理
+        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.contentLayout);
+        if (currentFragment instanceof BackPressProvider backPressProvider) {
+            if (backPressProvider.handleBackPress()) {
                 return;
             }
-            // 如果当前不是第一个界面，则将TabLayout设置到第一项
-            if (this.sortFocused != 0) {
-                TabLayout.Tab firstTab = mTabLayout.getTabAt(0);
-                if (firstTab != null) {
-                    firstTab.select();
-                }
-            } else {
-                doExit();
-            }
-        } else {
-            doExit();
         }
-    }
 
-    private void doExit() {
+        // 如果不在主页，先返回主页
+        if (currentMainPage != Page.Home) {
+            // 返回主页
+            mBottomNavigation.setSelectedItemId(R.id.navigation_main);
+            return;
+        }
+
         // 如果两次返回间隔小于 2000 毫秒，则退出应用
         if (System.currentTimeMillis() - mExitTime < 2000) {
             AppManager.getInstance().finishAllActivity();
-            EventBus.getDefault().unregister(this);
             ControlManager.get().stopServer();
             finish();
             android.os.Process.killProcess(android.os.Process.myPid());
@@ -437,141 +324,5 @@ public class HomeActivity extends BaseActivity {
             mExitTime = System.currentTimeMillis();
             Toast.makeText(mContext, "再按一次返回键退出应用", Toast.LENGTH_SHORT).show();
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        mHandler.post(mRunnable);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mHandler.removeCallbacksAndMessages(null);
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void refresh(RefreshEvent event) {
-        if (event.type == RefreshEvent.TYPE_PUSH_URL) {
-            if (ApiConfig.get().getSource("push_agent") != null) {
-                Intent newIntent = new Intent(mContext, DetailActivity.class);
-                newIntent.putExtra("id", (String) event.obj);
-                newIntent.putExtra("sourceKey", "push_agent");
-                newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                HomeActivity.this.startActivity(newIntent);
-            }
-        } else if (event.type == RefreshEvent.TYPE_FILTER_CHANGE) {
-            if (currentView != null) {
-                showFilterIcon((int) event.obj);
-            }
-        }
-    }
-
-    private void showFilterIcon(int count) {
-        // 使用TabLayout时，可以在Tab的标题中添加筛选标记
-        boolean visible = count > 0;
-        if (currentSelected < 0 || currentSelected >= mTabLayout.getTabCount()
-                || currentSelected >= sortAdapter.getData().size()) {
-            return;
-        }
-        TabLayout.Tab currentTab = mTabLayout.getTabAt(currentSelected);
-        if (currentTab != null) {
-            MovieSort.SortData sortData = sortAdapter.getItem(currentSelected);
-            if (sortData != null) {
-                if (visible) {
-                    currentTab.setText(sortData.name + " (" + count + ")");
-                } else {
-                    currentTab.setText(sortData.name);
-                }
-            }
-        }
-    }
-
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
-        if (topHide < 0)
-            return false;
-        int keyCode = event.getKeyCode();
-        if (keyCode == KeyEvent.KEYCODE_MENU) {
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                menuKeyDownTime = System.currentTimeMillis();
-            } else if (event.getAction() == KeyEvent.ACTION_UP) {
-                long pressDuration = System.currentTimeMillis() - menuKeyDownTime;
-                if (pressDuration >= LONG_PRESS_THRESHOLD) {
-                    jumpActivity(SettingActivity.class);
-                } else {
-                    showSiteSwitch();
-                }
-            }
-        }
-        return super.dispatchKeyEvent(event);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        EventBus.getDefault().unregister(this);
-        AppManager.getInstance().appExit(0);
-        ControlManager.get().stopServer();
-    }
-
-    void showSiteSwitch() {
-        List<SourceBean> sites = ApiConfig.get().getSwitchSourceBeanList();
-        if (sites.isEmpty()) return;
-        int select = sites.indexOf(ApiConfig.get().getHomeSourceBean());
-        if (select < 0 || select >= sites.size()) select = 0;
-        if (mSiteSwitchDialog == null) {
-            mSiteSwitchDialog = new SelectDialog<>(HomeActivity.this);
-            TvRecyclerView tvRecyclerView = mSiteSwitchDialog.findViewById(R.id.list);
-            // 根据 sites 数量动态计算列数
-            int spanCount = (int) Math.floor(sites.size() / 20.0);
-            spanCount = Math.min(spanCount, 2);
-            tvRecyclerView.setLayoutManager(new V7GridLayoutManager(mSiteSwitchDialog.getContext(), spanCount + 1));
-            // 设置对话框宽度
-            ConstraintLayout cl_root = mSiteSwitchDialog.findViewById(R.id.cl_root);
-            ViewGroup.LayoutParams clp = cl_root.getLayoutParams();
-            clp.width = AutoSizeUtils.mm2px(mSiteSwitchDialog.getContext(), 380 + 200 * spanCount);
-            mSiteSwitchDialog.setTip("请选择首页数据源");
-        }
-        mSiteSwitchDialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<SourceBean>() {
-            @Override
-            public void click(SourceBean value, int pos) {
-                ApiConfig.get().setSourceBean(value);
-                refreshHome();
-            }
-
-            @Override
-            public String getDisplay(SourceBean val) {
-                return val.getName();
-            }
-        }, new DiffUtil.ItemCallback<SourceBean>() {
-            @Override
-            public boolean areItemsTheSame(@NonNull SourceBean oldItem, @NonNull SourceBean newItem) {
-                return oldItem == newItem;
-            }
-
-            @Override
-            public boolean areContentsTheSame(@NonNull SourceBean oldItem, @NonNull SourceBean newItem) {
-                return oldItem.getKey().equals(newItem.getKey());
-            }
-        }, sites, select);
-        mSiteSwitchDialog.show();
-    }
-
-    private void refreshHome() {
-        Intent intent = new Intent(getApplicationContext(), HomeActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        Bundle bundle = new Bundle();
-        bundle.putBoolean("useCache", true);
-        intent.putExtras(bundle);
-        HomeActivity.this.startActivity(intent);
-    }
-
-    private void refreshEmpty() {
-        skipNextUpdate = true;
-        showSuccess();
-        sortAdapter.setNewData(DefaultConfig.adjustSort(ApiConfig.get().getHomeSourceBean().getKey(), new ArrayList<>(), true));
-        initViewPager(null);
     }
 }

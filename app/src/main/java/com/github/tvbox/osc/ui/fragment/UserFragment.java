@@ -26,10 +26,8 @@ import java.util.Locale;
  * @description:
  */
 public class UserFragment extends GridFragment {
-    public static UserFragment newInstance(MovieSort.SortData sortData) {
-        UserFragment fragment = new UserFragment();
-        fragment.setArguments(sortData);
-        return fragment;
+    public UserFragment(MovieSort.SortData sortData) {
+        super(sortData);
     }
 
     @Override
@@ -58,7 +56,8 @@ public class UserFragment extends GridFragment {
         if (Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
             super.initData();
         } else {
-            showSuccess();
+            // 显示加载圆圈，等待豆瓣数据加载
+            showLoading();
             setDouBanData();
         }
     }
@@ -77,6 +76,8 @@ public class UserFragment extends GridFragment {
                     ArrayList<Movie.Video> hotMovies = loadHots(json);
                     if (!hotMovies.isEmpty()) {
                         gridAdapter.setNewData(hotMovies);
+                        // 缓存数据加载完成，显示成功状态
+                        showSuccess();
                         return;
                     }
                 }
@@ -91,7 +92,20 @@ public class UserFragment extends GridFragment {
                             Hawk.put("home_hot_day", today);
                             Hawk.put("home_hot", netJson);
                             if (mActivity != null) {
-                                mActivity.runOnUiThread(() -> gridAdapter.setNewData(loadHots(netJson)));
+                                mActivity.runOnUiThread(() -> {
+                                    gridAdapter.setNewData(loadHots(netJson));
+                                    // 网络数据加载完成，显示成功状态
+                                    showSuccess();
+                                });
+                            }
+                        }
+
+                        @Override
+                        public void onError(Response<String> response) {
+                            super.onError(response);
+                            // 加载失败也要隐藏加载圆圈
+                            if (mActivity != null) {
+                                mActivity.runOnUiThread(() -> showSuccess());
                             }
                         }
 
@@ -105,6 +119,8 @@ public class UserFragment extends GridFragment {
                     });
         } catch (Throwable th) {
             th.printStackTrace();
+            // 异常情况也要隐藏加载圆圈
+            showSuccess();
         }
     }
 

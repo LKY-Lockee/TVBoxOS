@@ -213,14 +213,6 @@ public class SettingActivity extends BaseActivity {
                 }
         ).setSummary("显示视频缩略图预览"));
 
-        settingItems.add(SettingItem.createSwitch(
-                "聚合搜索",
-                Hawk.get(HawkConfig.FAST_SEARCH_MODE, false),
-                item -> {
-                    Hawk.put(HawkConfig.FAST_SEARCH_MODE, item.isSwitchState());
-                }
-        ).setSummary("开启多源聚合搜索"));
-
         // 高级设置
         settingItems.add(SettingItem.createCategory("高级"));
 

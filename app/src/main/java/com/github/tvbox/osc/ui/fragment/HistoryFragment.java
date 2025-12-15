@@ -1,29 +1,25 @@
-package com.github.tvbox.osc.ui.activity;
+package com.github.tvbox.osc.ui.fragment;
 
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.BounceInterpolator;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BaseActivity;
+import com.github.tvbox.osc.base.BackPressProvider;
+import com.github.tvbox.osc.base.BaseLazyFragment;
+import com.github.tvbox.osc.base.ToolbarMenuProvider;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.cache.RoomDataManger;
-import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.ui.activity.DetailActivity;
+import com.github.tvbox.osc.ui.activity.FastSearchActivity;
 import com.github.tvbox.osc.ui.adapter.HistoryAdapter;
 import com.github.tvbox.osc.ui.dialog.ConfirmClearDialog;
+import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
-import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
-
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,16 +29,25 @@ import java.util.List;
  * @date :2021/1/7
  * @description:
  */
-public class HistoryActivity extends BaseActivity {
+public class HistoryFragment extends BaseLazyFragment implements ToolbarMenuProvider, BackPressProvider {
     public static HistoryAdapter historyAdapter;
-    private ImageView tvDelete;
-    private ImageView tvClear;
-    private TextView tvDelTip;
     private boolean delMode = false;
 
+    // --- BackPressProvider ---
+    @Override
+    public boolean handleBackPress() {
+        if (delMode) {
+            toggleDelMode();
+            return true;
+        }
+        return false;
+    }
+    // ----------------
+
+    // --- BaseLazyFragment ---
     @Override
     protected int getLayoutResID() {
-        return R.layout.activity_history;
+        return R.layout.fragment_grid;
     }
 
     @Override
@@ -50,37 +55,48 @@ public class HistoryActivity extends BaseActivity {
         initView();
         initData();
     }
+    // ----------------
+
+    // --- ToolbarMenuProvider ---
+    @Override
+    public int getMenuResId() {
+        return R.menu.history_toolbar_menu;
+    }
+
+    @Override
+    public String getToolbarTitle() {
+        return "历史记录";
+    }
+
+    @Override
+    public boolean onMenuItemClick(int itemId) {
+        if (itemId == R.id.action_delete) {
+            toggleDelMode();
+            return true;
+        } else if (itemId == R.id.action_clear) {
+            showClearDialog();
+            return true;
+        }
+        return false;
+    }
+    // ----------------
 
     private void toggleDelMode() {
         HawkConfig.hotVodDelete = !HawkConfig.hotVodDelete;
         historyAdapter.notifyDataSetChanged();
         delMode = !delMode;
-        tvDelTip.setVisibility(delMode ? View.VISIBLE : View.GONE);
+    }
+
+    private void showClearDialog() {
+        ConfirmClearDialog dialog = new ConfirmClearDialog(mContext, "History");
+        dialog.show();
     }
 
     private void initView() {
-        EventBus.getDefault().register(this);
-        tvDelete = findViewById(R.id.tvDelete);
-        tvClear = findViewById(R.id.tvClear);
-        tvDelTip = findViewById(R.id.tvDelTip);
-        TvRecyclerView mGridView = findViewById(R.id.mGridView);
-        mGridView.setHasFixedSize(true);
-        mGridView.setLayoutManager(new V7GridLayoutManager(this.mContext, isBaseOnWidth() ? 5 : 6));
+        TvRecyclerView mGridView = rootView.findViewById(R.id.mGridView);
+        mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, 150));
         historyAdapter = new HistoryAdapter();
         mGridView.setAdapter(historyAdapter);
-        tvDelete.setOnClickListener(v -> toggleDelMode());
-        tvClear.setOnClickListener(v -> {
-            ConfirmClearDialog dialog = new ConfirmClearDialog(mContext, "History");
-            dialog.show();
-        });
-        mGridView.setOnInBorderKeyEventListener((direction, focused) -> {
-            if (direction == View.FOCUS_UP) {
-                tvDelete.setFocusable(true);
-                tvClear.setFocusable(true);
-                tvDelete.requestFocus();
-            }
-            return false;
-        });
         mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
@@ -116,17 +132,12 @@ public class HistoryActivity extends BaseActivity {
                         jumpActivity(DetailActivity.class, bundle);
                     } else {
                         bundle.putString("title", vodInfo.name);
-                        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, false)) {
-                            jumpActivity(FastSearchActivity.class, bundle);
-                        } else {
-                            jumpActivity(SearchActivity.class, bundle);
-                        }
+                        jumpActivity(FastSearchActivity.class, bundle);
                     }
                 }
             }
         });
         historyAdapter.setOnItemLongClickListener((adapter, view, position) -> {
-            tvDelete.setFocusable(true);
             toggleDelMode();
             return true;
         });
@@ -140,28 +151,5 @@ public class HistoryActivity extends BaseActivity {
             vodInfoList.add(vodInfo);
         }
         historyAdapter.setNewData(vodInfoList);
-    }
-
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void refresh(RefreshEvent event) {
-        if (event.type == RefreshEvent.TYPE_HISTORY_REFRESH) {
-            initData();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        EventBus.getDefault().unregister(this);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (delMode) {
-            toggleDelMode();
-            return;
-        }
-        super.onBackPressed();
     }
 }

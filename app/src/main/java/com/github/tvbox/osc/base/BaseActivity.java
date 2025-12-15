@@ -69,6 +69,7 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
      */
     private void setupAppBarTransparency() {
         try {
+            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
             AppBarLayout appBarLayout = findViewById(R.id.appBarLayout);
             MaterialToolbar appBar = findViewById(R.id.appBar);
 

@@ -21,14 +21,7 @@
                 android:paddingRight="@dimen/vs_50"
                 app:title="@string/app_name"
                 app:layout_scrollFlags="scroll|enterAlways|snap" />
-
-        <com.google.android.material.tabs.TabLayout
-                android:id="@+id/mTabLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:tabMode="scrollable"
-                app:tabIndicatorAnimationMode="elastic" />
-
+        
     </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout
@@ -36,14 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/mViewPager"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-    </FrameLayout>
+            app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottom_navigation"

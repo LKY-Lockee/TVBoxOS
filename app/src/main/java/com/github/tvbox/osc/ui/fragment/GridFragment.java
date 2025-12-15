@@ -21,17 +21,13 @@ import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
-import com.github.tvbox.osc.ui.activity.SearchActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog;
 import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
-import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
@@ -57,10 +53,9 @@ public class GridFragment extends BaseLazyFragment {
     private boolean isLoad = false;
     private boolean isTop = true;
     private View focusedView = null;
-    private ImgUtil.Style style;
 
-    public static GridFragment newInstance(MovieSort.SortData sortData) {
-        return new GridFragment().setArguments(sortData);
+    public GridFragment(MovieSort.SortData sortData) {
+        setArguments(sortData);
     }
 
     public GridFragment setArguments(MovieSort.SortData sortData) {
@@ -81,24 +76,20 @@ public class GridFragment extends BaseLazyFragment {
     }
 
     private void changeView(String id, Boolean isFolder) {
-        if (isFolder) {
-            this.sortData.flag = style == null ? "1" : "2"; // 修改sortData.flag
-        } else {
-            this.sortData.flag = "2"; // 修改sortData.flag
-        }
+        this.sortData.flag = isFolder ? "1" : "2";
         initView();
         this.sortData.id = id; // 修改sortData.id为新的ID
         initViewModel();
         initData();
     }
 
-    public boolean isFolederMode() {
+    public boolean isFolderMode() {
         return (getUITag() == '1');
     }
 
     // 获取当前页面UI的显示模式 ‘0’ 正常模式 '1' 文件夹模式 '2' 显示缩略图的文件夹模式
     public char getUITag() {
-        return (sortData == null || sortData.flag == null || sortData.flag.isEmpty() || style != null) ? '0' : sortData.flag.charAt(0);
+        return (sortData == null || sortData.flag == null || sortData.flag.isEmpty()) ? '0' : sortData.flag.charAt(0);
     }
 
     // 是否允许聚合搜索 sortData.flag的第二个字符为‘1’时允许聚搜
@@ -134,7 +125,6 @@ public class GridFragment extends BaseLazyFragment {
         this.isLoad = info.isLoad;
         this.focusedView = info.focusedView;
         this.mGridView.setVisibility(View.VISIBLE);
-//        if(this.focusedView != null){ this.focusedView.requestFocus(); }
         if (mGridView != null) mGridView.requestFocus();
         return true;
     }
@@ -156,8 +146,7 @@ public class GridFragment extends BaseLazyFragment {
             mGridView.setVisibility(View.VISIBLE);
         }
         mGridView.setHasFixedSize(true);
-        style = ImgUtil.initStyle();
-        gridAdapter = new GridAdapter(isFolederMode(), style);
+        gridAdapter = new GridAdapter(isFolderMode());
         this.page = 1;
         this.maxPage = 1;
         this.isLoad = false;
@@ -166,24 +155,12 @@ public class GridFragment extends BaseLazyFragment {
     private void initView() {
         this.createView();
         mGridView.setAdapter(gridAdapter);
-        if (isFolederMode()) {
+        if (isFolderMode()) {
             mGridView.setLayoutManager(new V7LinearLayoutManager(this.mContext, 1, false));
         } else {
             // 使用自适应网格布局管理器
-            // 竖屏最小列宽 150dp（可显示2列），横屏可显示4-5列
             int minColumnWidthDp = 150;
-            if (style != null) {
-                // 如果有自定义样式,使用样式定义的宽度
-                int styleWidth = ImgUtil.getStyleDefaultWidth(style);
-                minColumnWidthDp = (int) (styleWidth * 0.7); // 减小系数以允许更多列
-            }
-
-            // 对于单列布局(spanCount = 1)使用线性布局,否则使用自适应网格布局
-            if (style != null && ImgUtil.spanCountByStyle(style, isBaseOnWidth() ? 5 : 6) == 1) {
-                mGridView.setLayoutManager(new V7LinearLayoutManager(mContext, 1, false));
-            } else {
-                mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, minColumnWidthDp));
-            }
+            mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, minColumnWidthDp));
         }
 
         gridAdapter.setOnLoadMoreListener(() -> {
@@ -224,11 +201,7 @@ public class GridFragment extends BaseLazyFragment {
                     }
                 } else {
                     if (video.id == null || video.id.isEmpty() || video.id.startsWith("msearch:")) {
-                        if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, false) && enableFastSearch()) {
-                            jumpActivity(FastSearchActivity.class, bundle);
-                        } else {
-                            jumpActivity(SearchActivity.class, bundle);
-                        }
+                        jumpActivity(FastSearchActivity.class, bundle);
                     } else {
                         bundle.putString("picture", video.pic);
                         jumpActivity(DetailActivity.class, bundle);

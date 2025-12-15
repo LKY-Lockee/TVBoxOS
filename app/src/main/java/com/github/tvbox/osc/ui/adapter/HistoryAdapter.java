@@ -13,6 +13,7 @@ import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.picasso.RoundTransformation;
+import com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.ImgUtil;
@@ -48,7 +49,6 @@ public class HistoryAdapter extends BaseQuickAdapter<VodInfo, BaseViewHolder> {
             tvYear.setText(bean.getName());
         } else {
             tvYear.setText("搜");
-//            tvYear.setVisibility(View.GONE);
         }
         helper.setVisible(R.id.tvLang, false);
         helper.setVisible(R.id.tvArea, false);
@@ -58,9 +58,8 @@ public class HistoryAdapter extends BaseQuickAdapter<VodInfo, BaseViewHolder> {
             helper.setText(R.id.tvNote, item.note);
         }
         helper.setText(R.id.tvName, item.name);
-        // helper.setText(R.id.tvActor, item.actor);
         ImageView ivThumb = helper.getView(R.id.ivThumb);
-        //由于部分电视机使用glide报错
+        // 由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {
             Picasso.get()
                     .load(DefaultConfig.checkReplaceProxy(item.pic))
@@ -74,6 +73,10 @@ public class HistoryAdapter extends BaseQuickAdapter<VodInfo, BaseViewHolder> {
                     .into(ivThumb);
         } else {
             ivThumb.setImageDrawable(ImgUtil.createTextDrawable(item.name));
+        }
+        // 动态设置宽高
+        if (ivThumb instanceof AspectRatioImageView) {
+            ((AspectRatioImageView) ivThumb).setAspectRatio(214f / 280f);
         }
     }
 }
