@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.button.MaterialSplitButton xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp">
+
+    <Button
+            android:id="@+id/splitButtonMain"
+            style="?attr/materialSplitButtonLeadingFilledStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+    <Button
+            android:id="@+id/splitButtonDropdown"
+            style="?attr/materialSplitButtonIconFilledStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/m3_split_button_chevron_avd" />
+
+</com.google.android.material.button.MaterialSplitButton>

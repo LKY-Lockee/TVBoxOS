@@ -1,19 +1,18 @@
 package com.github.tvbox.osc.ui.fragment;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.BounceInterpolator;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.core.content.ContextCompat;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.bean.Movie;
@@ -22,12 +21,14 @@ import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
-import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
-import com.github.tvbox.osc.ui.dialog.GridFilterDialog;
 import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
@@ -46,13 +47,17 @@ public class GridFragment extends BaseLazyFragment {
     private MovieSort.SortData sortData = null;
     private TvRecyclerView mGridView;
     private SourceViewModel sourceViewModel;
-    private GridFilterDialog gridFilterDialog;
     protected GridAdapter gridAdapter;
     private int page = 1;
     private int maxPage = 1;
     private boolean isLoad = false;
     private boolean isTop = true;
     private View focusedView = null;
+    private HorizontalScrollView filterChipScrollView;
+    private LinearLayout filterButtonContainer;
+    private View divider;
+    private BottomSheetDialog currentBottomSheet;
+    private MovieSort.SortFilter currentExpandedFilter;
 
     public GridFragment(MovieSort.SortData sortData) {
         setArguments(sortData);
@@ -154,6 +159,13 @@ public class GridFragment extends BaseLazyFragment {
 
     private void initView() {
         this.createView();
+
+        // 初始化筛选 Split Button 组件
+        filterChipScrollView = findViewById(R.id.filterChipScrollView);
+        filterButtonContainer = findViewById(R.id.filterButtonContainer);
+        divider = findViewById(R.id.divider);
+        setupFilterChips();
+
         mGridView.setAdapter(gridAdapter);
         if (isFolderMode()) {
             mGridView.setLayoutManager(new V7LinearLayoutManager(this.mContext, 1, false));
@@ -269,6 +281,7 @@ public class GridFragment extends BaseLazyFragment {
         showLoading();
         isLoad = false;
         scrollTop();
+        setupFilterChips();
         toggleFilterColor();
         sourceViewModel.getList(sortData, page);
     }
@@ -289,78 +302,132 @@ public class GridFragment extends BaseLazyFragment {
         mGridView.scrollToPosition(0);
     }
 
-    public void showFilter() {
-        if (!sortData.filters.isEmpty() && gridFilterDialog == null) {
-            gridFilterDialog = new GridFilterDialog(mContext);
-//            gridFilterDialog.setData(sortData);
-//            gridFilterDialog.setOnDismiss(new GridFilterDialog.Callback() {
-//                @Override
-//                public void change() {
-//                    page = 1;
-//                    initData();
-//                }
-//            });
-            setFilterDialogData();
+    private void setupFilterChips() {
+        if (sortData == null || sortData.filters == null || sortData.filters.isEmpty()) {
+            filterChipScrollView.setVisibility(View.GONE);
+            divider.setVisibility(View.GONE);
+            return;
         }
-        if (gridFilterDialog != null)
-            gridFilterDialog.show();
+
+        filterChipScrollView.setVisibility(View.VISIBLE);
+        divider.setVisibility(View.VISIBLE);
+        filterButtonContainer.removeAllViews();
+
+        for (MovieSort.SortFilter filter : sortData.filters) {
+            View splitButtonView = LayoutInflater.from(mContext).inflate(R.layout.item_filter_split_button, filterButtonContainer, false);
+
+            MaterialButton mainButton = splitButtonView.findViewById(R.id.splitButtonMain);
+            MaterialButton dropdownButton = splitButtonView.findViewById(R.id.splitButtonDropdown);
+
+            String displayText = filter.name;
+            String selectedValue = sortData.filterSelect.get(filter.key);
+
+            if (selectedValue != null) {
+                for (String key : filter.values.keySet()) {
+                    String value = filter.values.get(key);
+                    if (value != null && value.equals(selectedValue)) {
+                        displayText = filter.name + ": " + key;
+                        break;
+                    }
+                }
+            }
+
+            mainButton.setText(displayText);
+
+            View.OnClickListener clickListener = v -> showFilterBottomSheet(filter);
+            mainButton.setOnClickListener(clickListener);
+            dropdownButton.setOnClickListener(clickListener);
+
+            // 如果这个筛选项当前是展开状态，恢复其展开状态
+            if (currentExpandedFilter != null && currentExpandedFilter.equals(filter)) {
+                dropdownButton.setChecked(true);
+            }
+
+            filterButtonContainer.addView(splitButtonView);
+        }
     }
 
-    public void setFilterDialogData() {
-        Context context = getContext();
-        LayoutInflater inflater = LayoutInflater.from(context);
-        assert context != null;
-        final int defaultColor = ContextCompat.getColor(context, R.color.color_FFFFFF);
-        final int selectedColor = ContextCompat.getColor(context, R.color.color_02F8E1);
-        // 遍历过滤条件数据
-        for (MovieSort.SortFilter filter : sortData.filters) {
-            View line = inflater.inflate(R.layout.item_grid_filter, gridFilterDialog.filterRoot, false);
-            TextView filterNameTv = line.findViewById(R.id.filterName);
-            filterNameTv.setText(filter.name);
-            TvRecyclerView gridView = line.findViewById(R.id.mFilterKv);
-            gridView.setHasFixedSize(true);
-            gridView.setLayoutManager(new V7LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false));
-            GridFilterKVAdapter adapter = new GridFilterKVAdapter();
-            gridView.setAdapter(adapter);
-            final String key = filter.key;
-            final ArrayList<String> values = new ArrayList<>(filter.values.keySet());
-            final ArrayList<String> keys = new ArrayList<>(filter.values.values());
-            adapter.setOnItemClickListener(new BaseQuickAdapter.OnItemClickListener() {
-                // 用于记录上一次选中的 view
-                View previousSelectedView = null;
-
-                @Override
-                public void onItemClick(BaseQuickAdapter adapter, View view, int position) {
-                    String currentSelection = sortData.filterSelect.get(key);
-                    String newSelection = keys.get(position);
-                    if (currentSelection == null || !currentSelection.equals(newSelection)) {
-                        // 更新选中状态
-                        sortData.filterSelect.put(key, newSelection);
-                        updateViewStyle(view, selectedColor, true);
-                        if (previousSelectedView != null) {
-                            updateViewStyle(previousSelectedView, defaultColor, false);
-                        }
-                        previousSelectedView = view;
-                    } else {
-                        // 取消选中
-                        sortData.filterSelect.remove(key);
-                        if (previousSelectedView != null) {
-                            updateViewStyle(previousSelectedView, defaultColor, false);
-                        }
-                        previousSelectedView = null;
-                    }
-                    forceRefresh();
-                }
-
-                private void updateViewStyle(View view, int color, boolean isBold) {
-                    TextView valueTv = view.findViewById(R.id.filterValue);
-                    valueTv.getPaint().setFakeBoldText(isBold);
-                    valueTv.setTextColor(color);
-                }
-            });
-            adapter.setNewData(values);
-            gridFilterDialog.filterRoot.addView(line);
+    private void showFilterBottomSheet(MovieSort.SortFilter filter) {
+        if (currentBottomSheet != null && currentBottomSheet.isShowing()) {
+            currentBottomSheet.dismiss();
         }
+
+        // 记录当前展开的筛选项
+        currentExpandedFilter = filter;
+
+        currentBottomSheet = new BottomSheetDialog(mContext);
+        View view = LayoutInflater.from(mContext).inflate(R.layout.bottom_sheet_filter_options, null);
+
+        TextView titleView = view.findViewById(R.id.filterTitle);
+        titleView.setText(filter.name);
+
+        ChipGroup chipGroup = view.findViewById(R.id.chipGroup);
+        chipGroup.removeAllViews();
+
+        String currentSelection = sortData.filterSelect.get(filter.key);
+
+        // 添加选项 Chips
+        ArrayList<String> displayValues = new ArrayList<>(filter.values.keySet());
+        ArrayList<String> actualValues = new ArrayList<>(filter.values.values());
+
+        for (int i = 0; i < displayValues.size(); i++) {
+            String displayValue = displayValues.get(i);
+            String actualValue = actualValues.get(i);
+
+            Chip optionChip = new Chip(mContext);
+            optionChip.setText(displayValue);
+            optionChip.setCheckable(true);
+            optionChip.setChecked(actualValue.equals(currentSelection));
+
+            optionChip.setOnClickListener(v -> {
+                if (actualValue.equals(sortData.filterSelect.get(filter.key))) {
+                    sortData.filterSelect.remove(filter.key);
+                } else {
+                    sortData.filterSelect.put(filter.key, actualValue);
+                }
+
+                // 立即刷新数据，setupFilterChips 会自动恢复箭头展开状态
+                setupFilterChips();
+                forceRefresh();
+            });
+
+            chipGroup.addView(optionChip);
+        }
+
+        currentBottomSheet.setOnDismissListener(dialog -> {
+            // 清除展开状态记录
+            currentExpandedFilter = null;
+            // 重新查找按钮（因为 setupFilterChips 可能已经重新创建了按钮）
+            MaterialButton triggerButton = findDropdownButtonForFilter(filter);
+            // 播放收起动画
+            if (triggerButton != null) {
+                triggerButton.setChecked(false);
+            }
+        });
+
+        currentBottomSheet.setContentView(view);
+        currentBottomSheet.show();
+
+        // 播放展开动画
+        MaterialButton triggerButton = findDropdownButtonForFilter(filter);
+        if (triggerButton != null) {
+            triggerButton.setChecked(true);
+        }
+    }
+
+    @Nullable
+    private MaterialButton findDropdownButtonForFilter(MovieSort.SortFilter filter) {
+        if (sortData == null || sortData.filters == null) {
+            return null;
+        }
+
+        int filterIndex = sortData.filters.indexOf(filter);
+        if (filterIndex < 0 || filterIndex >= filterButtonContainer.getChildCount()) {
+            return null;
+        }
+
+        View splitButtonView = filterButtonContainer.getChildAt(filterIndex);
+        return splitButtonView.findViewById(R.id.splitButtonDropdown);
     }
 
     public void forceRefresh() {

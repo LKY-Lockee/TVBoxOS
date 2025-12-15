@@ -53,7 +53,7 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
     // --- ToolbarMenuProvider ---
     @Override
     public int getMenuResId() {
-        return R.menu.collect_toolbar_menu;
+        return R.menu.collect_fragment_menu;
     }
 
     @Override

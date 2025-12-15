@@ -1,63 +1,40 @@
 package com.github.tvbox.osc.ui.fragment;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.ViewGroup;
 
-import androidx.annotation.NonNull;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.DiffUtil;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.BackPressProvider;
 import com.github.tvbox.osc.base.BaseLazyFragment;
+import com.github.tvbox.osc.base.ToolbarMenuProvider;
 import com.github.tvbox.osc.bean.AbsSortXml;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.ui.activity.HomeActivity;
 import com.github.tvbox.osc.ui.adapter.HomePageAdapter;
-import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
-import com.github.tvbox.osc.ui.dialog.SelectDialog;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.orhanobut.hawk.Hawk;
-import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import me.jessyan.autosize.utils.AutoSizeUtils;
-
-public class HomeFragment extends BaseLazyFragment implements BackPressProvider {
+public class HomeFragment extends BaseLazyFragment implements BackPressProvider, ToolbarMenuProvider {
     private TabLayout mTabLayout;
     private ViewPager2 mViewPager;
     private final List<BaseLazyFragment> fragments = new ArrayList<>();
     private List<MovieSort.SortData> sortDataList = new ArrayList<>();
     private HomePageAdapter adapter;
     private int currentSelected = 0;
-    private OnTabReselectedListener tabReselectedListener;
-    private SelectDialog<SourceBean> mSiteSwitchDialog;
     private SourceViewModel sourceViewModel;
-
-    public HomeFragment() {
-        setOnTabReselectedListener((position, sortData, fragment) -> {
-            // 如果是主页标签（id为"my0"），弹出站点切换
-            if ("my0".equals(sortData.id)) {
-                showSiteSwitch();
-                return;
-            }
-            // 如果有筛选项，弹出筛选
-            if ((fragment instanceof GridFragment) && !sortData.filters.isEmpty()) {
-                ((GridFragment) fragment).showFilter();
-            }
-        });
-    }
 
     // --- BackPressProvider ---
     @Override
@@ -102,47 +79,44 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider 
     }
     // ----------------
 
+    // --- ToolbarMenuProvider ---
+    @Override
+    public int getMenuResId() {
+        return R.menu.home_fragment_menu;
+    }
+
+    @Override
+    public boolean onMenuItemClick(int itemId) {
+        if (itemId == R.id.action_switch_site) {
+            showSiteSwitch();
+            return true;
+        }
+        return false;
+    }
+    // ----------------
+
     private void showSiteSwitch() {
         List<SourceBean> sites = ApiConfig.get().getSwitchSourceBeanList();
         if (sites.isEmpty()) return;
+
         int select = sites.indexOf(ApiConfig.get().getHomeSourceBean());
         if (select < 0 || select >= sites.size()) select = 0;
-        if (mSiteSwitchDialog == null) {
-            mSiteSwitchDialog = new SelectDialog<>(mContext);
-            TvRecyclerView tvRecyclerView = mSiteSwitchDialog.findViewById(R.id.list);
-            // 根据 sites 数量动态计算列数
-            int spanCount = (int) Math.floor(sites.size() / 20.0);
-            spanCount = Math.min(spanCount, 2);
-            tvRecyclerView.setLayoutManager(new V7GridLayoutManager(mSiteSwitchDialog.getContext(), spanCount + 1));
-            // 设置对话框宽度
-            ConstraintLayout cl_root = mSiteSwitchDialog.findViewById(R.id.cl_root);
-            ViewGroup.LayoutParams clp = cl_root.getLayoutParams();
-            clp.width = AutoSizeUtils.mm2px(mSiteSwitchDialog.getContext(), 380 + 200 * spanCount);
-            mSiteSwitchDialog.setTip("请选择首页数据源");
+
+        String[] siteNames = new String[sites.size()];
+        for (int i = 0; i < sites.size(); i++) {
+            siteNames[i] = sites.get(i).getName();
         }
-        mSiteSwitchDialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
-            @Override
-            public void click(SourceBean value, int pos) {
-                ApiConfig.get().setSourceBean(value);
-                refreshHome();
-            }
 
-            @Override
-            public String getDisplay(SourceBean val) {
-                return val.getName();
-            }
-        }, new DiffUtil.ItemCallback<>() {
-            @Override
-            public boolean areItemsTheSame(@NonNull SourceBean oldItem, @NonNull SourceBean newItem) {
-                return oldItem == newItem;
-            }
-
-            @Override
-            public boolean areContentsTheSame(@NonNull SourceBean oldItem, @NonNull SourceBean newItem) {
-                return oldItem.getKey().equals(newItem.getKey());
-            }
-        }, sites, select);
-        mSiteSwitchDialog.show();
+        new MaterialAlertDialogBuilder(mContext)
+                .setTitle("请选择首页数据源")
+                .setSingleChoiceItems(siteNames, select, (dialog, which) -> {
+                    SourceBean selectedSite = sites.get(which);
+                    ApiConfig.get().setSourceBean(selectedSite);
+                    dialog.dismiss();
+                    refreshHome();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void refreshHome() {
@@ -204,6 +178,7 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider 
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void setupViewPager() {
         if (getActivity() == null) {
             return;
@@ -255,12 +230,6 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider 
 
             @Override
             public void onTabReselected(TabLayout.Tab tab) {
-                int position = tab.getPosition();
-                if (position >= 0 && position < fragments.size() && position < sortDataList.size()) {
-                    if (tabReselectedListener != null) {
-                        tabReselectedListener.onTabReselected(position, sortDataList.get(position), fragments.get(position));
-                    }
-                }
             }
         });
     }
@@ -279,10 +248,6 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider 
                 tab.select();
             }
         }
-    }
-
-    public void setOnTabReselectedListener(OnTabReselectedListener listener) {
-        this.tabReselectedListener = listener;
     }
 
     public int getCurrentPosition() {

@@ -60,7 +60,7 @@ public class HistoryFragment extends BaseLazyFragment implements ToolbarMenuProv
     // --- ToolbarMenuProvider ---
     @Override
     public int getMenuResId() {
-        return R.menu.history_toolbar_menu;
+        return R.menu.history_fragment_menu;
     }
 
     @Override
