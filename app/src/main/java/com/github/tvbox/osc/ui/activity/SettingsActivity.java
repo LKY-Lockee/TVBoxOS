@@ -46,7 +46,7 @@ import java.util.List;
  * @date :2020/12/23
  * @description:
  */
-public class SettingActivity extends BaseActivity {
+public class SettingsActivity extends BaseActivity {
     public static DevModeCallback callback = null;
 
     // 远程TV搜索相关静态变量（从 ModelSettingFragment 迁移）
@@ -58,10 +58,7 @@ public class SettingActivity extends BaseActivity {
     String devMode = "";
     private final Runnable mDevModeRun = () -> devMode = "";
 
-    // Material 3 组件
-    private RecyclerView recyclerView;
     private SettingM3Adapter adapter;
-    private MaterialToolbar toolbar;
     private final List<SettingItem> settingItems = new ArrayList<>();
 
     private String homeSourceKey;
@@ -82,11 +79,12 @@ public class SettingActivity extends BaseActivity {
     }
 
     private void initView() {
-        toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
-        recyclerView = findViewById(R.id.recyclerView);
+        // Material 3 组件
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new SettingM3Adapter();
         recyclerView.setAdapter(adapter);
@@ -193,11 +191,6 @@ public class SettingActivity extends BaseActivity {
                 item -> showDefaultLoadDialog()
         ).setSummary("设置启动后默认页面"));
 
-        settingItems.add(SettingItem.createPreference(
-                "搜索展示",
-                getSearchView(Hawk.get(HawkConfig.SEARCH_VIEW, 0)),
-                item -> showSearchViewDialog()
-        ).setSummary("搜索结果展示方式"));
 
         settingItems.add(SettingItem.createPreference(
                 "历史记录数",
@@ -208,9 +201,7 @@ public class SettingActivity extends BaseActivity {
         settingItems.add(SettingItem.createSwitch(
                 "显示预览",
                 Hawk.get(HawkConfig.SHOW_PREVIEW, true),
-                item -> {
-                    Hawk.put(HawkConfig.SHOW_PREVIEW, item.isSwitchState());
-                }
+                item -> Hawk.put(HawkConfig.SHOW_PREVIEW, item.isSwitchState())
         ).setSummary("显示视频缩略图预览"));
 
         // 高级设置
@@ -225,9 +216,7 @@ public class SettingActivity extends BaseActivity {
         settingItems.add(SettingItem.createSwitch(
                 "调试模式",
                 Hawk.get(HawkConfig.DEBUG_OPEN, false),
-                item -> {
-                    Hawk.put(HawkConfig.DEBUG_OPEN, item.isSwitchState());
-                }
+                item -> Hawk.put(HawkConfig.DEBUG_OPEN, item.isSwitchState())
         ).setSummary("开启应用调试信息"));
 
         // 其他
@@ -249,7 +238,6 @@ public class SettingActivity extends BaseActivity {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            mHandler.removeCallbacks(mDataRunnable);
             int keyCode = event.getKeyCode();
             if (keyCode == KeyEvent.KEYCODE_0) {
                 mHandler.removeCallbacks(mDevModeRun);
@@ -261,8 +249,6 @@ public class SettingActivity extends BaseActivity {
                     }
                 }
             }
-        } else if (event.getAction() == KeyEvent.ACTION_UP) {
-            mHandler.postDelayed(mDataRunnable, 200);
         }
         return super.dispatchKeyEvent(event);
     }
@@ -345,13 +331,13 @@ public class SettingActivity extends BaseActivity {
         int select = sites.indexOf(ApiConfig.get().getHomeSourceBean());
         if (select < 0) select = 0;
 
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<SourceBean>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(SourceBean value, int pos) {
                 ApiConfig.get().setSourceBean(value);
                 updateSettingItem("首页站源", value.getName());
 
-                Intent intent = new Intent(SettingActivity.this, HomeActivity.class);
+                Intent intent = new Intent(SettingsActivity.this, HomeActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 Bundle bundle = new Bundle();
                 bundle.putBoolean("useCache", true);
@@ -363,7 +349,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(SourceBean val) {
                 return val.getName();
             }
-        }, new DiffUtil.ItemCallback<SourceBean>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull SourceBean oldItem, @NonNull @NotNull SourceBean newItem) {
                 return oldItem == newItem;
@@ -381,7 +367,7 @@ public class SettingActivity extends BaseActivity {
         int dohUrl = Hawk.get(HawkConfig.DOH_URL, 0);
         SelectDialog<String> dialog = new SelectDialog<>(this);
         dialog.setTip("请选择安全DNS");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<String>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(String value, int pos) {
                 Hawk.put(HawkConfig.DOH_URL, pos);
@@ -392,7 +378,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(String val) {
                 return val;
             }
-        }, new DiffUtil.ItemCallback<String>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull String oldItem, @NonNull @NotNull String newItem) {
                 return oldItem.equals(newItem);
@@ -420,7 +406,7 @@ public class SettingActivity extends BaseActivity {
 
         SelectDialog<Integer> dialog = new SelectDialog<>(this);
         dialog.setTip("请选择默认播放器");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(Integer value, int pos) {
                 Integer thisPlayerType = players.get(pos);
@@ -434,7 +420,7 @@ public class SettingActivity extends BaseActivity {
                 Integer playerType = players.get(val);
                 return PlayerHelper.getPlayerName(playerType);
             }
-        }, new DiffUtil.ItemCallback<Integer>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
                 return oldItem.intValue() == newItem.intValue();
@@ -466,7 +452,7 @@ public class SettingActivity extends BaseActivity {
 
         SelectDialog<IJKCode> dialog = new SelectDialog<>(this);
         dialog.setTip("请选择IJK解码");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<IJKCode>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(IJKCode value, int pos) {
                 value.selected(true);
@@ -477,7 +463,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(IJKCode val) {
                 return val.getName();
             }
-        }, new DiffUtil.ItemCallback<IJKCode>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull IJKCode oldItem, @NonNull @NotNull IJKCode newItem) {
                 return oldItem == newItem;
@@ -505,7 +491,7 @@ public class SettingActivity extends BaseActivity {
 
         SelectDialog<Integer> dialog = new SelectDialog<>(this);
         dialog.setTip("请选择默认渲染方式");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(Integer value, int pos) {
                 Hawk.put(HawkConfig.PLAY_RENDER, value);
@@ -517,7 +503,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(Integer val) {
                 return PlayerHelper.getRenderName(val);
             }
-        }, new DiffUtil.ItemCallback<Integer>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
                 return oldItem.intValue() == newItem.intValue();
@@ -543,7 +529,7 @@ public class SettingActivity extends BaseActivity {
 
         SelectDialog<Integer> dialog = new SelectDialog<>(this);
         dialog.setTip("请选择默认画面缩放");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(Integer value, int pos) {
                 Hawk.put(HawkConfig.PLAY_SCALE, value);
@@ -554,7 +540,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(Integer val) {
                 return PlayerHelper.getScaleName(val);
             }
-        }, new DiffUtil.ItemCallback<Integer>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
                 return oldItem.intValue() == newItem.intValue();
@@ -577,7 +563,7 @@ public class SettingActivity extends BaseActivity {
 
         SelectDialog<Integer> dialog = new SelectDialog<>(this);
         dialog.setTip("请选择首页列表数据");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(Integer value, int pos) {
                 Hawk.put(HawkConfig.HOME_REC, value);
@@ -588,7 +574,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(Integer val) {
                 return getHomeRecName(val);
             }
-        }, new DiffUtil.ItemCallback<Integer>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
                 return oldItem.intValue() == newItem.intValue();
@@ -608,39 +594,6 @@ public class SettingActivity extends BaseActivity {
         updateSettingItem("下次进入", !currentState ? "直播" : "点播");
     }
 
-    private void showSearchViewDialog() {
-        int defaultPos = Hawk.get(HawkConfig.SEARCH_VIEW, 0);
-        ArrayList<Integer> types = new ArrayList<>();
-        types.add(0);
-        types.add(1);
-
-        SelectDialog<Integer> dialog = new SelectDialog<>(this);
-        dialog.setTip("请选择搜索视图");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
-            @Override
-            public void click(Integer value, int pos) {
-                Hawk.put(HawkConfig.SEARCH_VIEW, value);
-                updateSettingItem("搜索展示", getSearchView(value));
-            }
-
-            @Override
-            public String getDisplay(Integer val) {
-                return getSearchView(val);
-            }
-        }, new DiffUtil.ItemCallback<Integer>() {
-            @Override
-            public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
-                return oldItem.intValue() == newItem.intValue();
-            }
-
-            @Override
-            public boolean areContentsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
-                return oldItem.intValue() == newItem.intValue();
-            }
-        }, types, defaultPos);
-        dialog.show();
-    }
-
     private void showHistoryNumDialog() {
         int defaultPos = Hawk.get(HawkConfig.HISTORY_NUM, 0);
         ArrayList<Integer> types = new ArrayList<>();
@@ -650,7 +603,7 @@ public class SettingActivity extends BaseActivity {
 
         SelectDialog<Integer> dialog = new SelectDialog<>(this);
         dialog.setTip("保留历史记录数量");
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<>() {
             @Override
             public void click(Integer value, int pos) {
                 Hawk.put(HawkConfig.HISTORY_NUM, value);
@@ -661,7 +614,7 @@ public class SettingActivity extends BaseActivity {
             public String getDisplay(Integer val) {
                 return HistoryHelper.getHistoryNumName(val);
             }
-        }, new DiffUtil.ItemCallback<Integer>() {
+        }, new DiffUtil.ItemCallback<>() {
             @Override
             public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
                 return oldItem.intValue() == newItem.intValue();
@@ -702,18 +655,11 @@ public class SettingActivity extends BaseActivity {
     // ========== 辅助方法 ==========
 
     private String getHomeRecName(int rec) {
-        switch (rec) {
-            case 1:
-                return "站点推荐";
-            case 2:
-                return "观看历史";
-            default:
-                return "豆瓣热播";
-        }
-    }
-
-    private String getSearchView(int view) {
-        return view == 1 ? "文字列表" : "缩略图";
+        return switch (rec) {
+            case 1 -> "站点推荐";
+            case 2 -> "观看历史";
+            default -> "豆瓣热播";
+        };
     }
 
     private void updateSettingItem(String title, String newValue) {
@@ -726,11 +672,4 @@ public class SettingActivity extends BaseActivity {
             }
         }
     }
-
-    private final Runnable mDataRunnable = new Runnable() {
-        @Override
-        public void run() {
-            // 处理数据变化
-        }
-    };
 }

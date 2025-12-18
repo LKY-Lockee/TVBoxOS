@@ -3,6 +3,7 @@ package com.github.tvbox.osc.ui.fragment;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.lifecycle.ViewModelProvider;
 import androidx.viewpager2.widget.ViewPager2;
@@ -68,14 +69,11 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider,
         mTabLayout = rootView.findViewById(R.id.mTabLayout);
         mViewPager = rootView.findViewById(R.id.mViewPager);
         mViewPager.setSaveEnabled(false);
+        mViewPager.setUserInputEnabled(false);
+        mTabLayout.setVisibility(View.GONE);
 
         initViewModel();
-
-        if (!fragments.isEmpty()) {
-            setupViewPager();
-        } else {
-            loadData();
-        }
+        loadData();
     }
     // ----------------
 
@@ -92,6 +90,11 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider,
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean enableAppBarScroll() {
+        return true;
     }
     // ----------------
 
@@ -240,6 +243,12 @@ public class HomeFragment extends BaseLazyFragment implements BackPressProvider,
             TabLayout.Tab tab = mTabLayout.newTab();
             tab.setText(sortData.name);
             mTabLayout.addTab(tab);
+        }
+
+        if (mTabLayout.getTabCount() > 0) {
+            mTabLayout.setVisibility(View.VISIBLE);
+        } else {
+            mTabLayout.setVisibility(View.GONE);
         }
 
         if (currentSelected < mTabLayout.getTabCount()) {

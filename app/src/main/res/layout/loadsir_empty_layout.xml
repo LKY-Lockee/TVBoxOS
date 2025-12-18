@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
     <LinearLayout
+            android:id="@+id/empty_content"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -13,15 +15,16 @@
         <ImageView
                 android:layout_width="@dimen/vs_120"
                 android:layout_height="@dimen/vs_120"
-                android:src="@drawable/icon_empty" />
+                android:src="@drawable/icon_empty"
+                app:tint="?android:attr/textColorTertiaryInverse" />
 
         <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/vs_20"
                 android:gravity="center"
-                android:text="没找到数据"
-                android:textColor="@android:color/white"
+                android:text="没有数据"
+                android:textColor="?android:attr/textColorTertiaryInverse"
                 android:textSize="@dimen/ts_24" />
     </LinearLayout>
 

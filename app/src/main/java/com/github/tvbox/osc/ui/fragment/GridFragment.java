@@ -13,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.base.BaseLazyFragment;
@@ -20,7 +21,7 @@ import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
-import com.github.tvbox.osc.ui.activity.FastSearchActivity;
+import com.github.tvbox.osc.ui.activity.HomeActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
@@ -45,6 +46,7 @@ public class GridFragment extends BaseLazyFragment {
     private final Stack<GridInfo> mGrids = new Stack<>(); //ui栈
     private MovieSort.SortData sortData = null;
     private RecyclerView mGridView;
+    private SwipeRefreshLayout mSwipe;
     private SourceViewModel sourceViewModel;
     protected GridAdapter gridAdapter;
     private int page = 1;
@@ -61,12 +63,8 @@ public class GridFragment extends BaseLazyFragment {
     public GridFragment(MovieSort.SortData sortData) {
         setArguments(sortData);
     }
-
-    public GridFragment setArguments(MovieSort.SortData sortData) {
-        this.sortData = sortData;
-        return this;
-    }
-
+    
+    // --- BaseLazyFragment ---
     @Override
     protected int getLayoutResID() {
         return R.layout.fragment_grid;
@@ -77,6 +75,12 @@ public class GridFragment extends BaseLazyFragment {
         initView();
         initViewModel();
         initData();
+    }
+    // ----------------
+
+    public GridFragment setArguments(MovieSort.SortData sortData) {
+        this.sortData = sortData;
+        return this;
     }
 
     private void changeView(String id, Boolean isFolder) {
@@ -94,11 +98,6 @@ public class GridFragment extends BaseLazyFragment {
     // 获取当前页面UI的显示模式 ‘0’ 正常模式 '1' 文件夹模式 '2' 显示缩略图的文件夹模式
     public char getUITag() {
         return (sortData == null || sortData.flag == null || sortData.flag.isEmpty()) ? '0' : sortData.flag.charAt(0);
-    }
-
-    // 是否允许聚合搜索 sortData.flag的第二个字符为‘1’时允许聚搜
-    public boolean enableFastSearch() {
-        return sortData.flag == null || sortData.flag.length() < 2 || (sortData.flag.charAt(1) == '1');
     }
 
     // 保存当前页面
@@ -164,6 +163,13 @@ public class GridFragment extends BaseLazyFragment {
         divider = findViewById(R.id.divider);
         setupFilterChips();
 
+        mSwipe = findViewById(R.id.mSwipe);
+        mSwipe.setOnRefreshListener(() -> {
+            page = 1;
+            initData();
+        });
+        mSwipe.setOnChildScrollUpCallback((parent, child) -> mGridView.canScrollVertically(-1));
+
         mGridView.setAdapter(gridAdapter);
         if (isFolderMode()) {
             mGridView.setLayoutManager(new LinearLayoutManager(this.mContext, LinearLayoutManager.VERTICAL, false));
@@ -195,25 +201,15 @@ public class GridFragment extends BaseLazyFragment {
                 } else {
                     //noinspection SpellCheckingInspection
                     if (video.id == null || video.id.isEmpty() || video.id.startsWith("msearch:")) {
-                        jumpActivity(FastSearchActivity.class, bundle);
+                        if (mActivity instanceof HomeActivity homeActivity) {
+                            homeActivity.switchToSearchAndSearch(video.name);
+                        }
                     } else {
                         bundle.putString("picture", video.pic);
                         jumpActivity(DetailActivity.class, bundle);
                     }
                 }
             }
-        });
-        gridAdapter.setOnItemLongClickListener((adapter, view, position) -> {
-            FastClickCheckUtil.check(view);
-            Movie.Video video = gridAdapter.getData().get(position);
-            if (video != null) {
-                Bundle bundle = new Bundle();
-                bundle.putString("id", video.id);
-                bundle.putString("sourceKey", video.sourceKey);
-                bundle.putString("title", video.name);
-                jumpActivity(FastSearchActivity.class, bundle);
-            }
-            return true;
         });
         gridAdapter.setLoadMoreView(new LoadMoreView());
         setLoadSir2(mGridView);
@@ -225,6 +221,9 @@ public class GridFragment extends BaseLazyFragment {
         }
         sourceViewModel = new ViewModelProvider(this).get(SourceViewModel.class);
         sourceViewModel.listResult.observe(this, absXml -> {
+            if (mSwipe != null && mSwipe.isRefreshing()) {
+                mSwipe.setRefreshing(false);
+            }
             if (absXml != null && absXml.movie != null && absXml.movie.videoList != null && !absXml.movie.videoList.isEmpty()) {
                 if (page == 1) {
                     showSuccess();
@@ -246,7 +245,9 @@ public class GridFragment extends BaseLazyFragment {
             } else {
                 if (page == 1) {
                     showEmpty();
-                } else if (page > 2) {// 只有一页数据时不提示
+                }
+                // 只有一页数据时不提示
+                else if (page > 2) {
                     Toast.makeText(getContext(), "没有更多了", Toast.LENGTH_SHORT).show();
                 }
                 gridAdapter.loadMoreEnd();
@@ -255,12 +256,10 @@ public class GridFragment extends BaseLazyFragment {
         });
     }
 
-    public boolean isLoad() {
-        return isLoad || !mGrids.empty(); //如果有缓存页的话也可以认为是加载了数据的
-    }
-
     protected void initData() {
-        showLoading();
+        if (mSwipe != null && !mSwipe.isRefreshing()) {
+            mSwipe.setRefreshing(true);
+        }
         isLoad = false;
         scrollTop();
         setupFilterChips();

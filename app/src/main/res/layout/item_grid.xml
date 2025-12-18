@@ -142,24 +142,7 @@
 
         </LinearLayout>
 
-        <!-- 删除模式覆盖层 -->
-        <FrameLayout
-                android:id="@+id/delFrameLayout"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@drawable/shape_user_delete"
-                android:visibility="gone">
-
-            <ImageView
-                    android:id="@+id/imageView"
-                    android:layout_width="@dimen/vs_80"
-                    android:layout_height="@dimen/vs_80"
-                    android:layout_gravity="center"
-                    android:src="@drawable/icon_delete" />
-        </FrameLayout>
-
     </FrameLayout>
-
 
 </com.google.android.material.card.MaterialCardView>
 

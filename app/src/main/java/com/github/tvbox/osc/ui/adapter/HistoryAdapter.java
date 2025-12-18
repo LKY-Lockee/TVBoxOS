@@ -1,8 +1,6 @@
 package com.github.tvbox.osc.ui.adapter;
 
 import android.text.TextUtils;
-import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -15,7 +13,6 @@ import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.picasso.RoundTransformation;
 import com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView;
 import com.github.tvbox.osc.util.DefaultConfig;
-import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.util.MD5;
 import com.squareup.picasso.Picasso;
@@ -36,13 +33,6 @@ public class HistoryAdapter extends BaseQuickAdapter<VodInfo, BaseViewHolder> {
 
     @Override
     protected void convert(BaseViewHolder helper, VodInfo item) {
-        FrameLayout tvDel = helper.getView(R.id.delFrameLayout);
-        if (HawkConfig.hotVodDelete) {
-            tvDel.setVisibility(View.VISIBLE);
-        } else {
-            tvDel.setVisibility(View.GONE);
-        }
-
         TextView tvYear = helper.getView(R.id.tvYear);
         SourceBean bean = ApiConfig.get().getSource(item.sourceKey);
         if (bean != null) {

@@ -71,11 +71,7 @@
                 android:name=".ui.activity.PlayActivity"
                 android:configChanges="orientation|screenSize" />
         <activity android:name=".ui.activity.PushActivity" />
-        <activity
-                android:name=".ui.activity.SearchActivity"
-                android:windowSoftInputMode="stateHidden|adjustResize" />
-        <activity android:name=".ui.activity.FastSearchActivity" />
-        <activity android:name=".ui.activity.SettingActivity" />
+        <activity android:name=".ui.activity.SettingsActivity" />
 
         <receiver
                 android:name=".receiver.SearchReceiver"

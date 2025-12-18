@@ -1,43 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/mSwipe"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipChildren="false"
-        android:clipToPadding="false"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
-    <HorizontalScrollView
-            android:id="@+id/filterChipScrollView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="@dimen/vs_10"
-            android:paddingEnd="@dimen/vs_10"
-            android:scrollbars="none"
-            android:visibility="gone">
-
-        <LinearLayout
-                android:id="@+id/filterButtonContainer"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal" />
-
-    </HorizontalScrollView>
-
-    <View
-            android:id="@+id/divider"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?android:attr/listDivider"
-            android:visibility="gone" />
-
-    <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/mGridView"
+    <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:paddingStart="@dimen/vs_10"
-            android:paddingTop="@dimen/vs_10"
-            android:paddingEnd="@dimen/vs_10"
-            android:paddingBottom="@dimen/vs_120" />
-</LinearLayout>
+            android:orientation="vertical">
+
+        <HorizontalScrollView
+                android:id="@+id/filterChipScrollView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="@dimen/vs_10"
+                android:paddingEnd="@dimen/vs_10"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+            <LinearLayout
+                    android:id="@+id/filterButtonContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+
+        </HorizontalScrollView>
+
+        <View
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="?android:attr/listDivider"
+                android:visibility="gone" />
+
+        <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/mGridView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:paddingStart="@dimen/vs_10"
+                    android:paddingTop="@dimen/vs_10"
+                    android:paddingEnd="@dimen/vs_10"
+                    android:paddingBottom="@dimen/vs_120" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

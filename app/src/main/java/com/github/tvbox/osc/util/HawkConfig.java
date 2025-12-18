@@ -11,7 +11,6 @@ public class HawkConfig {
     public static final String SHOW_PREVIEW = "show_preview";
     public static final String API_HISTORY = "api_history";
     public static final String LIVE_API_HISTORY = "live_api_history";
-    public static final String EPG_HISTORY = "epg_history";
     public static final String HOME_API = "home_api";
     public static final String DEFAULT_PARSE = "parse_default";
     public static final String DEBUG_OPEN = "debug_open";
@@ -25,14 +24,12 @@ public class HawkConfig {
     public static final String DOH_URL = "doh_url";
     public static final String HOME_REC = "home_rec"; // 0 豆瓣热播 1 数据源推荐 2 历史
     public static final String HISTORY_NUM = "history_num";
-    public static final String SEARCH_VIEW = "search_view"; // 0 列表 1 缩略图
     public static final String LIVE_CHANNEL = "last_live_channel_name";
     public static final String LIVE_CHANNEL_REVERSE = "live_channel_reverse";
     public static final String LIVE_CROSS_GROUP = "live_cross_group";
     public static final String LIVE_CONNECT_TIMEOUT = "live_connect_timeout";
     public static final String LIVE_SHOW_NET_SPEED = "live_show_net_speed";
     public static final String LIVE_SHOW_TIME = "live_show_time";
-    public static final String FAST_SEARCH_MODE = "fast_search_mode";
     public static final String SUBTITLE_TEXT_SIZE = "subtitle_text_size";
     public static final String SUBTITLE_TIME_DELAY = "subtitle_time_delay";
     public static final String SOURCES_FOR_SEARCH = "checked_sources_for_search";
@@ -49,5 +46,4 @@ public class HawkConfig {
     public static final String LIVE_WEB_HEADER = "live_web_header";
     public static final String DEFAULT_LOAD_LIVE = "DEFAULT_LOAD_LIVE";
     public static final String SEARCH_HISTORY = "search_history";
-    public static boolean hotVodDelete;
 }

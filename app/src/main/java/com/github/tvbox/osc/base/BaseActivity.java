@@ -2,7 +2,6 @@ package com.github.tvbox.osc.base;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Looper;
@@ -22,10 +21,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.kingja.loadsir.callback.Callback;
 import com.kingja.loadsir.core.LoadService;
 import com.kingja.loadsir.core.LoadSir;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 
 import me.jessyan.autosize.AutoSizeCompat;
 import me.jessyan.autosize.internal.CustomAdapt;
@@ -69,7 +64,6 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
      */
     private void setupAppBarTransparency() {
         try {
-            getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
             AppBarLayout appBarLayout = findViewById(R.id.appBarLayout);
             MaterialToolbar appBar = findViewById(R.id.appBar);
 
@@ -132,13 +126,6 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
         }
     }
 
-    protected boolean isLoading() {
-        if (mLoadService != null && mLoadService.getCurrentCallback() != null) {
-            return mLoadService.getCurrentCallback().equals(LoadingCallback.class);
-        }
-        return false;
-    }
-
     protected void showEmpty() {
         if (null != mLoadService) {
             mLoadService.showCallback(EmptyCallback.class);
@@ -166,22 +153,6 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
         Intent intent = new Intent(mContext, clazz);
         intent.putExtras(bundle);
         startActivity(intent);
-    }
-
-    protected String getAssetText(String fileName) {
-        StringBuilder stringBuilder = new StringBuilder();
-        try {
-            AssetManager assets = getAssets();
-            BufferedReader bf = new BufferedReader(new InputStreamReader(assets.open(fileName)));
-            String line;
-            while ((line = bf.readLine()) != null) {
-                stringBuilder.append(line);
-            }
-            return stringBuilder.toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return "";
     }
 
     @Override

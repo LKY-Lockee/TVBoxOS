@@ -1,41 +1,33 @@
 package com.github.tvbox.osc.ui.fragment;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
 
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BackPressProvider;
 import com.github.tvbox.osc.base.BaseLazyFragment;
 import com.github.tvbox.osc.base.ToolbarMenuProvider;
 import com.github.tvbox.osc.cache.RoomDataManger;
 import com.github.tvbox.osc.cache.VodCollect;
+import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
+import com.github.tvbox.osc.ui.activity.HomeActivity;
 import com.github.tvbox.osc.ui.adapter.CollectAdapter;
-import com.github.tvbox.osc.ui.dialog.ConfirmClearDialog;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.util.HawkConfig;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProvider, BackPressProvider {
+public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProvider {
     public static CollectAdapter collectAdapter;
-    private boolean delMode = false;
-
-    // --- BackPressProvider ---
-    @Override
-    public boolean handleBackPress() {
-        if (delMode) {
-            toggleDelMode();
-            return true;
-        }
-        return false;
-    }
-    // ----------------
+    private SwipeRefreshLayout mSwipe;
 
     // --- BaseLazyFragment ---
     @Override
@@ -47,6 +39,14 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
     protected void init() {
         initView();
         initData();
+    }
+    // ----------------
+
+    // --- Fragment ---
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        EventBus.getDefault().unregister(this);
     }
     // ----------------
 
@@ -63,10 +63,7 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
 
     @Override
     public boolean onMenuItemClick(int itemId) {
-        if (itemId == R.id.action_delete) {
-            toggleDelMode();
-            return true;
-        } else if (itemId == R.id.action_clear) {
+        if (itemId == R.id.action_clear) {
             showClearDialog();
             return true;
         }
@@ -74,49 +71,43 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
     }
     // ----------------
 
-    @SuppressLint("NotifyDataSetChanged")
-    private void toggleDelMode() {
-        HawkConfig.hotVodDelete = !HawkConfig.hotVodDelete;
-        collectAdapter.notifyDataSetChanged();
-        delMode = !delMode;
-    }
-
-    private void showClearDialog() {
-        ConfirmClearDialog dialog = new ConfirmClearDialog(mContext, "Collect");
-        dialog.show();
-    }
-
     private void initView() {
+        EventBus.getDefault().register(this);
+        
+        mSwipe = rootView.findViewById(R.id.mSwipe);
         RecyclerView mGridView = rootView.findViewById(R.id.mGridView);
         mGridView.setHasFixedSize(true);
         mGridView.setLayoutManager(new GridLayoutManager(mContext, isBaseOnWidth() ? 5 : 6));
         collectAdapter = new CollectAdapter();
         mGridView.setAdapter(collectAdapter);
+
+        setLoadSir2(mGridView);
+
+        mSwipe.setOnRefreshListener(this::initData);
+        mSwipe.setOnChildScrollUpCallback((parent, child) -> mGridView.canScrollVertically(-1));
+
         collectAdapter.setOnItemClickListener((adapter, view, position) -> {
             FastClickCheckUtil.check(view);
             VodCollect vodInfo = collectAdapter.getData().get(position);
             if (vodInfo != null) {
-                if (delMode) {
-                    collectAdapter.remove(position);
-                    RoomDataManger.deleteVodCollect(vodInfo.getId());
+                if (ApiConfig.get().getSource(vodInfo.sourceKey) != null) {
+                    Bundle bundle = new Bundle();
+                    bundle.putString("id", vodInfo.vodId);
+                    bundle.putString("sourceKey", vodInfo.sourceKey);
+                    bundle.putString("picture", vodInfo.pic);
+                    jumpActivity(DetailActivity.class, bundle);
                 } else {
-                    if (ApiConfig.get().getSource(vodInfo.sourceKey) != null) {
-                        Bundle bundle = new Bundle();
-                        bundle.putString("id", vodInfo.vodId);
-                        bundle.putString("sourceKey", vodInfo.sourceKey);
-                        bundle.putString("picture", vodInfo.pic);
-                        jumpActivity(DetailActivity.class, bundle);
-                    } /*else {
-                        Intent newIntent = new Intent(mContext, SearchActivity.class);
-                        newIntent.putExtra("title", vodInfo.name);
-                        newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        mContext.startActivity(newIntent);
-                    }*/
+                    if (mActivity instanceof HomeActivity homeActivity) {
+                        homeActivity.switchToSearchAndSearch(vodInfo.name);
+                    }
                 }
             }
         });
         collectAdapter.setOnItemLongClickListener((adapter, view, position) -> {
-            toggleDelMode();
+            VodCollect vodCollect = collectAdapter.getData().get(position);
+            if (vodCollect != null) {
+                showDeleteCollectItemDialog(vodCollect, position);
+            }
             return true;
         });
     }
@@ -125,6 +116,61 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
         List<VodCollect> allVodRecord = RoomDataManger.getAllVodCollect();
         List<VodCollect> vodInfoList = new ArrayList<>(allVodRecord);
         collectAdapter.setNewData(vodInfoList);
+
+        if (vodInfoList.isEmpty()) {
+            showEmpty();
+        } else {
+            showSuccess();
+        }
+
+        if (mSwipe != null) {
+            mSwipe.setRefreshing(false);
+        }
+    }
+
+    private void showDeleteCollectItemDialog(VodCollect vodCollect, int position) {
+        if (getActivity() == null || vodCollect == null) return;
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
+                .setTitle("删除收藏")
+                .setMessage("确定要取消收藏「" + vodCollect.name + "」吗？")
+                .setPositiveButton("删除", (dialog, which) -> {
+                    collectAdapter.remove(position);
+                    RoomDataManger.deleteVodCollect(vodCollect.getId());
+                    if (collectAdapter.getData().isEmpty()) {
+                        showEmpty();
+                    }
+                    android.widget.Toast.makeText(mContext, "已删除", android.widget.Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showClearDialog() {
+        if (getActivity() == null) return;
+
+        if (collectAdapter.getData().isEmpty()) {
+            android.widget.Toast.makeText(mContext, "暂无收藏", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
+                .setTitle("清空收藏")
+                .setMessage("确定要清空所有收藏吗？")
+                .setPositiveButton("清空", (dialog, which) -> {
+                    RoomDataManger.deleteVodCollectAll();
+                    collectAdapter.setNewData(new ArrayList<>());
+                    showEmpty();
+                    android.widget.Toast.makeText(mContext, "已清空收藏", android.widget.Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void refresh(RefreshEvent event) {
+        if (event.type == RefreshEvent.TYPE_HISTORY_REFRESH) {
+            initData();
+        }
     }
 }
-

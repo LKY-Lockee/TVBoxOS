@@ -48,6 +48,12 @@ public class UserFragment extends GridFragment {
                 vodList.add(vod);
             }
             gridAdapter.setNewData(vodList);
+            
+            if (vodList.isEmpty()) {
+                showEmpty();
+            } else {
+                showSuccess();
+            }
         }
     }
 
@@ -56,7 +62,6 @@ public class UserFragment extends GridFragment {
         if (Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
             super.initData();
         } else {
-            // 显示加载圆圈，等待豆瓣数据加载
             showLoading();
             setDouBanData();
         }
@@ -78,14 +83,18 @@ public class UserFragment extends GridFragment {
                         gridAdapter.setNewData(hotMovies);
                         // 缓存数据加载完成，显示成功状态
                         showSuccess();
-                        return;
+                    } else {
+                        // 缓存数据解析失败或为空，显示空状态
+                        gridAdapter.setNewData(new ArrayList<>());
+                        showEmpty();
                     }
+                    return;
                 }
             }
             String doubanUrl = "https://movie.douban.com/j/new_search_subjects?sort=U&range=0,10&tags=&playable=1&start=0&year_range=" + year + "," + year;
             OkGo.<String>get(doubanUrl)
                     .headers("User-Agent", UA.randomOne())
-                    .execute(new AbsCallback<String>() {
+                    .execute(new AbsCallback<>() {
                         @Override
                         public void onSuccess(Response<String> response) {
                             String netJson = response.body();
@@ -93,9 +102,13 @@ public class UserFragment extends GridFragment {
                             Hawk.put("home_hot", netJson);
                             if (mActivity != null) {
                                 mActivity.runOnUiThread(() -> {
-                                    gridAdapter.setNewData(loadHots(netJson));
-                                    // 网络数据加载完成，显示成功状态
-                                    showSuccess();
+                                    ArrayList<Movie.Video> hotMovies = loadHots(netJson);
+                                    gridAdapter.setNewData(hotMovies);
+                                    if (hotMovies.isEmpty()) {
+                                        showEmpty();
+                                    } else {
+                                        showSuccess();
+                                    }
                                 });
                             }
                         }
@@ -103,9 +116,12 @@ public class UserFragment extends GridFragment {
                         @Override
                         public void onError(Response<String> response) {
                             super.onError(response);
-                            // 加载失败也要隐藏加载圆圈
+                            // 加载失败显示空状态
                             if (mActivity != null) {
-                                mActivity.runOnUiThread(() -> showSuccess());
+                                mActivity.runOnUiThread(() -> {
+                                    gridAdapter.setNewData(new ArrayList<>());
+                                    showEmpty();
+                                });
                             }
                         }
 
@@ -119,8 +135,8 @@ public class UserFragment extends GridFragment {
                     });
         } catch (Throwable th) {
             th.printStackTrace();
-            // 异常情况也要隐藏加载圆圈
-            showSuccess();
+            gridAdapter.setNewData(new ArrayList<>());
+            showEmpty();
         }
     }
 

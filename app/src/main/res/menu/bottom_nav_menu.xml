@@ -10,6 +10,10 @@
             android:id="@+id/navigation_history"
             android:icon="@drawable/icon_history" />
     <item
+            android:title="搜索"
+            android:id="@+id/navigation_search"
+            android:icon="@drawable/icon_search" />
+    <item
             android:title="收藏"
             android:id="@+id/navigation_favourite"
             android:icon="@drawable/icon_collect" />
