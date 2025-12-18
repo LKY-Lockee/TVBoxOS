@@ -1,13 +1,14 @@
 package com.github.tvbox.osc.ui.dialog;
 
+import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
 
 import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.callback.EmptyCallback;
@@ -15,24 +16,42 @@ import com.github.tvbox.osc.callback.LoadingCallback;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox;
 import com.github.tvbox.osc.ui.activity.SettingsActivity;
-import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.kingja.loadsir.callback.Callback;
 import com.kingja.loadsir.core.LoadService;
 import com.kingja.loadsir.core.LoadSir;
 
+import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
 
-public class SearchRemoteTvDialog extends BaseDialog {
-
-
+public class SearchRemoteTvDialog {
+    private final Dialog dialog;
+    private final Context context;
+    private final View view;
     private LoadService<?> mLoadService;
 
     public SearchRemoteTvDialog(@NonNull @NotNull Context context) {
-        super(context);
-        setContentView(R.layout.dialog_search_remotetv);
+        this.context = context;
+        view = LayoutInflater.from(context).inflate(R.layout.dialog_search_remotetv, null);
+        dialog = new MaterialAlertDialogBuilder(context)
+                .setView(view)
+                .create();
+        EventBus.getDefault().register(this);
+
+        Button btnCancel = view.findViewById(R.id.btnCancel);
+        btnCancel.setOnClickListener(v -> dismiss());
+    }
+
+    public void show() {
+        dialog.show();
+    }
+
+    public void dismiss() {
+        EventBus.getDefault().unregister(this);
+        dialog.dismiss();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -42,14 +61,9 @@ public class SearchRemoteTvDialog extends BaseDialog {
         }
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
     public void setTip(String tip) {
-        ((TextView) findViewById(R.id.title)).setText(tip);
-        setLoadSir(findViewById(R.id.list));
+        ((TextView) view.findViewById(R.id.title)).setText(tip);
+        setLoadSir(view.findViewById(R.id.list));
         showLoading();
     }
 
@@ -58,7 +72,7 @@ public class SearchRemoteTvDialog extends BaseDialog {
             if (SettingsActivity.loadingSearchRemoteTvDialog != null) {
                 SettingsActivity.loadingSearchRemoteTvDialog.showEmpty();
             }
-            Toast.makeText(getContext(), "未找到附近TVBox", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "未找到附近TVBox", Toast.LENGTH_SHORT).show();
             return;
         }
         if (SettingsActivity.loadingSearchRemoteTvDialog != null) {
@@ -67,33 +81,18 @@ public class SearchRemoteTvDialog extends BaseDialog {
         if (SettingsActivity.remoteTvHostList == null) {
             return;
         }
-        RemoteTVBox.setAvalible(SettingsActivity.remoteTvHostList.get(0));
-        SelectDialog<String> dialog = new SelectDialog<>(getContext());
-        dialog.setTip("附近TVBox");
-        int defaultPos = 0;
-        dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<String>() {
-            @Override
-            public void click(String value, int pos) {
-                RemoteTVBox.setAvalible(value);
-                Toast.makeText(getContext(), "设置成功", Toast.LENGTH_SHORT).show();
-            }
+        RemoteTVBox.setAvailable(SettingsActivity.remoteTvHostList.get(0));
 
-            @Override
-            public String getDisplay(String val) {
-                return val;
-            }
-        }, new DiffUtil.ItemCallback<String>() {
-            @Override
-            public boolean areItemsTheSame(@NonNull @NotNull String oldItem, @NonNull @NotNull String newItem) {
-                return oldItem.equals(newItem);
-            }
-
-            @Override
-            public boolean areContentsTheSame(@NonNull @NotNull String oldItem, @NonNull @NotNull String newItem) {
-                return oldItem.equals(newItem);
-            }
-        }, SettingsActivity.remoteTvHostList, defaultPos);
-        dialog.show();
+        String[] hosts = SettingsActivity.remoteTvHostList.toArray(new String[0]);
+        new MaterialAlertDialogBuilder(context)
+                .setTitle("附近TVBox")
+                .setSingleChoiceItems(hosts, 0, (dlg, which) -> {
+                    RemoteTVBox.setAvailable(hosts[which]);
+                    Toast.makeText(context, "设置成功", Toast.LENGTH_SHORT).show();
+                    dlg.dismiss();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     protected void setLoadSir(View view) {

@@ -123,13 +123,8 @@
     void *(**On*Event);
     void *(**On*Listener);
 }
-#xwalk
--keep class org.xwalk.core.** { *; }
--keep class org.crosswalk.engine.** { *; }
--keep class org.chromium.** { *; }
 -dontwarn android.view.**
 -dontwarn android.media.**
--dontwarn org.chromium.**
 #okhttp
 -dontwarn okhttp3.**
 -keep class okhttp3.**{*;}
@@ -214,7 +209,6 @@
 }
 # Cronet支持http3
 -keep class com.google.net.cronet.**{*;}
--keep class org.chromium.net.**{*;}
 
 # Nano
 -keep class fi.iki.elonen.** { *; }

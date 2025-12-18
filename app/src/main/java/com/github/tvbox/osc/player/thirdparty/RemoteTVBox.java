@@ -3,6 +3,8 @@ package com.github.tvbox.osc.player.thirdparty;
 import android.app.Activity;
 import android.text.TextUtils;
 
+import androidx.annotation.NonNull;
+
 import com.github.tvbox.osc.base.App;
 import com.github.tvbox.osc.bean.IpScanningVo;
 import com.github.tvbox.osc.server.RemoteServer;
@@ -12,9 +14,11 @@ import com.orhanobut.hawk.Hawk;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -25,12 +29,12 @@ import okhttp3.Response;
 
 public class RemoteTVBox {
 
-    private static int avalibleFailNum;
-    private static int avalibleSuccessNum;
-    private static int avalibleIpNum;
+    private static int availableFailNum;
+    private static int availableSuccessNum;
+    private static int availableIpNum;
 
     public static boolean run(Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
-        String actionUrl = getAvalibleActionUrl();
+        String actionUrl = getAvailableActionUrl();
         if (TextUtils.isEmpty(actionUrl)) {
             return false;
         }
@@ -53,13 +57,13 @@ public class RemoteTVBox {
             params.put("url", url);
             post(actionUrl, params, new okhttp3.Callback() {
                 @Override
-                public void onFailure(Call call, IOException e) {
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     e.printStackTrace();
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    String pushResult = response.body().string();
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    String pushResult = Objects.requireNonNull(response.body()).string();
                 }
             });
         } catch (Exception e) {
@@ -69,17 +73,17 @@ public class RemoteTVBox {
         return true;
     }
 
-    public static void searchAvalible(Callback callback) {
-        avalibleFailNum = 0;
-        avalibleSuccessNum = 0;
+    public static void searchAvailable(Callback callback) {
+        availableFailNum = 0;
+        availableSuccessNum = 0;
         String localIp = RemoteServer.getLocalIPAddress(App.getInstance());
         List<IpScanningVo> searchList = new IpScanning().search(localIp, false);
-        avalibleIpNum = searchList.size();
+        availableIpNum = searchList.size();
         int port = 9978;
         for (IpScanningVo one : searchList) {
             String ip = one.getIp();
             if (ip.equals(localIp)) {
-                avalibleIpNum--;
+                availableIpNum--;
                 continue;
             }
             String actionUrl = "http://" + ip + ":" + port + "/action";
@@ -87,17 +91,17 @@ public class RemoteTVBox {
             try {
                 post(actionUrl, null, new okhttp3.Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
-                        avalibleFailNum++;
-                        callback.fail(avalibleFailNum == avalibleIpNum, (avalibleSuccessNum + avalibleFailNum) == avalibleIpNum);
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        availableFailNum++;
+                        callback.fail(availableFailNum == availableIpNum, (availableSuccessNum + availableFailNum) == availableIpNum);
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) throws IOException {
-                        avalibleSuccessNum++;
-                        String result = response.body().string();
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        availableSuccessNum++;
+                        String result = Objects.requireNonNull(response.body()).string();
                         if (result.equals("ok")) {
-                            callback.found(viewHost, (avalibleSuccessNum + avalibleFailNum) == avalibleIpNum);
+                            callback.found(viewHost, (availableSuccessNum + availableFailNum) == availableIpNum);
                         }
                     }
                 });
@@ -108,19 +112,19 @@ public class RemoteTVBox {
 
     }
 
-    public static String getAvalible() {
+    public static String getAvailable() {
         return Hawk.get(HawkConfig.REMOTE_TVBOX, null);
     }
 
-    public static void setAvalible(String viewHost) {
+    public static void setAvailable(String viewHost) {
         Hawk.put(HawkConfig.REMOTE_TVBOX, viewHost);
     }
 
-    public static String getAvalibleActionUrl() {
-        if (getAvalible() == null) {
+    public static String getAvailableActionUrl() {
+        if (getAvailable() == null) {
             return "";
         }
-        return "http://" + getAvalible() + "/action";
+        return "http://" + getAvailable() + "/action";
     }
 
     public static void post(String url, Map<String, String> params, okhttp3.Callback callback) {
@@ -144,7 +148,6 @@ public class RemoteTVBox {
 
         public abstract void fail(boolean all, boolean end);
     }
-
 }
 
 

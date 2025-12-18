@@ -1,5 +1,6 @@
 package com.github.tvbox.osc.ui.dialog;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 
@@ -26,13 +27,14 @@ public class QuickSearchDialog extends BaseDialog {
     private QuickSearchAdapter searchAdapter;
 
     public QuickSearchDialog(@NonNull @NotNull Context context) {
-        super(context, R.style.CustomDialogStyleDim);
+        super(context);
         setCanceledOnTouchOutside(false);
         setCancelable(true);
         setContentView(R.layout.dialog_quick_search);
         init(context);
     }
 
+    @SuppressWarnings("unchecked")
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void refresh(RefreshEvent event) {
         if (event.type == RefreshEvent.TYPE_QUICK_SEARCH) {
@@ -48,6 +50,7 @@ public class QuickSearchDialog extends BaseDialog {
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private void init(Context context) {
         EventBus.getDefault().register(this);
         setOnDismissListener(new DialogInterface.OnDismissListener() {
@@ -62,7 +65,6 @@ public class QuickSearchDialog extends BaseDialog {
         // lite
         mGridView.setLayoutManager(new V7LinearLayoutManager(getContext(), 1, false));
         // with preview
-        // mGridView.setLayoutManager(new V7GridLayoutManager(getContext(), 3));
         mGridView.setAdapter(searchAdapter);
         searchAdapter.setOnItemClickListener((adapter, view, position) -> {
             Movie.Video video = searchAdapter.getData().get(position);

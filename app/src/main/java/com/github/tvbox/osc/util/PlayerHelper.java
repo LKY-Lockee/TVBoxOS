@@ -177,7 +177,7 @@ public class PlayerHelper {
             playersExist.put(10, MXPlayer.getPackageInfo() != null);
             playersExist.put(11, ReexPlayer.getPackageInfo() != null);
             playersExist.put(12, Kodi.getPackageInfo() != null);
-            playersExist.put(13, RemoteTVBox.getAvalible() != null);
+            playersExist.put(13, RemoteTVBox.getAvailable() != null);
             playersExist.put(14, VlcPlayer.getPackageInfo() != null);
             mPlayersExistInfo = playersExist;
         }
