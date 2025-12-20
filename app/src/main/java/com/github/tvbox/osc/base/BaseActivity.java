@@ -24,7 +24,6 @@ import com.kingja.loadsir.core.LoadSir;
 
 import me.jessyan.autosize.AutoSizeCompat;
 import me.jessyan.autosize.internal.CustomAdapt;
-import xyz.doikki.videoplayer.util.CutoutUtil;
 
 /**
  * @author pj567
@@ -52,7 +51,6 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
         super.onCreate(savedInstanceState);
         setContentView(getLayoutResID());
         mContext = this;
-        CutoutUtil.adaptCutoutAboveAndroidP(mContext, true);
         AppManager.getInstance().addActivity(this);
         setupAppBarTransparency();
         init();

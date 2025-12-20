@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/tabInfoContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="top|center_vertical"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:id="@+id/constraintLayout">
+
+            <TextView
+                    android:id="@+id/tvName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:focusable="false"
+                    android:ellipsize="end"
+                    android:layout_marginTop="@dimen/vs_3"
+                    android:layout_marginEnd="16dp"
+                    android:text="电影名称"
+                    android:textSize="35sp"
+                    style="@style/TextAppearance.AppCompat.Display1"
+                    app:layout_constraintEnd_toStartOf="@+id/tvCollect"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent" />
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/tvCollect"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:icon="@drawable/icon_collect"
+                    app:iconSize="@dimen/vs_24"
+                    app:iconGravity="textStart"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@+id/constraintLayout"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:id="@+id/constraintLayout2"
+                android:layout_marginTop="8dp">
+
+            <ImageView
+                    android:id="@+id/ivThumb"
+                    android:layout_width="@dimen/vs_80"
+                    android:layout_height="108dp"
+                    android:scaleType="fitXY"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/ivThumb"
+                    android:id="@+id/linearLayout2"
+                    app:layout_constraintTop_toTopOf="parent"
+                    android:layout_marginStart="8dp">
+
+                <TextView
+                        android:id="@+id/tvSite"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:focusable="false"
+                        android:ellipsize="end"
+                        android:text="来源"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvYear"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:focusable="false"
+                        android:ellipsize="end"
+                        android:text="年份"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvArea"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:focusable="false"
+                        android:ellipsize="end"
+                        android:text="地区"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvLang"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:focusable="false"
+                        android:ellipsize="end"
+                        android:text="语言"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvType"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:focusable="false"
+                        android:ellipsize="end"
+                        android:text="类型"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvActor"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:focusable="false"
+                        android:text="演员"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvDirector"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:focusable="false"
+                        android:text="导演"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+                <TextView
+                        android:id="@+id/tvPlayUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="@dimen/vs_2"
+                        android:ellipsize="end"
+                        android:focusable="false"
+                        android:text="地址"
+                        android:textSize="12sp"
+                        style="@style/TextAppearance.AppCompat.Small" />
+
+            </LinearLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <TextView
+                android:id="@+id/tvDes"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:focusable="false"
+                android:ellipsize="end"
+                android:text="简介"
+                android:textSize="12sp"
+                style="@style/TextAppearance.AppCompat.Small"
+                app:layout_constraintTop_toBottomOf="@+id/constraintLayout2"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="8dp" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

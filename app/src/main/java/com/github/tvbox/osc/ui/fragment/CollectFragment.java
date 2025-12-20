@@ -16,6 +16,7 @@ import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.HomeActivity;
 import com.github.tvbox.osc.ui.adapter.CollectAdapter;
+import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 
 import org.greenrobot.eventbus.EventBus;
@@ -76,8 +77,7 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
         
         mSwipe = rootView.findViewById(R.id.mSwipe);
         RecyclerView mGridView = rootView.findViewById(R.id.mGridView);
-        mGridView.setHasFixedSize(true);
-        mGridView.setLayoutManager(new GridLayoutManager(mContext, isBaseOnWidth() ? 5 : 6));
+        mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, 150));
         collectAdapter = new CollectAdapter();
         mGridView.setAdapter(collectAdapter);
 
@@ -132,7 +132,7 @@ public class CollectFragment extends BaseLazyFragment implements ToolbarMenuProv
         if (getActivity() == null || vodCollect == null) return;
 
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
-                .setTitle("删除收藏")
+                .setTitle("取消收藏")
                 .setMessage("确定要取消收藏「" + vodCollect.name + "」吗？")
                 .setPositiveButton("删除", (dialog, which) -> {
                     collectAdapter.remove(position);

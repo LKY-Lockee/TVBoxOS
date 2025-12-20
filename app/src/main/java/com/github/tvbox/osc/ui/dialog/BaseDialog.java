@@ -2,7 +2,6 @@ package com.github.tvbox.osc.ui.dialog;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -10,17 +9,9 @@ import androidx.annotation.NonNull;
 
 import java.util.Objects;
 
-import xyz.doikki.videoplayer.util.CutoutUtil;
-
 public class BaseDialog extends Dialog {
     public BaseDialog(@NonNull Context context) {
         super(context);
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        CutoutUtil.adaptCutoutAboveAndroidP(this, true);//设置刘海
-        super.onCreate(savedInstanceState);
     }
 
     @Override

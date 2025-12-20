@@ -400,45 +400,56 @@ public class SearchFragment extends BaseLazyFragment implements BackPressProvide
     private void updateSearchBarPosition() {
         if (rootView == null || getActivity() == null) return;
         rootView.post(() -> {
-            if (getActivity() == null) return;
+            if (getActivity() == null || searchBarContainer == null) return;
+
             View bottomNav = getActivity().findViewById(R.id.bottom_navigation);
-            if (bottomNav != null && searchBarContainer != null) {
-                CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) searchBarContainer.getLayoutParams();
-                params.gravity = android.view.Gravity.NO_GRAVITY;
-                params.setMargins(params.leftMargin, 0, params.rightMargin, 0);
-                searchBarContainer.setLayoutParams(params);
 
-                if (preDrawListener != null) {
-                    rootView.getViewTreeObserver().removeOnPreDrawListener(preDrawListener);
-                }
+            CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) searchBarContainer.getLayoutParams();
+            params.gravity = android.view.Gravity.NO_GRAVITY;
+            params.setMargins(params.leftMargin, 0, params.rightMargin, 0);
+            searchBarContainer.setLayoutParams(params);
 
-                // 使用 OnPreDrawListener 监听每一帧
-                preDrawListener = () -> {
-                    if (searchBarContainer == null || getActivity() == null) return true;
-                    if (rootView != null) {
-                        // 获取底部导航栏在屏幕中的位置
+            if (preDrawListener != null) {
+                rootView.getViewTreeObserver().removeOnPreDrawListener(preDrawListener);
+            }
+
+            // 使用 OnPreDrawListener 监听每一帧
+            preDrawListener = () -> {
+                if (searchBarContainer == null || getActivity() == null) return true;
+                if (rootView != null) {
+                    int targetY;
+
+                    if (bottomNav != null && bottomNav.getVisibility() == View.VISIBLE) {
+                        // 有底部导航栏时，定位在导航栏上方
                         int[] navLocation = new int[2];
                         bottomNav.getLocationInWindow(navLocation);
                         int navTopInScreen = navLocation[1];
 
-                        // 获取rootView在屏幕中的位置
                         int[] rootLocation = new int[2];
                         rootView.getLocationInWindow(rootLocation);
                         int rootTopInScreen = rootLocation[1];
 
-                        // 计算searchBarContainer应该在rootView中的Y坐标
                         int searchBarHeight = searchBarContainer.getHeight();
-                        int targetY = navTopInScreen - rootTopInScreen - searchBarHeight;
+                        targetY = navTopInScreen - rootTopInScreen - searchBarHeight;
+                    } else {
+                        // 没有底部导航栏时，定位在屏幕底部
+                        int[] rootLocation = new int[2];
+                        rootView.getLocationInWindow(rootLocation);
+                        int rootTopInScreen = rootLocation[1];
 
-                        // 使用setY设置绝对位置
-                        if (Math.abs(searchBarContainer.getY() - targetY) > 0.5f) {
-                            searchBarContainer.setY(targetY);
-                        }
+                        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                        int searchBarHeight = searchBarContainer.getHeight();
+                        targetY = screenHeight - rootTopInScreen - searchBarHeight;
                     }
-                    return true;
-                };
-                rootView.getViewTreeObserver().addOnPreDrawListener(preDrawListener);
-            }
+
+                    // 使用setY设置绝对位置
+                    if (Math.abs(searchBarContainer.getY() - targetY) > 0.5f) {
+                        searchBarContainer.setY(targetY);
+                    }
+                }
+                return true;
+            };
+            rootView.getViewTreeObserver().addOnPreDrawListener(preDrawListener);
         });
     }
 

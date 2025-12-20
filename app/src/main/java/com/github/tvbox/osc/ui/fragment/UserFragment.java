@@ -26,8 +26,12 @@ import java.util.Locale;
  * @description:
  */
 public class UserFragment extends GridFragment {
+    public UserFragment() {
+    }
+
     public UserFragment(MovieSort.SortData sortData) {
         super(sortData);
+
     }
 
     @Override
@@ -48,7 +52,7 @@ public class UserFragment extends GridFragment {
                 vodList.add(vod);
             }
             gridAdapter.setNewData(vodList);
-            
+
             if (vodList.isEmpty()) {
                 showEmpty();
             } else {

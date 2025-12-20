@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+    <LinearLayout
+            android:id="@+id/tabSourceContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+        <com.google.android.material.tabs.TabLayout android:id="@+id/mGridViewFlag"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:tabMode="scrollable"
+                app:tabGravity="start"
+                xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </LinearLayout>
+
+    <LinearLayout
+            android:id="@+id/tabEpisodeContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+        <LinearLayout
+                android:id="@+id/mSeriesGroupTv"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginStart="@dimen/vs_5"
+                android:focusable="false">
+
+            <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mSeriesSortTv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="正序"
+                    android:focusable="true" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/mSeriesGroupView"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:clipChildren="false"
+                    android:clipToPadding="false"
+                    android:layout_marginStart="@dimen/vs_10"
+                    android:focusable="true" />
+        </LinearLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/mGridView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingHorizontal="@dimen/vs_10"
+                android:clipChildren="false"
+                android:clipToPadding="false" />
+    </LinearLayout>
+</LinearLayout>

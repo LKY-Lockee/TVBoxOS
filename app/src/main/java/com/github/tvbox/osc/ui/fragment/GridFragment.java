@@ -60,10 +60,13 @@ public class GridFragment extends BaseLazyFragment {
     private BottomSheetDialog currentBottomSheet;
     private MovieSort.SortFilter currentExpandedFilter;
 
+    public GridFragment() {
+    }
+
     public GridFragment(MovieSort.SortData sortData) {
         setArguments(sortData);
     }
-    
+
     // --- BaseLazyFragment ---
     @Override
     protected int getLayoutResID() {
