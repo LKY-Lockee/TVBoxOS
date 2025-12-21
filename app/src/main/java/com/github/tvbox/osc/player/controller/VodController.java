@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
@@ -21,6 +22,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.DiffUtil;
 
 import com.github.tvbox.osc.R;
@@ -58,10 +60,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -84,6 +86,7 @@ public class VodController extends BaseController {
     public TextView mPlayerTimeResetBtn;
     public SimpleSubtitleView mSubtitleView;
     public TextView mLandscapePortraitBtn;
+    public ImageView mFullscreenBtn;
     SeekBar mSeekBar;
     TextView mCurrentTime;
     TextView mTotalTime;
@@ -94,11 +97,11 @@ public class VodController extends BaseController {
     ImageView mLockView;
     LinearLayout mBottomRoot;
     LinearLayout mPlayBtnGroup;
+    ConstraintLayout mTopContainer;
     LinearLayout mTopRoot1;
     LinearLayout mTopRoot2;
     LinearLayout mParseRoot;
     TvRecyclerView mGridParseView;
-    TextView mPlayTitle;
     TextView mPlayTitle1;
     TextView mPlayLoadNetSpeedRightTop;
     TextView mNextBtn;
@@ -170,6 +173,7 @@ public class VodController extends BaseController {
                 }
                 case 1002: { // 显示底部菜单
                     mBottomRoot.setVisibility(VISIBLE);
+                    mTopContainer.setVisibility(VISIBLE);
                     mTopRoot1.setVisibility(VISIBLE);
                     mTopRoot2.setVisibility(VISIBLE);
                     mPlayLoadNetSpeedRightTop.setVisibility(VISIBLE);
@@ -178,14 +182,15 @@ public class VodController extends BaseController {
                     } else {
                         net_play_speed.setVisibility(GONE);
                     }
-                    mPlayTitle.setVisibility(GONE);
                     backBtn.setVisibility(ScreenUtils.isTv(context) ? INVISIBLE : VISIBLE);
                     showLockView();
                     break;
                 }
                 case 1003: { // 隐藏底部菜单
                     mBottomRoot.setVisibility(GONE);
+                    mTopContainer.setVisibility(GONE);
                     mTopRoot1.setVisibility(GONE);
+                    mTopRoot2.setVisibility(GONE);
                     mPlayLoadNetSpeedRightTop.setVisibility(GONE);
                     if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == GONE) {
                         mPlayPauseTime.setVisibility(GONE);
@@ -222,7 +227,6 @@ public class VodController extends BaseController {
         super.initView();
         mCurrentTime = findViewById(R.id.curr_time);
         mTotalTime = findViewById(R.id.total_time);
-        mPlayTitle = findViewById(R.id.tv_info_name);
         mPlayTitle1 = findViewById(R.id.tv_info_name1);
         mPlayLoadNetSpeedRightTop = findViewById(R.id.tv_play_load_net_speed_right_top);
         mSeekBar = findViewById(R.id.seekBar);
@@ -230,6 +234,7 @@ public class VodController extends BaseController {
         mProgressIcon = findViewById(R.id.tv_progress_icon);
         mProgressText = findViewById(R.id.tv_progress_text);
         mBottomRoot = findViewById(R.id.bottom_container);
+        mTopContainer = findViewById(R.id.tv_top_container);
         mTopRoot1 = findViewById(R.id.tv_top_l_container);
         mTopRoot2 = findViewById(R.id.tv_top_r_container);
         mPlayBtnGroup = findViewById(R.id.play_btn_group);
@@ -256,6 +261,7 @@ public class VodController extends BaseController {
         mZimuBtn = findViewById(R.id.zimu_select);
         mAudioTrackBtn = findViewById(R.id.audio_track_select);
         mLandscapePortraitBtn = findViewById(R.id.landscape_portrait);
+        mFullscreenBtn = findViewById(R.id.tv_fullscreen);
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
         mScreenDisplay = findViewById(R.id.screen_display);
@@ -599,6 +605,11 @@ public class VodController extends BaseController {
             setLandscapePortrait();
             hideBottom();
         });
+        mFullscreenBtn.setOnClickListener(view -> {
+            FastClickCheckUtil.check(view);
+            setLandscapePortrait();
+            hideBottom();
+        });
         //屏显
         int disPlay = Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE);
         seekTime.setVisibility(disPlay);
@@ -643,16 +654,26 @@ public class VodController extends BaseController {
                 mLandscapePortraitBtn.setVisibility(View.VISIBLE);
                 mLandscapePortraitBtn.setText("竖屏");
             }
+            int currentOrientation = getResources().getConfiguration().orientation;
+            if (currentOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+                mFullscreenBtn.setImageResource(R.drawable.icon_fullscreen_exit);
+            } else {
+                mFullscreenBtn.setImageResource(R.drawable.icon_fullscreen);
+            }
         }
     }
 
     void setLandscapePortrait() {
-        int requestedOrientation = mActivity.getRequestedOrientation();
-        if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) {
+        int currentOrientation = getResources().getConfiguration().orientation;
+        if (currentOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+            // 当前是横屏，切换到竖屏
             mLandscapePortraitBtn.setText("横屏");
+            mFullscreenBtn.setImageResource(R.drawable.icon_fullscreen);
             mActivity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-        } else if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT || requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT) {
+        } else {
+            // 当前是竖屏，切换到横屏
             mLandscapePortraitBtn.setText("竖屏");
+            mFullscreenBtn.setImageResource(R.drawable.icon_fullscreen_exit);
             mActivity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         }
     }
@@ -665,6 +686,54 @@ public class VodController extends BaseController {
     @Override
     protected int getLayoutId() {
         return R.layout.player_vod_control_view;
+    }
+
+    @Override
+    protected void onConfigurationChanged(Configuration newConfig) {
+        // 保存当前状态
+        String currentTitle = mPlayTitle1 != null ? mPlayTitle1.getText().toString() : "";
+        boolean currentLockState = isLock;
+        int currentBottomVisibility = mBottomRoot != null ? mBottomRoot.getVisibility() : GONE;
+        ParseAdapter currentAdapter = null;
+        if (mGridParseView != null && mGridParseView.getAdapter() instanceof ParseAdapter) {
+            currentAdapter = (ParseAdapter) mGridParseView.getAdapter();
+        }
+
+        // 移除所有子视图，避免两套布局同时存在
+        removeAllViews();
+
+        // 重新初始化视图（initView会自动inflate布局，应用正确的布局变种如layout-land）
+        initView();
+
+        // 恢复保存的状态
+        if (mPlayerConfig != null) {
+            updatePlayerCfgView();
+        }
+        if (!currentTitle.isEmpty() && mPlayTitle1 != null) {
+            mPlayTitle1.setText(currentTitle);
+        }
+        // 恢复锁定状态
+        isLock = currentLockState;
+        if (mLockView != null) {
+            mLockView.setImageResource(isLock ? R.drawable.icon_lock : R.drawable.icon_unlock);
+        }
+        // 更新全屏按钮图标
+        if (mFullscreenBtn != null) {
+            int currentOrientation = getResources().getConfiguration().orientation;
+            if (currentOrientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+                mFullscreenBtn.setImageResource(R.drawable.icon_fullscreen_exit);
+            } else {
+                mFullscreenBtn.setImageResource(R.drawable.icon_fullscreen);
+            }
+        }
+        // 恢复解析适配器
+        if (currentAdapter != null && mGridParseView != null) {
+            mGridParseView.setAdapter(currentAdapter);
+        }
+        // 恢复控制栏可见性
+        if (currentBottomVisibility == VISIBLE) {
+            mHandler.sendEmptyMessage(1002); // 显示底部菜单
+        }
     }
 
     public void showParse(boolean userJxList) {
@@ -694,12 +763,7 @@ public class VodController extends BaseController {
     }
 
     public void setTitle(String playTitleInfo) {
-        mPlayTitle.setText(playTitleInfo);
         mPlayTitle1.setText(playTitleInfo);
-    }
-
-    public void setUrlTitle(String playTitleInfo) {
-        mPlayTitle.setText(playTitleInfo);
     }
 
     public void resetSpeed() {
@@ -794,7 +858,7 @@ public class VodController extends BaseController {
     protected void updateSeekUI(int curr, int seekTo, int duration) {
         super.updateSeekUI(curr, seekTo, duration);
         if (seekTo > curr) {
-            mProgressIcon.setImageResource(R.drawable.icon_pre);
+            mProgressIcon.setImageResource(R.drawable.icon_forward);
         } else {
             mProgressIcon.setImageResource(R.drawable.icon_back);
         }
@@ -816,10 +880,7 @@ public class VodController extends BaseController {
                 startProgress();
                 break;
             case VideoView.STATE_PAUSED:
-                mTopRoot1.setVisibility(GONE);
-//                mTopRoot2.setVisibility(GONE);
                 mPlayLoadNetSpeedRightTop.setVisibility(GONE);
-                mPlayTitle.setVisibility(VISIBLE);
                 break;
             case VideoView.STATE_ERROR:
                 listener.errReplay();
@@ -1069,23 +1130,9 @@ public class VodController extends BaseController {
         mHandler.removeCallbacks(myRunnable2);
     }
 
-    //尝试去bom
-    public String getWebPlayUrlIfNeeded(String webPlayUrl) {
-        if (webPlayUrl != null && !webPlayUrl.contains("127.0.0.1:9978") && webPlayUrl.contains(".m3u8")) {
-            try {
-                String urlEncode = URLEncoder.encode(webPlayUrl, "UTF-8");
-                LOG.i("echo-BOM-------");
-                return ControlManager.get().getAddress(true) + "proxy?go=bom&url=" + urlEncode;
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-        }
-        return webPlayUrl;
-    }
-
     public String encodeUrl(String url) {
         try {
-            return URLEncoder.encode(url, "UTF-8");
+            return URLEncoder.encode(url, StandardCharsets.UTF_8);
         } catch (Exception e) {
             return url;
         }

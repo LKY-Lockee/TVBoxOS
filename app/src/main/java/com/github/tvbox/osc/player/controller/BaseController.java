@@ -13,11 +13,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import com.google.android.material.loadingindicator.LoadingIndicator;
 
 import java.util.Map;
 
@@ -46,7 +47,7 @@ public abstract class BaseController extends BaseVideoController implements Gest
     private int mCurPlayState;
     private boolean mIsDoubleTapTogglePlayEnabled = true;
     private TextView mSlideInfo;
-    private ProgressBar mLoading;
+    private LoadingIndicator mLoading;
     private ViewGroup mPauseRoot;
     private TextView mPauseTime;
 

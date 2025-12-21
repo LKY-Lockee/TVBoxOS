@@ -33,6 +33,10 @@ public class SearchResultFragment extends BaseLazyFragment {
 
     @Override
     protected void init() {
+        if (rootView == null) {
+            return;
+        }
+        
         RecyclerView mGridView = rootView.findViewById(R.id.mGridView);
         mGridView.setHasFixedSize(true);
 

@@ -249,11 +249,6 @@ public class SettingsActivity extends BaseActivity {
                 item -> showHistoryNumDialog()
         ).setSummary("保留历史记录的数量"));
 
-        settingItems.add(SettingItem.createSwitch(
-                "显示预览",
-                Hawk.get(HawkConfig.SHOW_PREVIEW, true),
-                item -> Hawk.put(HawkConfig.SHOW_PREVIEW, item.isSwitchState())
-        ).setSummary("显示视频缩略图预览"));
 
         // 高级设置
         settingItems.add(SettingItem.createCategory("高级"));

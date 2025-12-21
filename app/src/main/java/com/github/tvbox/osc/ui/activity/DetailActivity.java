@@ -32,12 +32,10 @@ import com.github.tvbox.osc.ui.fragment.DetailTabInfoFragment;
 import com.github.tvbox.osc.ui.fragment.DetailTabPlaylistFragment;
 import com.github.tvbox.osc.ui.fragment.PlayFragment;
 import com.github.tvbox.osc.ui.fragment.SearchFragment;
-import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.SubtitleHelper;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.google.android.material.tabs.TabLayout;
 import com.lzy.okgo.OkGo;
-import com.orhanobut.hawk.Hawk;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -56,7 +54,6 @@ import java.util.List;
  * @description:
  */
 public class DetailActivity extends BaseActivity {
-    final boolean showPreview = Hawk.get(HawkConfig.SHOW_PREVIEW, true);
     public String vodId;
     public String sourceKey;
     public String firstSourceKey;
@@ -64,7 +61,6 @@ public class DetailActivity extends BaseActivity {
     VodInfo previewVodInfo = null;
     private boolean isFullscreen = false;
     private FragmentContainerView llPlayerFragmentContainer;
-    private View llPlayerFragmentContainerBlock;
     private View topLayout;
     private androidx.viewpager2.widget.ViewPager2 viewPager;
     private PlayFragment playFragment = null;
@@ -72,7 +68,6 @@ public class DetailActivity extends BaseActivity {
     private Movie.Video mVideo;
     private VodInfo vodInfo;
     private String preFlag = "";
-    private boolean firstReverse;
     private String vod_picture = "";
 
     private TabLayout tabLayout;
@@ -115,7 +110,6 @@ public class DetailActivity extends BaseActivity {
         if (position == -1) {
             vodInfo.reverseSort = !vodInfo.reverseSort;
             vodInfo.reverse();
-            firstReverse = true;
             tabPlaylistFragment.refreshList(vodInfo);
             return;
         }
@@ -142,13 +136,8 @@ public class DetailActivity extends BaseActivity {
 
         tabPlaylistFragment.updateSeriesSelection(oldIndex, position);
 
-        if (showPreview && !isFullscreen && !isAllowFull && playFragment != null && playFragment.getPlayer() != null && playFragment.getPlayer().isPlaying()) {
-            enterFullscreen();
-        }
-
-        if (!showPreview || reload) {
+        if (reload) {
             jumpToPlay();
-            firstReverse = false;
         }
     }
 
@@ -178,7 +167,7 @@ public class DetailActivity extends BaseActivity {
                 if (isFullscreen) {
                     if (playFragment.onBackPressed())
                         return;
-                    exitFullscreen();
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
                     List<VodInfo.VodSeries> list = vodInfo.seriesMap.get(vodInfo.playFlag);
                     if (list != null) {
                         tabPlaylistFragment.setSeriesGroupVisibility(list.size() > 1 ? View.VISIBLE : View.GONE);
@@ -186,11 +175,7 @@ public class DetailActivity extends BaseActivity {
                     tabPlaylistFragment.requestGridFocus();
                     return;
                 }
-                if (tabPlaylistFragment.hasFocus()) {
-                    tabPlaylistFragment.requestFlagFocus();
-                    return;
-                }
-                if (showPreview && playFragment != null) playFragment.setPlayTitle(false);
+                if (playFragment != null) playFragment.setPlayTitle(false);
 
                 setEnabled(false);
                 getOnBackPressedDispatcher().onBackPressed();
@@ -202,22 +187,15 @@ public class DetailActivity extends BaseActivity {
     private void initView() {
         ConstraintLayout llLayout = findViewById(R.id.llLayout);
         topLayout = findViewById(R.id.topLayout);
-        View llPlayerPlace = findViewById(R.id.previewPlayerPlace);
         llPlayerFragmentContainer = findViewById(R.id.previewPlayer);
-        llPlayerFragmentContainerBlock = findViewById(R.id.previewPlayerBlock);
-        llPlayerPlace.setVisibility(showPreview ? View.VISIBLE : View.GONE);
 
         View tabInfoView = getLayoutInflater().inflate(R.layout.fragment_detail_tab_info, null);
         View tabPlaylistView = getLayoutInflater().inflate(R.layout.fragment_detail_tab_playlist, null);
 
-        firstReverse = false;
         preFlag = "";
-        if (showPreview) {
-            playFragment = new PlayFragment();
-            getSupportFragmentManager().beginTransaction().add(R.id.previewPlayer, playFragment).commit();
-            getSupportFragmentManager().beginTransaction().show(playFragment).commitAllowingStateLoss();
-        }
-        llPlayerFragmentContainerBlock.setFocusable(showPreview);
+        playFragment = new PlayFragment();
+        getSupportFragmentManager().beginTransaction().add(R.id.previewPlayer, playFragment).commit();
+        getSupportFragmentManager().beginTransaction().show(playFragment).commitAllowingStateLoss();
 
         tabLayout = findViewById(R.id.tabLayout);
         viewPager = findViewById(R.id.viewPager);
@@ -285,18 +263,6 @@ public class DetailActivity extends BaseActivity {
             }
         });
 
-        llPlayerFragmentContainerBlock.setOnClickListener(v -> {
-            enterFullscreen();
-            if (firstReverse) {
-                jumpToPlay();
-                firstReverse = false;
-            }
-        });
-
-
-        if (showPreview) {
-            llPlayerFragmentContainerBlock.requestFocus();
-        }
         setLoadSir(llLayout);
     }
 
@@ -310,31 +276,27 @@ public class DetailActivity extends BaseActivity {
             insertVod(firstSourceKey, vodInfo);
             bundle.putString("sourceKey", sourceKey);
             App.getInstance().setVodInfo(vodInfo);
-            if (showPreview) {
-                if (previewVodInfo == null) {
-                    try {
-                        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(bos);
-                        oos.writeObject(vodInfo);
-                        oos.flush();
-                        oos.close();
-                        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
-                        previewVodInfo = (VodInfo) ois.readObject();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+            if (previewVodInfo == null) {
+                try {
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(bos);
+                    oos.writeObject(vodInfo);
+                    oos.flush();
+                    oos.close();
+                    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
+                    previewVodInfo = (VodInfo) ois.readObject();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                if (previewVodInfo != null) {
-                    previewVodInfo.playerCfg = vodInfo.playerCfg;
-                    previewVodInfo.playFlag = vodInfo.playFlag;
-                    previewVodInfo.playIndex = vodInfo.playIndex;
-                    previewVodInfo.seriesMap = vodInfo.seriesMap;
-                    App.getInstance().setVodInfo(previewVodInfo);
-                }
-                playFragment.setData(bundle);
-            } else {
-                jumpActivity(PlayActivity.class, bundle);
             }
+            if (previewVodInfo != null) {
+                previewVodInfo.playerCfg = vodInfo.playerCfg;
+                previewVodInfo.playFlag = vodInfo.playFlag;
+                previewVodInfo.playIndex = vodInfo.playIndex;
+                previewVodInfo.seriesMap = vodInfo.seriesMap;
+                App.getInstance().setVodInfo(previewVodInfo);
+            }
+            playFragment.setData(bundle);
         }
     }
 
@@ -394,19 +356,15 @@ public class DetailActivity extends BaseActivity {
 
                     tabPlaylistFragment.setVodInfo(vodInfo);
 
-                    if (showPreview) {
-                        jumpToPlay();
-                        llPlayerFragmentContainer.setVisibility(View.VISIBLE);
-                        llPlayerFragmentContainerBlock.setVisibility(View.VISIBLE);
-                        toggleSubtitleTextSize();
-                    }
+                    jumpToPlay();
+                    llPlayerFragmentContainer.setVisibility(View.VISIBLE);
+                    toggleSubtitleTextSize();
                 } else {
                     tabPlaylistFragment.setPlaylistVisibility(View.GONE);
                 }
             } else {
                 showEmpty();
                 llPlayerFragmentContainer.setVisibility(View.GONE);
-                llPlayerFragmentContainerBlock.setVisibility(View.GONE);
             }
         });
     }
@@ -509,29 +467,17 @@ public class DetailActivity extends BaseActivity {
         return super.onKeyUp(keyCode, event);
     }
 
-    private void enterFullscreen() {
-        if (!isFullscreen) {
-            isFullscreen = true;
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        }
-    }
-
-    private void exitFullscreen() {
-        if (isFullscreen) {
-            isFullscreen = false;
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        }
-    }
-
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            isFullscreen = true;
             hideSystemUI();
             updatePlayerLayoutForFullscreen(true);
             toggleSubtitleTextSize();
         } else if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            isFullscreen = false;
             showSystemUI();
             updatePlayerLayoutForFullscreen(false);
             toggleSubtitleTextSize();
@@ -545,7 +491,6 @@ public class DetailActivity extends BaseActivity {
             // 隐藏所有其他UI元素
             tabLayout.setVisibility(View.GONE);
             viewPager.setVisibility(View.GONE);
-            llPlayerFragmentContainerBlock.setVisibility(View.GONE);
 
             // 修改topLayout的布局参数，使其填充整个屏幕
             ConstraintLayout.LayoutParams topParams =
@@ -573,7 +518,6 @@ public class DetailActivity extends BaseActivity {
             // 恢复UI元素显示
             tabLayout.setVisibility(View.VISIBLE);
             viewPager.setVisibility(View.VISIBLE);
-            llPlayerFragmentContainerBlock.setVisibility(View.VISIBLE);
 
             // 恢复topLayout的布局参数
             ConstraintLayout.LayoutParams topParams =
