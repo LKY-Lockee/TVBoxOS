@@ -23,7 +23,6 @@ import com.github.tvbox.osc.ui.dialog.TipDialog;
 import com.github.tvbox.osc.ui.fragment.CollectFragment;
 import com.github.tvbox.osc.ui.fragment.HistoryFragment;
 import com.github.tvbox.osc.ui.fragment.HomeFragment;
-import com.github.tvbox.osc.ui.fragment.LiveFragment;
 import com.github.tvbox.osc.ui.fragment.SearchFragment;
 import com.github.tvbox.osc.util.AppManager;
 import com.github.tvbox.osc.util.HawkConfig;
@@ -37,7 +36,6 @@ enum Page {
     History,
     Search,
     Collect,
-    Live
 }
 
 public class HomeActivity extends BaseActivity {
@@ -46,7 +44,6 @@ public class HomeActivity extends BaseActivity {
     private HistoryFragment historyFragment;
     private SearchFragment searchFragment;
     private CollectFragment collectFragment;
-    private LiveFragment liveFragment;
     // ----------------
 
     private final Handler mHandler = new Handler();
@@ -174,9 +171,6 @@ public class HomeActivity extends BaseActivity {
                     case Collect:
                         mBottomNavigation.setSelectedItemId(R.id.navigation_favourite);
                         break;
-                    case Live:
-                        mBottomNavigation.setSelectedItemId(R.id.navigation_live);
-                        break;
                 }
 
                 // 强制展开 AppBar 和底部导航
@@ -203,8 +197,7 @@ public class HomeActivity extends BaseActivity {
                 showFragment(Page.Collect, true);
                 return true;
             } else if (itemId == R.id.navigation_live) {
-                showFragment(Page.Live, true);
-                return true;
+                jumpActivity(LivePlayActivity.class);
             }
             return false;
         });
@@ -323,7 +316,6 @@ public class HomeActivity extends BaseActivity {
             case History -> historyFragment;
             case Search -> searchFragment;
             case Collect -> collectFragment;
-            case Live -> liveFragment;
         };
     }
 
@@ -498,12 +490,6 @@ public class HomeActivity extends BaseActivity {
                         collectFragment = new CollectFragment();
                     }
                     yield collectFragment;
-                }
-                case Live -> {
-                    if (liveFragment == null) {
-                        liveFragment = new LiveFragment();
-                    }
-                    yield liveFragment;
                 }
             };
         }
