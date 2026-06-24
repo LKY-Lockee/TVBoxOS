@@ -16,7 +16,7 @@ public class LivePlayerManager {
     JSONObject currentPlayerConfig;
     private String currentApi = "";
 
-    public void init(VideoView<?> videoView) {
+    public void init(VideoView videoView) {
         try {
             currentApi = Hawk.get(HawkConfig.LIVE_API_URL, "");
             defaultPlayerConfig.put("pl", Hawk.get(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 0)));
@@ -29,7 +29,7 @@ public class LivePlayerManager {
         getDefaultLiveChannelPlayer(videoView);
     }
 
-    public void getDefaultLiveChannelPlayer(VideoView<?> videoView) {
+    public void getDefaultLiveChannelPlayer(VideoView videoView) {
         PlayerHelper.updateCfg(videoView, defaultPlayerConfig);
         try {
             currentPlayerConfig = new JSONObject(defaultPlayerConfig.toString());
@@ -38,7 +38,7 @@ public class LivePlayerManager {
         }
     }
 
-    public void getLiveChannelPlayer(VideoView<?> videoView, String channelName) {
+    public void getLiveChannelPlayer(VideoView videoView, String channelName) {
         channelName = currentCfgKey(channelName);
         JSONObject playerConfig = Hawk.get(channelName, null);
         if (playerConfig == null) {
@@ -97,7 +97,7 @@ public class LivePlayerManager {
         return 0;
     }
 
-    public void changeLivePlayerType(VideoView<?> videoView, int playerType, String channelName) {
+    public void changeLivePlayerType(VideoView videoView, int playerType, String channelName) {
         channelName = currentCfgKey(channelName);
         JSONObject playerConfig = currentPlayerConfig;
         try {
@@ -132,7 +132,7 @@ public class LivePlayerManager {
         currentPlayerConfig = playerConfig;
     }
 
-    public void changeLivePlayerScale(@NonNull VideoView<?> videoView, int playerScale, String channelName) {
+    public void changeLivePlayerScale(@NonNull VideoView videoView, int playerScale, String channelName) {
         channelName = currentCfgKey(channelName);
         videoView.setScreenScaleType(playerScale);
 

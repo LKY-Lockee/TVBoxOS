@@ -72,7 +72,6 @@ import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 import com.squareup.picasso.Picasso;
 
-import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -142,7 +141,7 @@ public class LivePlayActivity extends BaseActivity {
     TextView tv_srcinfo;
     TextView tv_curepg_left;
     TextView tv_nextepg_left;
-    private VideoView<xyz.doikki.videoplayer.player.AbstractPlayer> mVideoView;
+    private VideoView mVideoView;
     private TextView tvChannelInfo;
     private final Runnable mHideChannelInfoRun = new Runnable() {
         @Override
@@ -718,7 +717,7 @@ public class LivePlayActivity extends BaseActivity {
 
     @SuppressLint("SetTextI18n")
     private void updateChannelIcon(String channelName, String logoUrl) {
-        if (StringUtils.isEmpty(logoUrl)) {
+        if (logoUrl.isEmpty()) {
             liveIconNullBg.setVisibility(View.VISIBLE);
             liveIconNullText.setVisibility(View.VISIBLE);
             imgLiveIcon.setVisibility(View.INVISIBLE);

@@ -32,11 +32,11 @@ public class PlayerHelper {
     private static HashMap<Integer, String> mPlayersInfo = null;
     private static HashMap<Integer, Boolean> mPlayersExistInfo = null;
 
-    public static void updateCfg(VideoView<?> videoView, JSONObject playerCfg) {
+    public static void updateCfg(VideoView videoView, JSONObject playerCfg) {
         updateCfg(videoView, playerCfg, -1);
     }
 
-    public static void updateCfg(VideoView<?> videoView, JSONObject playerCfg, int forcePlayerType) {
+    public static void updateCfg(VideoView videoView, JSONObject playerCfg, int forcePlayerType) {
         int playerType = Hawk.get(HawkConfig.PLAY_TYPE, 0);
         int renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0);
         String ijkCode = Hawk.get(HawkConfig.IJK_CODEC, "硬解码");
@@ -92,7 +92,7 @@ public class PlayerHelper {
         }
     }
 
-    public static void updateCfg(VideoView<?> videoView) {
+    public static void updateCfg(VideoView videoView) {
         int playType = Hawk.get(HawkConfig.PLAY_TYPE, 0);
         PlayerFactory playerFactory;
         if (playType == 1) {

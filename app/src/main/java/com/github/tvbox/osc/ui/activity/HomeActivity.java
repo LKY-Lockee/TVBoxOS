@@ -79,11 +79,11 @@ public class HomeActivity extends BaseActivity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
 
-        if (intent != null && intent.getExtras() != null) {
+        if (intent.getExtras() != null) {
             Bundle bundle = intent.getExtras();
             if (bundle.getBoolean("openSearch", false)) {
                 String searchTitle = bundle.getString("searchTitle");

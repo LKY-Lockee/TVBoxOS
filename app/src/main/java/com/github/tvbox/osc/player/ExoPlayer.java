@@ -6,6 +6,7 @@ import android.util.Pair;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
 import androidx.media3.common.Tracks;
+import androidx.media3.common.util.UnstableApi;
 
 import com.github.tvbox.osc.util.AudioTrackMemory;
 import com.github.tvbox.osc.util.LOG;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 import xyz.doikki.videoplayer.exo.ExoMediaPlayer;
 
+@UnstableApi
 public class ExoPlayer extends ExoMediaPlayer {
 
     private static final Map<String, String> LANG_MAP = new HashMap<>();
@@ -111,9 +113,12 @@ public class ExoPlayer extends ExoMediaPlayer {
             Format targetFormat = targetGroup.getTrackFormat(trackIndex);
 
             // Set parameters to prefer this specific audio track
-            trackSelector.setParameters(
-                    trackSelector.buildUponParameters()
+            // mTrackSelector is private in parent; use Player's public API instead
+            mInternalPlayer.setTrackSelectionParameters(
+                    mInternalPlayer.getTrackSelectionParameters()
+                            .buildUpon()
                             .setPreferredAudioLanguage(targetFormat.language != null ? targetFormat.language : "")
+                            .build()
             );
 
             // 缓存到 map：下次同一路径播放时使用

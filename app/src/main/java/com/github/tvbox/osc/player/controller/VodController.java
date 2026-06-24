@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.player.controller;
 
-import static xyz.doikki.videoplayer.util.PlayerUtils.seconds2Time;
 import static xyz.doikki.videoplayer.util.PlayerUtils.stringForTime;
 
 import android.annotation.SuppressLint;
@@ -798,7 +797,7 @@ public class VodController extends BaseController {
         }
         mCurrentTime.setText(stringForTime(position));
         mTotalTime.setText(stringForTime(duration));
-        seekTime.setText((seconds2Time(position)) + " | " + (seconds2Time(duration))); //右上角进度条时间显示
+        seekTime.setText((stringForTime(position)) + " | " + (stringForTime(duration))); //右上角进度条时间显示
         if (duration > 0) {
             mSeekBar.setEnabled(true);
             int pos = (int) (position * 1.0 / duration * mSeekBar.getMax());

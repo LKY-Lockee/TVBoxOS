@@ -18,14 +18,9 @@
 -keepattributes LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# 重新包装所有重命名的包并放在给定的单一包中
--flattenpackagehierarchy androidx.base
-
 # 将包里的类混淆成n个再重新打包到一个统一的package中  会覆盖flattenpackagehierarchy选项
 -repackageclasses androidx.base
 
-# 把混淆类中的方法名也混淆了
--useuniqueclassmembernames
 #############################################
 #
 # Android开发中一些需要保留的公共部分
@@ -214,10 +209,10 @@
 -keep class fi.iki.elonen.** { *; }
 
 # Python支持
-#-keep public class com.undcover.freedom.pyramid.** { *; }
-#-dontwarn com.undcover.freedom.pyramid.**
-#-keep public class com.chaquo.python.** { *; }
-#-dontwarn com.chaquo.python.**
+-keep public class com.undcover.freedom.pyramid.** { *; }
+-dontwarn com.undcover.freedom.pyramid.**
+-keep public class com.chaquo.python.** { *; }
+-dontwarn com.chaquo.python.**
 
 #############################################
 #
@@ -300,4 +295,3 @@
 -dontwarn org.joda.time.format.ISODateTimeFormat
 -dontwarn org.kxml2.io.KXmlParser
 -dontwarn org.xmlpull.mxp1.MXParser
-

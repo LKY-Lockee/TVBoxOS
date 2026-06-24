@@ -34,6 +34,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.util.UnstableApi;
 import androidx.recyclerview.widget.DiffUtil;
 
 import com.github.catvod.crawler.Spider;
@@ -272,11 +273,13 @@ public class PlayFragment extends BaseLazyFragment {
                 }
             }
 
+            @UnstableApi
             @Override
             public void selectAudioTrack() {
                 selectMyAudioTrack();
             }
 
+            @UnstableApi
             @Override
             public void prepared() {
                 initSubtitleView();
@@ -390,6 +393,7 @@ public class PlayFragment extends BaseLazyFragment {
         }
     }
 
+    @UnstableApi
     void selectMyAudioTrack() {
         AbstractPlayer mediaPlayer = mVideoView.getMediaPlayer();
         TrackInfo trackInfo = null;
@@ -615,6 +619,7 @@ public class PlayFragment extends BaseLazyFragment {
         });
     }
 
+    @UnstableApi
     private void initSubtitleView() {
         TrackInfo trackInfo = null;
         AbstractPlayer mediaPlayer = mVideoView.getMediaPlayer();

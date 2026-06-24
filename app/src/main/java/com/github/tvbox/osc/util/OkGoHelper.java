@@ -3,6 +3,7 @@ package com.github.tvbox.osc.util;
 import android.graphics.Bitmap;
 
 import androidx.annotation.NonNull;
+import androidx.media3.common.util.UnstableApi;
 
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
@@ -38,6 +39,7 @@ import okhttp3.Dns;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.dnsoverhttps.DnsOverHttps;
+import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import xyz.doikki.videoplayer.exo.ExoMediaSourceHelper;
 
 
@@ -57,6 +59,7 @@ public class OkGoHelper {
     static OkHttpClient defaultClient = null;
     static OkHttpClient noRedirectClient = null;
 
+    @UnstableApi
     static void initExoOkHttpClient() {
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor("OkExoPlayer");
@@ -85,7 +88,8 @@ public class OkGoHelper {
         builder.dns(new CustomDns(dnsOverHttps));
         ItvClient = builder.build();
 
-        ExoMediaSourceHelper.getInstance(App.getInstance()).setOkClient(ItvClient);
+        ExoMediaSourceHelper.getInstance(App.getInstance())
+                .setHttpDataSourceFactory(new OkHttpDataSource.Factory(ItvClient));
     }
 
     public static String getDohUrl(int type) {

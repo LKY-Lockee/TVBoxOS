@@ -9,7 +9,16 @@ import ujson
 from pyquery import PyQuery as pq
 from urllib.parse import urljoin
 import re
-from jsonpath import jsonpath
+from jsonpath_ng import parse
+
+def jsonpath(obj, path):
+    try:
+        matches = parse(path).find(obj)
+        if not matches:
+            return False
+        return [m.value for m in matches]
+    except Exception:
+        return False
 
 PARSE_CACHE = True  # 解析缓存
 NOADD_INDEX = ':eq|:lt|:gt|:first|:last|^body$|^#'  # 不自动加eq下标索引
@@ -149,7 +158,7 @@ class jsoup:
             ret = self.parseOneRule(doc, nparse, ret)
             if not ret:  # 可能循环取值后ret 对应eq取完无值了，pdfa直接返回空列表
                 return []
-        res = [item.outerHtml() for item in ret.items()]
+        res = [item.outer_html() for item in ret.items()]
         return res
 
     def pdfh(self, html, parse: str, base_url: str = ''):
