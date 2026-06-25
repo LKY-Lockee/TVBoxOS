@@ -275,7 +275,7 @@ public class DetailActivity extends BaseActivity {
             //保存历史
             insertVod(firstSourceKey, vodInfo);
             bundle.putString("sourceKey", sourceKey);
-            App.getInstance().setVodInfo(vodInfo);
+            App.getInstance().vodInfo = vodInfo;
             if (previewVodInfo == null) {
                 try {
                     ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -294,7 +294,7 @@ public class DetailActivity extends BaseActivity {
                 previewVodInfo.playFlag = vodInfo.playFlag;
                 previewVodInfo.playIndex = vodInfo.playIndex;
                 previewVodInfo.seriesMap = vodInfo.seriesMap;
-                App.getInstance().setVodInfo(previewVodInfo);
+                App.getInstance().vodInfo = previewVodInfo;
             }
             playFragment.setData(bundle);
         }

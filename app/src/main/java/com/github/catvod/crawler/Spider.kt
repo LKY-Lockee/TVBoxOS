@@ -1,147 +1,110 @@
-package com.github.catvod.crawler;
+package com.github.catvod.crawler
 
-import android.content.Context;
+import android.content.*
+import com.github.tvbox.osc.util.*
+import okhttp3.*
+import org.json.*
 
-import com.github.tvbox.osc.util.OkGoHelper;
+open class Spider {
+	protected var mContext: Context? = null
 
-import org.json.JSONObject;
+	open fun init(context: Context) {
+		mContext = context
+	}
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+	open fun init(context: Context, extend: String?) {
+		init(context)
+	}
 
-import okhttp3.Dns;
+	/**
+	 * 首页数据内容
+	 *
+	 * @param filter 是否开启筛选
+	 */
+	open fun homeContent(filter: Boolean): String {
+		return ""
+	}
 
-public class Spider {
+	/**
+	 * 首页最近更新数据 如果上面的homeContent中不包含首页最近更新视频的数据 可以使用这个接口返回
+	 */
+	open fun homeVideoContent(): String {
+		return ""
+	}
 
-    public static JSONObject empty = new JSONObject();
+	/**
+	 * 分类数据
+	 */
+	open fun categoryContent(tid: String?, pg: String?, filter: Boolean, extend: Map<String, String>?): String {
+		return ""
+	}
 
-    protected static Context mContext;
+	/**
+	 * 详情数据
+	 */
+	open fun detailContent(ids: List<String>?): String {
+		return ""
+	}
 
-    public static Dns safeDns() {
-        return OkGoHelper.dnsOverHttps;
-    }
+	/**
+	 * 搜索数据内容
+	 */
+	open fun searchContent(key: String?, quick: Boolean): String {
+		return ""
+	}
 
-    public void init(Context context) {
-        mContext = context;
-    }
+	/**
+	 * 播放信息
+	 */
+	open fun playerContent(flag: String?, id: String?, vipFlags: List<String>?): String {
+		return ""
+	}
 
-    public void init(Context context, String extend) {
-        init(context);
-    }
+	/**
+	 * 直播list
+	 */
+	open fun liveContent(url: String?): String {
+		return ""
+	}
 
-    /**
-     * 首页数据内容
-     *
-     * @param filter 是否开启筛选
-     * @return
-     */
-    public String homeContent(boolean filter) {
-        return "";
-    }
+	/**
+	 * webview解析时使用 可自定义判断当前加载的 url 是否是视频
+	 */
+	open fun isVideoFormat(url: String?): Boolean {
+		return false
+	}
 
-    /**
-     * 首页最近更新数据 如果上面的homeContent中不包含首页最近更新视频的数据 可以使用这个接口返回
-     *
-     * @return
-     */
-    public String homeVideoContent() {
-        return "";
-    }
+	/**
+	 * 是否手动检测webview中加载的url
+	 */
+	open fun manualVideoCheck(): Boolean {
+		return false
+	}
 
-    /**
-     * 分类数据
-     *
-     * @param tid
-     * @param pg
-     * @param filter
-     * @param extend
-     * @return
-     */
-    public String categoryContent(String tid, String pg, boolean filter, HashMap<String, String> extend) {
-        return "";
-    }
+	/**
+	 * 取消请求tag
+	 */
+	open fun cancelByTag() {
+	}
 
-    /**
-     * 详情数据
-     *
-     * @param ids
-     * @return
-     */
-    public String detailContent(List<String> ids) {
-        return "";
-    }
+	/**
+	 * 销毁
+	 */
+	open fun destroy() {
+	}
 
-    /**
-     * 搜索数据内容
-     *
-     * @param key
-     * @param quick
-     * @return
-     */
-    public String searchContent(String key, boolean quick) {
-        return "";
-    }
+	/**
+	 * 爬虫代理
+	 */
+	open fun proxyLocal(params: Map<String, String>?): Array<Any?> {
+		return emptyArray()
+	}
 
-    /**
-     * 播放信息
-     *
-     * @param flag
-     * @param id
-     * @return
-     */
-    public String playerContent(String flag, String id, List<String> vipFlags) {
-        return "";
-    }
+	companion object {
+		var empty: JSONObject = JSONObject()
 
-    /**
-     * webview解析时使用 可自定义判断当前加载的 url 是否是视频
-     *
-     * @param url
-     * @return
-     */
-    public boolean isVideoFormat(String url) {
-        return false;
-    }
-
-    /**
-     * 是否手动检测webview中加载的url
-     *
-     * @return
-     */
-    public boolean manualVideoCheck() {
-        return false;
-    }
-
-    /**
-     * 直播list
-     *
-     * @return
-     */
-    public String liveContent(String url) {
-        return "";
-    }
-
-    /**
-     * 取消请求tag
-     */
-    public void cancelByTag() {
-
-    }
-
-    /**
-     * 销毁
-     */
-    public void destroy() {
-    }
-
-    /**
-     * 爬虫代理
-     *
-     * @param params
-     * @return
-     */
-    public Object[] proxyLocal(Map<String, String> params) {
-        return null;
-    }
+		fun safeDns(): Dns? {
+			return OkGoHelper.dnsOverHttps
+		}
+	}
 }

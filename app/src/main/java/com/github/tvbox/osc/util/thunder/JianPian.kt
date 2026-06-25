@@ -1,57 +1,54 @@
-package com.github.tvbox.osc.util.thunder;
+package com.github.tvbox.osc.util.thunder
 
-import android.net.Uri;
-import android.text.TextUtils;
+import android.text.*
+import androidx.core.net.*
+import com.github.tvbox.osc.base.*
+import com.github.tvbox.osc.util.*
+import com.p2p.*
+import java.io.*
+import java.net.*
 
-import com.github.tvbox.osc.base.App;
-import com.github.tvbox.osc.util.LocalIPAddress;
-import com.p2p.P2PClass;
+object JianPian {
+	fun jpUrlDec(url: String?): String {
+		val p2p = App.getP2P()
+		if (p2p != null) {
+			try {
+				val decode = URLDecoder.decode(url, "UTF-8")
+				val split = decode.split("\\|".toRegex()).filter { it.isNotEmpty() }
+				var replace = split.firstOrNull()?.replace("xg://", "ftp://") ?: return ""
+				if (replace.contains("xgplay://")) {
+					replace = replace.replace("xgplay://", "ftp://")
+				}
+				if (!TextUtils.isEmpty(App.burl)) {
+					p2p.P2Pdoxpause(App.burl?.toByteArray(charset("GBK")))
+					p2p.P2Pdoxdel(App.burl?.toByteArray(charset("GBK")))
+				}
+				App.burl = replace
+				p2p.P2Pdoxstart(replace.toByteArray(charset("GBK")))
+				p2p.P2Pdoxadd(replace.toByteArray(charset("GBK")))
+				val segment = replace.toUri().lastPathSegment ?: return ""
+				return "http://${LocalIPAddress.getIP(App.instance)}:${P2PClass.port}/${URLEncoder.encode(segment, "GBK")}"
+			} catch (e: Exception) {
+				return e.localizedMessage ?: ""
+			}
+		}
+		return ""
+	}
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
+	fun finish() {
+		val p2p = App.getP2P()
+		if (!TextUtils.isEmpty(App.burl) && p2p != null) {
+			try {
+				p2p.P2Pdoxpause(App.burl?.toByteArray(charset("GBK")))
+				p2p.P2Pdoxdel(App.burl?.toByteArray(charset("GBK")))
+				App.burl = ""
+			} catch (e: UnsupportedEncodingException) {
+				e.printStackTrace()
+			}
+		}
+	}
 
-
-public class Jianpian {
-
-    public static String JPUrlDec(String url) {
-        if (App.getp2p() != null) {
-            try {
-                String decode = URLDecoder.decode(url, "UTF-8");
-                String[] split = decode.split("\\|");
-                String replace = split[0].replace("xg://", "ftp://");
-                if (replace.contains("xgplay://")) {
-                    replace = split[0].replace("xgplay://", "ftp://");
-                }
-                if (!TextUtils.isEmpty(App.burl)) {
-                    App.getp2p().P2Pdoxpause(App.burl.getBytes("GBK"));
-                    App.getp2p().P2Pdoxdel(App.burl.getBytes("GBK"));
-                }
-                App.burl = replace;
-                App.getp2p().P2Pdoxstart(replace.getBytes("GBK"));
-                App.getp2p().P2Pdoxadd(replace.getBytes("GBK"));
-                return "http://" + LocalIPAddress.getIP(App.getInstance()) + ":" + P2PClass.port + "/" + URLEncoder.encode(Uri.parse(replace).getLastPathSegment(), "GBK");
-            } catch (Exception e) {
-                return e.getLocalizedMessage();
-            }
-        } else {
-            return "";
-        }
-    }
-
-    public static void finish() {
-        if (!TextUtils.isEmpty(App.burl) && App.getp2p() != null) {
-            try {
-                App.getp2p().P2Pdoxpause(App.burl.getBytes("GBK"));
-                App.getp2p().P2Pdoxdel(App.burl.getBytes("GBK"));
-                App.burl = "";
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public static Boolean isJpUrl(String url) {
-        return url.startsWith("tvbox-xg:") || (Thunder.isFtp(url) && url.contains("gbl.114s"));
-    }
+	fun isJpUrl(url: String): Boolean {
+		return url.startsWith("tvbox-xg:") || (Thunder.isFtp(url) && url.contains("gbl.114s"))
+	}
 }

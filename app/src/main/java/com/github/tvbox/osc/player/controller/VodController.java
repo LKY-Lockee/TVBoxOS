@@ -311,7 +311,7 @@ public class VodController extends BaseController {
             hideBottom();
         });
         mGridParseView.setAdapter(parseAdapter);
-        parseAdapter.setNewData(ApiConfig.get().getParseBeanList());
+        parseAdapter.setNewData(ApiConfig.get().parseBeanList);
 
         mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -1329,7 +1329,7 @@ public class VodController extends BaseController {
     public void stopOther() {
         Thunder.stop(false);//停止磁力下载
         Jianpian.finish();//停止p2p下载
-        App.getInstance().setDashData(null);
+        App.getInstance().dashData = null;
     }
 
     public interface VodControlListener {

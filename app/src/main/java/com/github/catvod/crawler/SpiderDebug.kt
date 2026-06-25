@@ -1,23 +1,17 @@
-package com.github.catvod.crawler;
+package com.github.catvod.crawler
 
-public class SpiderDebug {
-    public static void log(Throwable th) {
-        try {
-            android.util.Log.d("SpiderLog", th.getMessage(), th);
-        } catch (Throwable ignored) {
+import android.util.*
 
-        }
-    }
+object SpiderDebug {
+	fun log(th: Throwable) {
+		Log.d("SpiderLog", th.message, th)
+	}
 
-    public static void log(String msg) {
-        try {
-            android.util.Log.d("SpiderLog", msg);
-        } catch (Throwable ignored) {
+	fun log(msg: String) {
+		Log.d("SpiderLog", msg)
+	}
 
-        }
-    }
-
-    public static String ec(int i) {
-        return "";
-    }
+	fun ec(i: Int): String {
+		return ""
+	}
 }

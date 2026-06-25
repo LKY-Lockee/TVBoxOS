@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.http.SslError;
@@ -420,8 +419,10 @@ public class PlayFragment extends BaseLazyFragment {
                     }
                     mediaPlayer.pause();
                     long progress = mediaPlayer.getCurrentPosition();//保存当前进度，ijk 切换轨道 会有快进几秒
-                    if (mediaPlayer instanceof IjkMediaPlayer) ((IjkMediaPlayer) mediaPlayer).setTrack(value.index, progressKey);
-                    if (mediaPlayer instanceof ExoPlayer) ((ExoPlayer) mediaPlayer).setTrack(value.groupIndex, value.index, progressKey);
+                    if (mediaPlayer instanceof IjkMediaPlayer)
+                        ((IjkMediaPlayer) mediaPlayer).setTrack(value.index, progressKey);
+                    if (mediaPlayer instanceof ExoPlayer)
+                        ((ExoPlayer) mediaPlayer).setTrack(value.groupIndex, value.index, progressKey);
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -549,7 +550,8 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     void playUrl(String url, HashMap<String, String> headers) {
-        if (!url.startsWith("data:application")) EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, url));//更新播放地址
+        if (!url.startsWith("data:application"))
+            EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_REFRESH, url));//更新播放地址
         if (!Hawk.get(HawkConfig.M3U8_PURIFY, false)) {
             goPlayUrl(url, headers);
             return;
@@ -598,7 +600,7 @@ public class PlayFragment extends BaseLazyFragment {
                         hideTip();
                         if (url.startsWith("data:application/dash+xml;base64,")) {
                             PlayerHelper.updateCfg(mVideoView, mVodPlayerCfg, 2);
-                            App.getInstance().setDashData(url.split("base64,")[1]);
+                            App.getInstance().dashData = url.split("base64,")[1];
                             url = ControlManager.get().getAddress(true) + "dash/proxy.mpd";
                         } else if (url.contains(".mpd") || url.contains("type=mpd")) {
                             PlayerHelper.updateCfg(mVideoView, mVodPlayerCfg, 2);
@@ -671,7 +673,8 @@ public class PlayFragment extends BaseLazyFragment {
                                 }
                             }
                         }
-                        if (!hasCh) ((IjkMediaPlayer) (mVideoView.getMediaPlayer())).setTrack(subtitleTrackList.get(0).index);
+                        if (!hasCh)
+                            ((IjkMediaPlayer) (mVideoView.getMediaPlayer())).setTrack(subtitleTrackList.get(0).index);
                     }
                 }
             }
@@ -771,7 +774,7 @@ public class PlayFragment extends BaseLazyFragment {
 
     public void setData(Bundle bundle) {
 //        mVodInfo = (VodInfo) bundle.getSerializable("VodInfo");
-        mVodInfo = App.getInstance().getVodInfo();
+        mVodInfo = App.getInstance().vodInfo;
         sourceKey = bundle.getString("sourceKey");
         sourceBean = ApiConfig.get().getSource(sourceKey);
         initPlayerCfg();
@@ -1072,7 +1075,7 @@ public class PlayFragment extends BaseLazyFragment {
                 parseBean.setUrl(playUrl.substring(5));
             } else if (playUrl.startsWith("parse:")) {
                 String parseRedirect = playUrl.substring(6);
-                for (ParseBean pb : ApiConfig.get().getParseBeanList()) {
+                for (ParseBean pb : ApiConfig.get().parseBeanList) {
                     if (pb.getName().equals(parseRedirect)) {
                         parseBean = pb;
                         break;
@@ -1235,7 +1238,7 @@ public class PlayFragment extends BaseLazyFragment {
             setTip("正在解析播放地址", true, false);
             parseThreadPool = Executors.newSingleThreadExecutor();
             LinkedHashMap<String, String> jxs = new LinkedHashMap<>();
-            for (ParseBean p : ApiConfig.get().getParseBeanList()) {
+            for (ParseBean p : ApiConfig.get().parseBeanList) {
                 if (p.getType() == 1) {
                     jxs.put(p.getName(), p.mixUrl());
                 }
@@ -1294,7 +1297,7 @@ public class PlayFragment extends BaseLazyFragment {
         LinkedHashMap<String, HashMap<String, String>> jxs = new LinkedHashMap<>();
         LinkedHashMap<String, String> json_jxs = new LinkedHashMap<>();
         String extendName = "";
-        for (ParseBean p : ApiConfig.get().getParseBeanList()) {
+        for (ParseBean p : ApiConfig.get().parseBeanList) {
             HashMap<String, String> data = new HashMap<String, String>();
             data.put("url", p.getUrl());
             if (p.getUrl().equals(pb.getUrl())) {
@@ -1638,7 +1641,8 @@ public class PlayFragment extends BaseLazyFragment {
                         url = loadFoundVideoUrls.poll();
                         mHandler.removeMessages(100);
                         String cookie = CookieManager.getInstance().getCookie(url);
-                        if (!TextUtils.isEmpty(cookie)) headers.put("Cookie", " " + cookie);//携带cookie
+                        if (!TextUtils.isEmpty(cookie))
+                            headers.put("Cookie", " " + cookie);//携带cookie
                         playUrl(url, headers);
                     }
                 }

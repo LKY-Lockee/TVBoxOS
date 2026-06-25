@@ -226,7 +226,7 @@ public class RemoteServer extends NanoHTTPD {
 //                    com.github.tvbox.osc.util.LOG.i("echo-m3u8:"+m3u8Content);
                     return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, NanoHTTPD.MIME_PLAINTEXT, m3u8Content);
                 } else if (fileName.startsWith("/dash/")) {
-                    String dashData = App.getInstance().getDashData();
+                    String dashData = App.getInstance().dashData;
                     try {
                         String data = new String(Base64.decode(dashData, Base64.DEFAULT | Base64.NO_WRAP), StandardCharsets.UTF_8);
                         return NanoHTTPD.newFixedLengthResponse(

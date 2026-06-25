@@ -1177,7 +1177,8 @@ public class LivePlayActivity extends BaseActivity {
                             }
                             matcher.appendTail(result);
                             LOG.i("echo-shiyiurl:" + shiyiUrl);
-                            if (shiyiUrl.endsWith("&")) shiyiUrl = shiyiUrl.substring(0, shiyiUrl.length() - 1);
+                            if (shiyiUrl.endsWith("&"))
+                                shiyiUrl = shiyiUrl.substring(0, shiyiUrl.length() - 1);
                             shiyiUrl += result.toString();
                         } else {
                             if (shiyiUrl.indexOf("?") <= 0) {
@@ -1283,7 +1284,8 @@ public class LivePlayActivity extends BaseActivity {
                             }
                             matcher.appendTail(result);
                             LOG.i("echo-shiyiurl:" + shiyiUrl);
-                            if (shiyiUrl.endsWith("&")) shiyiUrl = shiyiUrl.substring(0, shiyiUrl.length() - 1);
+                            if (shiyiUrl.endsWith("&"))
+                                shiyiUrl = shiyiUrl.substring(0, shiyiUrl.length() - 1);
                             shiyiUrl += result.toString();
                         } else {
                             if (shiyiUrl.indexOf("?") <= 0) {
@@ -1297,7 +1299,8 @@ public class LivePlayActivity extends BaseActivity {
 
                         LOG.i("echo-回看地址playUrl :" + shiyiUrl);
                         playUrl = shiyiUrl;
-                        if (liveWebHeader() != null) LOG.i("echo-liveWebHeader :" + liveWebHeader().toString());
+                        if (liveWebHeader() != null)
+                            LOG.i("echo-liveWebHeader :" + liveWebHeader().toString());
                         mVideoView.setUrl(playUrl, liveWebHeader());
                         mVideoView.start();
                         epgListAdapter.setShiyiSelection(position, true, timeFormat.format(date));
@@ -1934,7 +1937,7 @@ public class LivePlayActivity extends BaseActivity {
     }
 
     private void initLiveSettingGroupList() {
-        liveSettingGroupList = ApiConfig.get().getLiveSettingGroupList();
+        liveSettingGroupList = ApiConfig.get().liveSettingGroupList;
         liveSettingGroupList.get(3).getLiveSettingItems().get(Hawk.get(HawkConfig.LIVE_CONNECT_TIMEOUT, 1)).setItemSelected(true);
         liveSettingGroupList.get(4).getLiveSettingItems().get(0).setItemSelected(Hawk.get(HawkConfig.LIVE_SHOW_TIME, false));
         liveSettingGroupList.get(4).getLiveSettingItems().get(1).setItemSelected(Hawk.get(HawkConfig.LIVE_SHOW_NET_SPEED, false));

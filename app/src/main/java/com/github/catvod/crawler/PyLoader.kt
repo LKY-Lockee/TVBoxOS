@@ -1,96 +1,80 @@
-// 文件: app/src/python/java/com/github/catvod/crawler/python/PyLoader.java
-package com.github.catvod.crawler;
+package com.github.catvod.crawler
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.util.Log;
+import android.*
+import android.content.pm.*
+import android.util.*
+import androidx.core.content.*
+import com.github.catvod.crawler.python.*
+import com.github.tvbox.osc.base.*
+import com.github.tvbox.osc.util.*
+import com.undcover.freedom.pyramid.*
+import java.util.concurrent.*
 
-import androidx.core.content.ContextCompat;
+class PyLoader : IPyLoader {
+	private val pythonLoader: PythonLoader = PythonLoader.instance.setApplication(App.instance)
+	private val spiders = ConcurrentHashMap<String, Spider>()
 
-import com.github.catvod.crawler.python.IPyLoader;
-import com.github.tvbox.osc.base.App;
-import com.github.tvbox.osc.util.LOG;
-import com.github.tvbox.osc.util.MD5;
-import com.undcover.freedom.pyramid.PythonLoader;
-import com.undcover.freedom.pyramid.PythonSpider;
+	/**
+	 * 记录上次的配置
+	 */
+	private var lastConfig: String? = null
+	private var recentPyApi: String? = null
 
-import java.io.UnsupportedEncodingException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+	override fun clear() {
+		spiders.clear()
+	}
 
-public class pyLoader implements IPyLoader {
-    private final PythonLoader pythonLoader;
-    private final ConcurrentHashMap<String, Spider> spiders;
-    private String lastConfig = null; // 记录上次的配置
-    private String recentPyApi;
+	override fun setConfig(jsonStr: String?) {
+		if (jsonStr != null && jsonStr != lastConfig) {
+			Log.i("PyLoader", "echo-setConfig 初始化json ")
+			pythonLoader.setConfig(jsonStr)
+			lastConfig = jsonStr
+		}
+	}
 
-    public pyLoader() {
-        pythonLoader = PythonLoader.getInstance().setApplication(App.getInstance());
-        spiders = new ConcurrentHashMap<>();
-    }
+	override fun setRecentPyKey(pyApi: String?) {
+		recentPyApi = pyApi
+	}
 
-    @Override
-    public void clear() {
-        spiders.clear();
-    }
+	override fun getSpider(key: String, cls: String, ext: String): Spider {
+		if (spiders.containsKey(key)) {
+			Log.i("PyLoader", "echo-getSpider spider缓存: $key")
+			return spiders[key] ?: return SpiderNull()
+		}
+		try {
+			if (ContextCompat.checkSelfPermission(App.instance, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+				Log.i("PyLoader", "无存储权限，终止执行")
+				return SpiderNull()
+			}
+			Log.i("PyLoader", "echo-getSpider url: " + getPyUrl(cls, ext))
+			val sp: Spider = pythonLoader.getSpider(key, getPyUrl(cls, ext)) ?: return SpiderNull()
+			spiders[key] = sp
+			Log.i("PyLoader", "echo-getSpider 加载spider: $key")
+			return sp
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+		return SpiderNull()
+	}
 
-    @Override
-    public void setConfig(String jsonStr) {
-        if (jsonStr != null && !jsonStr.equals(lastConfig)) {
-            Log.i("PyLoader", "echo-setConfig 初始化json ");
-            pythonLoader.setConfig(jsonStr);
-            lastConfig = jsonStr;
-        }
-    }
+	override fun proxyInvoke(params: Map<String, String>): Array<Any?>? {
+		val pyApi = recentPyApi ?: return null
+		LOG.i("echo-recentPyApi$pyApi")
+		try {
+			val originalSpider = getSpider(MD5.string2MD5(pyApi), pyApi, "") as PythonSpider
+			return originalSpider.proxyLocal(params)
+		} catch (th: Throwable) {
+			LOG.i("echo-proxyInvoke_Throwable:---" + th.message)
+			th.printStackTrace()
+		}
+		return null
+	}
 
-    @Override
-    public void setRecentPyKey(String pyApi) {
-        recentPyApi = pyApi;
-    }
-
-    @Override
-    public Spider getSpider(String key, String cls, String ext) {
-        if (spiders.containsKey(key)) {
-            Log.i("PyLoader", "echo-getSpider spider缓存: " + key);
-            return spiders.get(key);
-        }
-        try {
-            if (ContextCompat.checkSelfPermission(App.getInstance(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                Log.i("PyLoader", "无存储权限，终止执行");
-                return new SpiderNull();
-            }
-            Log.i("PyLoader", "echo-getSpider url: " + getPyUrl(cls, ext));
-            Spider sp = pythonLoader.getSpider(key, getPyUrl(cls, ext));
-//            Log.i("PyLoader", "echo-getSpider homeContent: " + sp.homeContent(true));
-            spiders.put(key, sp);
-            Log.i("PyLoader", "echo-getSpider 加载spider: " + key);
-            return sp;
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-        return new SpiderNull();
-    }
-
-    @Override
-    public Object[] proxyInvoke(Map<String, String> params) {
-        if (recentPyApi == null) return null;
-        LOG.i("echo-recentPyApi" + recentPyApi);
-        try {
-            PythonSpider originalSpider = (PythonSpider) getSpider(MD5.string2MD5(recentPyApi), recentPyApi, "");
-            return originalSpider.proxyLocal(params);
-        } catch (Throwable th) {
-            LOG.i("echo-proxyInvoke_Throwable:---" + th.getMessage());
-            th.printStackTrace();
-        }
-        return null;
-    }
-
-    private String getPyUrl(String api, String ext) throws UnsupportedEncodingException {
-        StringBuilder urlBuilder = new StringBuilder(api);
-        if (!ext.isEmpty()) {
-//            ext= URLEncoder.encode(ext,"utf8");
-            urlBuilder.append(api.contains("?") ? "&" : "?").append("extend=").append(ext);
-        }
-        return urlBuilder.toString();
-    }
+	private fun getPyUrl(api: String, ext: String): String {
+		val urlBuilder = StringBuilder(api)
+		if (ext.isNotEmpty()) {
+			urlBuilder.append(if (api.contains("?")) "&" else "?").append("extend=").append(ext)
+		}
+		return urlBuilder.toString()
+	}
 }

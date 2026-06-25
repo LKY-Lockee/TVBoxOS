@@ -1,4 +1,3 @@
-package com.github.catvod.crawler;
+package com.github.catvod.crawler
 
-public class SpiderNull extends Spider {
-}
+class SpiderNull : Spider()

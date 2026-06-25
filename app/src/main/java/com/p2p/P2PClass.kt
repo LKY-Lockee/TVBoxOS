@@ -1,201 +1,180 @@
-package com.p2p;
+package com.p2p
 
-import java.io.File;
+import java.io.*
 
+class P2PClass(str: String) {
+	var path: String
+		private set
 
-public class P2PClass {
-    private static final String TAG = "P2PClass";
+	val version: String?
+		get() = doxgetVersion()
 
-    public static int port = 8087;
+	val touPingUrl: String?
+		get() = doxgetlocalAddress()
 
-    static {
-        System.loadLibrary("p2p");
-    }
+	val serviceAddress: String?
+		get() = doxgethostbynamehook("xx0.github.com")
 
-    public String path;
+	init {
+		path = "$str/jpali"
+		val file = File(path)
+		if (!file.exists()) {
+			file.mkdirs()
+		}
+		port = doxstarthttpd("TEST3E63BAAECDAA79BEAA91853490A69F08".toByteArray(), str.toByteArray())
+	}
 
-    public P2PClass(String str) {
-        path = str + "/jpali";
-        File file = new File(path);
-        if (!file.exists()) {
-            file.mkdirs();
-        }
-        port = doxstarthttpd("TEST3E63BAAECDAA79BEAA91853490A69F08".getBytes(), str.getBytes());
-        //Executors.newCachedThreadPool().execute(new init(str));
-    }
+	fun P2Pdoxstart(bArr: ByteArray?): Int {
+		return doxstart(bArr)
+	}
 
-    private native void XGFilmCloseFile(long j);
+	fun P2Pdoxdownload(bArr: ByteArray?): Int {
+		return doxdownload(bArr)
+	}
 
-    private native long XGFilmOpenFile(byte[] bArr);
+	fun P2Pdoxterminate(): Int {
+		return doxterminate()
+	}
 
-    private native int XGFilmReadFile(long j, long j2, int i, byte[] bArr);
+	fun P2Pdosetupload(i: Int): Int {
+		return dosetupload(i)
+	}
 
-    private native int dosetupload(int i);
+	fun P2Pdoxcheck(bArr: ByteArray?): Int {
+		return doxcheck(bArr)
+	}
 
-    private native void doxSetP2PPauseUpdate(int i);
+	fun P2Pdoxadd(bArr: ByteArray?): Int {
+		return doxadd(bArr)
+	}
 
-    private native int doxadd(byte[] bArr);
+	fun P2Pdoxpause(bArr: ByteArray?): Int {
+		return doxpause(bArr)
+	}
 
-    private native int doxcheck(byte[] bArr);
+	fun P2Pdoxdel(bArr: ByteArray?): Int {
+		return doxdel(bArr)
+	}
 
-    private native int doxdel(byte[] bArr);
+	fun P2PdoxdelAll(): Int {
+		return doxdelall()
+	}
 
-    private native int doxdelall();
+	fun P2Pgetspeed(i: Int): Long {
+		return getspeed(i)
+	}
 
-    private native int doxdownload(byte[] bArr);
+	fun P2Pgetdownsize(i: Int): Long {
+		return getdownsize(i)
+	}
 
-    private native int doxendhttpd();
+	fun P2Pgetfilesize(i: Int): Long {
+		return getfilesize(i)
+	}
 
-    private native String doxgetVersion();
+	fun P2Pgetpercent(): Int {
+		return getpercent()
+	}
 
-    private native String doxgethostbynamehook(String str);
+	fun P2Pgetlocalfilesize(bArr: ByteArray?): Long {
+		return getlocalfilesize(bArr)
+	}
 
-    private native String doxgetlocalAddress();
+	fun P2Pdosetduration(i: Int): Long {
+		return doxsetduration(i).toLong()
+	}
 
-    private native String doxgettaskstat(int i);
+	fun P2Pdoxstarthttpd(bArr: ByteArray?, bArr2: ByteArray?): Int {
+		return doxstarthttpd(bArr, bArr2)
+	}
 
-    private native int doxpause(byte[] bArr);
+	fun P2Pdoxsave(): Int {
+		return doxsave()
+	}
 
-    private native int doxsave();
+	fun P2Pdoxendhttpd(): Int {
+		return doxendhttpd()
+	}
 
-    private native int doxsetduration(int i);
+	fun xGFilmOpenFile(bArr: ByteArray?): Long {
+		return XGFilmOpenFile(bArr)
+	}
 
-    private native int doxstart(byte[] bArr);
+	fun xGFilmCloseFile(j: Long) {
+		XGFilmCloseFile(j)
+	}
 
-    private native int doxstarthttpd(byte[] bArr, byte[] bArr2);
+	fun xGFilmReadFile(j: Long, j2: Long, i: Int, bArr: ByteArray?): Int {
+		return XGFilmReadFile(j, j2, i, bArr)
+	}
 
-    private native int doxterminate();
+	fun setP2PPauseUpdate(i: Int) {
+		doxSetP2PPauseUpdate(i)
+	}
 
-    private native long getdownsize(int i);
+	fun P2Pdoxgettaskstat(i: Int): String? {
+		return doxgettaskstat(i)
+	}
 
-    private native long getfilesize(int i);
+	private external fun XGFilmCloseFile(j: Long)
 
-    private native long getlocalfilesize(byte[] bArr);
+	private external fun XGFilmOpenFile(bArr: ByteArray?): Long
 
-    private native int getpercent();
+	private external fun XGFilmReadFile(j: Long, j2: Long, i: Int, bArr: ByteArray?): Int
 
-    private native long getspeed(int i);
+	private external fun dosetupload(i: Int): Int
 
-    public int P2Pdoxstart(byte[] bArr) {
-        return doxstart(bArr);
-    }
+	private external fun doxSetP2PPauseUpdate(i: Int)
 
-    public int P2Pdoxdownload(byte[] bArr) {
-        return doxdownload(bArr);
-    }
+	private external fun doxadd(bArr: ByteArray?): Int
 
-    public int P2Pdoxterminate() {
-        return doxterminate();
-    }
+	private external fun doxcheck(bArr: ByteArray?): Int
 
-    public int P2Pdosetupload(int i) {
-        return dosetupload(i);
-    }
+	private external fun doxdel(bArr: ByteArray?): Int
 
-    public int P2Pdoxcheck(byte[] bArr) {
-        return doxcheck(bArr);
-    }
+	private external fun doxdelall(): Int
 
-    public int P2Pdoxadd(byte[] bArr) {
-        return doxadd(bArr);
-    }
+	private external fun doxdownload(bArr: ByteArray?): Int
 
-    public int P2Pdoxpause(byte[] bArr) {
-        return doxpause(bArr);
-    }
+	private external fun doxendhttpd(): Int
 
-    public int P2Pdoxdel(byte[] bArr) {
-        return doxdel(bArr);
-    }
+	private external fun doxgetVersion(): String?
 
-    public int P2PdoxdelAll() {
-        return doxdelall();
-    }
+	private external fun doxgethostbynamehook(str: String?): String?
 
-    public long P2Pgetspeed(int i) {
-        return getspeed(i);
-    }
+	private external fun doxgetlocalAddress(): String?
 
-    public long P2Pgetdownsize(int i) {
-        return getdownsize(i);
-    }
+	private external fun doxgettaskstat(i: Int): String?
 
-    public long P2Pgetfilesize(int i) {
-        return getfilesize(i);
-    }
+	private external fun doxpause(bArr: ByteArray?): Int
 
-    public int P2Pgetpercent() {
-        return getpercent();
-    }
+	private external fun doxsave(): Int
 
-    public long P2Pgetlocalfilesize(byte[] bArr) {
-        return getlocalfilesize(bArr);
-    }
+	private external fun doxsetduration(i: Int): Int
 
-    public long P2Pdosetduration(int i) {
-        return doxsetduration(i);
-    }
+	private external fun doxstart(bArr: ByteArray?): Int
 
-    public String getServiceAddress() {
-        return doxgethostbynamehook("xx0.github.com");
-    }
+	private external fun doxstarthttpd(bArr: ByteArray?, bArr2: ByteArray?): Int
 
-    public int P2Pdoxstarthttpd(byte[] bArr, byte[] bArr2) {
-        return doxstarthttpd(bArr, bArr2);
-    }
+	private external fun doxterminate(): Int
 
-    public int P2Pdoxsave() {
-        return doxsave();
-    }
+	private external fun getdownsize(i: Int): Long
 
-    public int P2Pdoxendhttpd() {
-        return doxendhttpd();
-    }
+	private external fun getfilesize(i: Int): Long
 
-    public String getVersion() {
-        return doxgetVersion();
-    }
+	private external fun getlocalfilesize(bArr: ByteArray?): Long
 
-    public long xGFilmOpenFile(byte[] bArr) {
-        return XGFilmOpenFile(bArr);
-    }
+	private external fun getpercent(): Int
 
-    public void xGFilmCloseFile(long j) {
-        XGFilmCloseFile(j);
-    }
+	private external fun getspeed(i: Int): Long
 
-    public int xGFilmReadFile(long j, long j2, int i, byte[] bArr) {
-        return XGFilmReadFile(j, j2, i, bArr);
-    }
+	companion object {
+		private const val TAG = "P2PClass"
 
-    public void setP2PPauseUpdate(int i) {
-        doxSetP2PPauseUpdate(i);
-    }
+		var port: Int = 8087
 
-    public String getTouPingUrl() {
-        return doxgetlocalAddress();
-    }
-
-    public String P2Pdoxgettaskstat(int i) {
-        return doxgettaskstat(i);
-    }
-
-    class init extends Thread {
-
-        final String CardPath;
-
-        init(String str) {
-            this.CardPath = str;
-        }
-
-        public void run() {
-            P2PClass p2PClass = P2PClass.this;
-            p2PClass.path = this.CardPath + "/jpali";
-            File file = new File(P2PClass.this.path);
-            if (!file.exists()) {
-                file.mkdirs();
-            }
-            P2PClass.port = P2PClass.this.doxstarthttpd("TEST3E63BAAECDAA79BEAA91853490A69F08".getBytes(), this.CardPath.getBytes());
-        }
-    }
+		init {
+			System.loadLibrary("p2p")
+		}
+	}
 }

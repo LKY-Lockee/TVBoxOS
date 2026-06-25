@@ -1,17 +1,15 @@
-package com.github.catvod.crawler.python;
+package com.github.catvod.crawler.python
 
-import com.github.catvod.crawler.Spider;
+import com.github.catvod.crawler.*
 
-import java.util.Map;
+interface IPyLoader {
+    fun clear()
 
-public interface IPyLoader {
-    void clear();
+	fun setConfig(jsonStr: String?)
 
-    void setConfig(String jsonStr);
+	fun setRecentPyKey(pyApi: String?)
 
-    void setRecentPyKey(String pyApi);
+	fun getSpider(key: String, cls: String, ext: String): Spider
 
-    Spider getSpider(String key, String cls, String ext);
-
-    Object[] proxyInvoke(Map<String, String> params);
+	fun proxyInvoke(params: Map<String, String>): Array<Any?>?
 }

@@ -1,246 +1,198 @@
-package com.undcover.freedom.pyramid;
+package com.undcover.freedom.pyramid
 
-import android.app.Application;
-import android.content.Context;
-import android.util.Base64;
+import android.app.*
+import com.chaquo.python.*
+import com.chaquo.python.android.*
+import com.github.catvod.crawler.*
+import com.github.tvbox.osc.util.*
+import com.github.tvbox.osc.util.urlhttp.*
+import com.github.tvbox.osc.util.urlhttp.OKCallBack.*
+import okhttp3.*
+import org.json.*
+import java.io.*
+import java.util.concurrent.*
 
-import com.chaquo.python.PyObject;
-import com.chaquo.python.Python;
-import com.chaquo.python.android.AndroidPlatform;
-import com.github.catvod.crawler.Spider;
-import com.github.catvod.crawler.SpiderNull;
+class PythonLoader {
+	var pyInstance: Python? = null
+	var androidPlatform: Python.Platform? = null
+	var port: Int = -1
+	var streamCallback: FileStreamCallback? = null
+	var stringCallback: FileStringCallback? = null
+	var cache: String = "/storage/emulated/0/plugin/"
+	lateinit var pyApp: PyObject
+	private val spiders = ConcurrentHashMap<String, Spider>()
+	private val siteMap = HashMap<String, JSONObject>()
+	private var app: Application? = null
 
-import com.github.tvbox.osc.util.OkGoHelper;
-import com.github.tvbox.osc.util.urlhttp.OKCallBack;
-import com.github.tvbox.osc.util.urlhttp.OkHttpUtil;
+	fun setConfig(config: String) {
+		try {
+			val configJo = JSONObject(config)
+			val siteList = configJo.getJSONArray("sites")
+			for (i in 0..<siteList.length()) {
+				val jo = siteList.getJSONObject(i)
+				val key = jo.optString("api")
+				if (key.isNotEmpty()) {
+					siteMap[key] = jo
+				}
+			}
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
+	}
 
+	fun setApplication(app: Application): PythonLoader {
+		this.app = app
+		setSdk()
+		if (pyInstance == null) {
+			if (!Python.isStarted()) {
+				val platform = AndroidPlatform(app)
+				androidPlatform = platform
+				Python.start(platform)
+			}
+			val instance = Python.getInstance()
+			pyInstance = instance
+			pyApp = instance.getModule("app")
+		}
+		return this
+	}
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+	fun setPluginConfig(config: String): PythonLoader {
+		this.cache = config
+		return this
+	}
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+	fun getUrlByApi(api: String?): String {
+		val jo = siteMap[api] ?: return ""
+		val key = jo.optString("key")
+		val url = jo.optString("ext")
+		return if (key.isNotEmpty() && url.isNotEmpty()) {
+			if (spiders.containsKey(key)) "" else url
+		} else {
+			""
+		}
+	}
 
-import okhttp3.Call;
-import okhttp3.Response;
+	fun getSpider(key: String, url: String?): Spider? {
+		val app = this.app ?: throw Exception("set application first")
+		if (spiders.containsKey(key)) {
+			PyLog.d("$key :缓存加载成功！")
+			return spiders[key]
+		}
 
-public class PythonLoader {
-    private static PythonLoader sInstance;
-    private final ConcurrentHashMap<String, Spider> spiders = new ConcurrentHashMap<>();
-    private final HashMap<String, JSONObject> siteMap;
-    Python pyInstance;
-    PyObject pyApp;
-    Python.Platform androidPlatform;
-    String cache = "/storage/emulated/0/plugin/";
-    int port = -1;
-    FileStreamCallback streamCallback;
-    FileStringCallback stringCallback;
-    private Application app;
+		// 使用ExecutorService来管理线程
+		val executor = Executors.newSingleThreadExecutor()
+		var future: Future<*>? = null
+		try {
+			val sp = PythonSpider(key, cache)
 
-    public PythonLoader() {
-        siteMap = new HashMap<>();
-    }
+			// 提交初始化任务
+			future = executor.submit {
+				try {
+					sp.init(app, url)
+				} catch (e: Exception) {
+					e.printStackTrace()
+				}
+			}
 
-    public static PythonLoader getInstance() {
-        if (sInstance == null) {
-            synchronized (PyToast.class) {
-                if (sInstance == null) {
-                    sInstance = new PythonLoader();
-                }
-            }
-        }
-        return sInstance;
-    }
+			// 等待线程完成，最多10秒
+			future.get(10, TimeUnit.SECONDS)
 
-    private void setSdk(Context context) {
-        int logLevel = PyLog.LEVEL_V;
-        PyLog.getInstance().setLogLevel(logLevel).setFilter(PyLog.FILTER_NW | PyLog.FILTER_LC);
-        PyLog.TagConstant.TAG_APP = "PythonLoader";
+			// 任务成功，缓存并返回
+			spiders[key] = sp
+			return sp
+		} catch (_: TimeoutException) {
+			PyLog.e("echo-init方法执行超时")
+		} catch (_: ExecutionException) {
+			PyLog.e("echo-init:ExecutionException")
+		} catch (_: InterruptedException) {
+			PyLog.e("echo-init:InterruptedException")
+		} finally {
+			if (future != null && !future.isDone) {
+				future.cancel(true)
+			}
+			executor.shutdown()
+		}
+		return SpiderNull()
+	}
 
-        PyToast.init(context);
-    }
+	fun getPort() {
+		if (port <= 0) {
+			for (i in 9978..9999) {
+				if (OkHttpUtil.string("http://127.0.0.1:$i/proxy?do=ck&api=python", null) == "ok") {
+					port = i
+					return
+				}
+			}
+		}
+	}
 
-    public void setConfig(String config) {
-        try {
-            JSONObject configJo = new JSONObject(config);
-            JSONArray siteList = configJo.getJSONArray("sites");
-            for (int i = 0; i < siteList.length(); i++) {
-                JSONObject jo = siteList.getJSONObject(i);
-                String key = jo.optString("api");
-                siteMap.put(key, jo);
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
+	fun localProxyUrl(): String {
+		getPort()
+		return "http://127.0.0.1:$port/proxy"
+	}
 
-    public PythonLoader setApplication(Application app) {
-        this.app = app;
-        setSdk(this.app);
-        if (pyInstance == null) {
-            if (!Python.isStarted()) {
-                androidPlatform = new AndroidPlatform(app);
-                Python.start(androidPlatform);
-            }
-            pyInstance = Python.getInstance();
-            pyApp = pyInstance.getModule("app");
-        }
-        return this;
-    }
+	fun str2map(header: String?): Map<String, String> {
+		val map = mutableMapOf<String, String>()
+		if (header.isNullOrEmpty()) return map
+		try {
+			val jo = JSONObject(header)
+			val it = jo.keys()
+			while (it.hasNext()) {
+				val key = it.next()
+				val value = jo.optString(key)
+				map[key] = value
+			}
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
+		return map
+	}
 
-    public PythonLoader setPluginConfig(String config) {
-        this.cache = config;
-        return this;
-    }
+	fun getFileStream(url: String?, param: String?, header: String?): InputStream {
+		return streamCallback?.get(url, str2map(param), str2map(header))
+			?: run {
+				val callBack: OKCallBackDefault = object : OKCallBackDefault() {
+					override fun onFailure(call: Call?, e: Exception?) {
+					}
 
-    public String getUrlByApi(String api) {
-        String key = "";
-        String url = "";
-        if (siteMap.containsKey(api)) {
-            JSONObject jo = siteMap.get(api);
-            key = jo.optString("key");
-            url = jo.optString("ext");
-        }
-        if (!key.isEmpty() && !url.isEmpty()) {
-            if (spiders.containsKey(key)) {
-                return "";
-            } else {
-                return url;
-            }
-        }
-        return "";
-    }
+					override fun onResponse(response: Response?) {
+					}
+				}
+				OkHttpUtil.get(OkGoHelper.getDefaultClient(), url, str2map(param), str2map(header), callBack)
+				callBack.result.body.byteStream()
+			}
+	}
 
-    public Spider getSpider(String key, String url) throws Exception {
-        if (app == null) throw new Exception("set application first");
-        if (spiders.containsKey(key)) {
-            PyLog.d(key + " :缓存加载成功！");
-            return spiders.get(key);
-        }
+	fun getFileString(url: String?, header: String?): String? {
+		return stringCallback?.get(url, str2map(header))
+			?: OkHttpUtil.string(url, str2map(header))
+	}
 
-        // 使用ExecutorService来管理线程
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<?> future = null;
-        try {
-            PythonSpider sp = new PythonSpider(key, cache);
+	fun setFileStreamCallback(callback: FileStreamCallback?): PythonLoader {
+		streamCallback = callback
+		return this
+	}
 
-            // 提交初始化任务
-            future = executor.submit(() -> {
-                try {
-                    sp.init(app, url);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+	fun setFileStringCallback(callback: FileStringCallback?): PythonLoader {
+		stringCallback = callback
+		return this
+	}
 
-            // 等待线程完成，最多10秒
-            future.get(10, TimeUnit.SECONDS);
+	private fun setSdk() {
+		PyLog.instance.setLogLevel(PyLog.LEVEL_V).setFilter(PyLog.FILTER_NW or PyLog.FILTER_LC)
+	}
 
-            // 任务成功，缓存并返回
-            spiders.put(key, sp);
-            return sp;
-        } catch (TimeoutException e) {
-            PyLog.e("echo-init方法执行超时");
-            // 超时了，不做中断，返回空的Spider
-        } catch (ExecutionException | InterruptedException e) {
-            PyLog.e("echo-init:ExecutionException|InterruptedException");
-        } finally {
-            // 关闭线程池
-            if (future != null && !future.isDone()) {
-                future.cancel(true);  // 取消任务
-            }
-            executor.shutdown();  // 关闭线程池
-        }
-        return new SpiderNull();
-    }
+	interface FileStreamCallback {
+		fun get(url: String?, paramsMap: Map<String, String>?, headerMap: Map<String, String>?): InputStream?
+	}
 
-    public void getPort() {
-        if (port <= 0) {
-            for (int i = 9978; i < 10000; i++) {
-                if (OkHttpUtil.string("http://127.0.0.1:" + i + "/proxy?do=ck&api=python", null).equals("ok")) {
-                    port = i;
-                    return;
-                }
-            }
-        }
-    }
+	interface FileStringCallback {
+		fun get(url: String?, headerMap: Map<String, String>?): String?
+	}
 
-    public String localProxyUrl() {
-        getPort();
-        return "http://127.0.0.1:" + port + "/proxy";
-    }
-
-    public Map<String, String> str2map(String header) {
-        Map<String, String> map = new HashMap<>();
-        if (header == null || header.isEmpty())
-            return map;
-        try {
-            JSONObject jo = new JSONObject(header);
-            for (Iterator<String> it = jo.keys(); it.hasNext(); ) {
-                String key = it.next();
-                String value = jo.optString(key);
-                map.put(key, value);
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return map;
-    }
-
-    public InputStream getFileStream(String url, String param, String header) {
-        if (streamCallback != null) {
-            return streamCallback.get(url, str2map(param), str2map(header));
-        } else {
-            OKCallBack.OKCallBackDefault callBack = new OKCallBack.OKCallBackDefault() {
-                @Override
-                protected void onFailure(Call call, Exception e) {
-
-                }
-
-                @Override
-                protected void onResponse(Response response) {
-
-                }
-            };
-            OkHttpUtil.get(OkGoHelper.getDefaultClient(), url, str2map(param), str2map(header), callBack);
-            return callBack.getResult().body().byteStream();
-        }
-    }
-
-    public String getFileString(String url, String header) {
-        if (stringCallback != null) {
-            return stringCallback.get(url, str2map(header));
-        } else {
-            return OkHttpUtil.string(url, str2map(header));
-        }
-    }
-
-    public PythonLoader setFileStreamCallback(FileStreamCallback callback) {
-        streamCallback = callback;
-        return this;
-    }
-
-    public PythonLoader setFileStringCallback(FileStringCallback callback) {
-        stringCallback = callback;
-        return this;
-    }
-
-    public interface FileStreamCallback {
-        InputStream get(String url, Map<String, String> paramsMap, Map<String, String> headerMap);
-    }
-
-    public interface FileStringCallback {
-        String get(String url, Map<String, String> headerMap);
-    }
+	companion object {
+		val instance: PythonLoader by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+			PythonLoader()
+		}
+	}
 }
