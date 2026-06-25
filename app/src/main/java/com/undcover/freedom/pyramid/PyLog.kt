@@ -5,7 +5,6 @@ import android.util.Log;
 /**
  * Created by UndCover on 16/12/15.
  */
-
 public class PyLog {
     public final static int LEVEL_V = 5;
     public final static int LEVEL_D = 4;
