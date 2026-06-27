@@ -49,16 +49,16 @@ object CacheManager {
 
 	fun <T> delete(key: String, body: T) {
 		val cache = Cache(key, toByteArray(body))
-		AppDataManager.get().getCacheDao().delete(cache)
+		AppDataManager.get().cacheDao.delete(cache)
 	}
 
 	fun <T> save(key: String, body: T) {
 		val cache = Cache(key, toByteArray(body))
-		AppDataManager.get().getCacheDao().save(cache)
+		AppDataManager.get().cacheDao.save(cache)
 	}
 
 	fun getCache(key: String): Any? {
-		val cache = AppDataManager.get().getCacheDao().getCache(key)
+		val cache = AppDataManager.get().cacheDao.getCache(key)
 		if (cache != null && cache.data.isNotEmpty()) {
 			return toObject(cache.data)
 		}

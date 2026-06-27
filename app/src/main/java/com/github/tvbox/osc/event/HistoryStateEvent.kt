@@ -1,15 +1,11 @@
-package com.github.tvbox.osc.event;
+package com.github.tvbox.osc.event
 
 /**
  * @author pj567
- * @date :2020/12/21
- * @description:
+ * @date 2020/12/21
  */
-public class HistoryStateEvent {
-    public final static int TYPE_TOP = 0;
-    public final int type;
-
-    public HistoryStateEvent(int type) {
-        this.type = type;
-    }
+class HistoryStateEvent(val type: Int) {
+	companion object {
+		const val TYPE_TOP: Int = 0
+	}
 }

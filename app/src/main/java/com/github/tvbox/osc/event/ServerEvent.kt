@@ -1,23 +1,16 @@
-package com.github.tvbox.osc.event;
+package com.github.tvbox.osc.event
 
 /**
  * @author pj567
- * @date :2021/1/5
- * @description:
+ * @date 2021/1/5
  */
-public class ServerEvent {
-    public static final int SERVER_SUCCESS = 0;
-    public static final int SERVER_CONNECTION = 1;
-    public static final int SERVER_SEARCH = 2;
-    public final int type;
-    public Object obj;
-
-    public ServerEvent(int type) {
-        this.type = type;
-    }
-
-    public ServerEvent(int type, Object obj) {
-        this.type = type;
-        this.obj = obj;
-    }
+class ServerEvent(
+	val type: Int,
+	var obj: Any? = null
+) {
+	companion object {
+		const val SERVER_SUCCESS = 0
+		const val SERVER_CONNECTION = 1
+		const val SERVER_SEARCH = 2
+	}
 }

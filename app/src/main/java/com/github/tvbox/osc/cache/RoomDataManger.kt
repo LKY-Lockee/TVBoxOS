@@ -31,7 +31,7 @@ object RoomDataManger {
 	}
 
 	fun insertVodRecord(sourceKey: String, vodInfo: VodInfo) {
-		var record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodInfo.id)
+		var record = AppDataManager.get().vodRecordDao.getVodRecord(sourceKey, vodInfo.id)
 		if (record == null) {
 			record = VodRecord()
 		}
@@ -39,11 +39,11 @@ object RoomDataManger {
 		record.vodId = vodInfo.id
 		record.updateTime = System.currentTimeMillis()
 		record.dataJson = vodInfoGson.toJson(vodInfo)
-		AppDataManager.get().getVodRecordDao().insert(record)
+		AppDataManager.get().vodRecordDao.insert(record)
 	}
 
 	fun insertVodCollect(sourceKey: String, vodInfo: VodInfo) {
-		val existing = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodInfo.id)
+		val existing = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodInfo.id)
 		if (existing != null) {
 			return
 		}
@@ -53,37 +53,37 @@ object RoomDataManger {
 		record.updateTime = System.currentTimeMillis()
 		record.name = vodInfo.name.orEmpty()
 		record.pic = vodInfo.pic.orEmpty()
-		AppDataManager.get().getVodCollectDao().insert(record)
+		AppDataManager.get().vodCollectDao.insert(record)
 	}
 
 	fun deleteVodRecord(sourceKey: String, vodInfo: VodInfo) {
-		val record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodInfo.id)
+		val record = AppDataManager.get().vodRecordDao.getVodRecord(sourceKey, vodInfo.id)
 		if (record != null) {
-			AppDataManager.get().getVodRecordDao().delete(record)
+			AppDataManager.get().vodRecordDao.delete(record)
 		}
 	}
 
 	fun deleteVodCollect(id: Int) {
-		AppDataManager.get().getVodCollectDao().delete(id)
+		AppDataManager.get().vodCollectDao.delete(id)
 	}
 
 	fun deleteVodCollect(sourceKey: String, vodInfo: VodInfo) {
-		val record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodInfo.id)
+		val record = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodInfo.id)
 		if (record != null) {
-			AppDataManager.get().getVodCollectDao().delete(record)
+			AppDataManager.get().vodCollectDao.delete(record)
 		}
 	}
 
 	fun deleteVodRecordAll() {
-		AppDataManager.get().getVodRecordDao().deleteAll()
+		AppDataManager.get().vodRecordDao.deleteAll()
 	}
 
 	fun deleteVodCollectAll() {
-		AppDataManager.get().getVodCollectDao().deleteAll()
+		AppDataManager.get().vodCollectDao.deleteAll()
 	}
 
 	fun getVodInfo(sourceKey: String, vodId: String): VodInfo? {
-		val record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodId)
+		val record = AppDataManager.get().vodRecordDao.getVodRecord(sourceKey, vodId)
 		try {
 			if (record != null && record.dataJson.isNotEmpty()) {
 				val vodInfo = vodInfoGson.fromJson<VodInfo>(record.dataJson, object : TypeToken<VodInfo>() {}.type)
@@ -97,36 +97,32 @@ object RoomDataManger {
 	}
 
 	fun getAllVodRecord(limit: Int): List<VodInfo> {
-		val count = AppDataManager.get().getVodRecordDao().getCount()
+		val count = AppDataManager.get().vodRecordDao.getCount()
 		val index = Hawk.get(HawkConfig.HISTORY_NUM, 0)
 		val hisNum = HistoryHelper.getHisNum(index)
 		if (count > hisNum) {
-			AppDataManager.get().getVodRecordDao().reserver(hisNum)
+			AppDataManager.get().vodRecordDao.reserver(hisNum)
 		}
-		val recordList = AppDataManager.get().getVodRecordDao().getAll(limit)
-		val vodInfoList = mutableListOf<VodInfo>()
-		for (record in recordList) {
+		return AppDataManager.get().vodRecordDao.getAll(limit).mapNotNull { record ->
 			try {
 				if (record.dataJson.isNotEmpty()) {
 					val info = vodInfoGson.fromJson<VodInfo>(record.dataJson, object : TypeToken<VodInfo>() {}.type)
 					info.sourceKey = record.sourceKey
-					if (info.name != null) {
-						vodInfoList.add(info)
-					}
-				}
+					if (info.name != null) info else null
+				} else null
 			} catch (e: Exception) {
 				e.printStackTrace()
+				null
 			}
 		}
-		return vodInfoList
 	}
 
 	fun getAllVodCollect(): List<VodCollect> {
-		return AppDataManager.get().getVodCollectDao().getAll()
+		return AppDataManager.get().vodCollectDao.getAll()
 	}
 
 	fun isVodCollect(sourceKey: String, vodId: String): Boolean {
-		val record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodId)
+		val record = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodId)
 		return record != null
 	}
 }

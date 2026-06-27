@@ -48,8 +48,6 @@ class App : Application() {
 		EpgUtil.init()
 		// 初始化Web服务器
 		ControlManager.init(this)
-		//初始化数据库
-		AppDataManager.init()
 		LoadSir.beginBuilder()
 			.addCallback(EmptyCallback())
 			.addCallback(LoadingCallback())

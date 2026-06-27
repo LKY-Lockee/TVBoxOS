@@ -1,73 +1,69 @@
-package com.github.tvbox.osc.callback;
+package com.github.tvbox.osc.callback
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.ContextWrapper;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-
-import com.github.tvbox.osc.R;
-import com.kingja.loadsir.callback.Callback;
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.Gravity
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import com.github.tvbox.osc.R
+import com.kingja.loadsir.callback.Callback
+import kotlin.math.max
 
 /**
  * @author pj567
- * @date :2020/12/24
- * @description:
+ * @date 2020/12/24
  */
-public class EmptyCallback extends Callback {
-    @Override
-    protected int onCreateView() {
-        return R.layout.loadsir_empty_layout;
-    }
+class EmptyCallback : Callback() {
+	override fun onCreateView(): Int {
+		return R.layout.loadsir_empty_layout
+	}
 
-    @Override
-    public void onAttach(Context context, View view) {
-        super.onAttach(context, view);
-        LinearLayout contentLayout = view.findViewById(R.id.empty_content);
-        if (contentLayout != null) {
-            Runnable updatePosition = () -> {
-                if (contentLayout.getHeight() == 0 || !contentLayout.isAttachedToWindow()) {
-                    return;
-                }
+	override fun onAttach(context: Context?, view: View) {
+		super.onAttach(context, view)
+		val contentLayout = view.findViewById<LinearLayout>(R.id.empty_content)
+		if (contentLayout != null) {
+			val updatePosition = Runnable {
+				if (contentLayout.height == 0 || !contentLayout.isAttachedToWindow) {
+					return@Runnable
+				}
+				// 获取整个应用的内容区域
+				val activity = getActivityFromContext(context) ?: return@Runnable
 
-                // 获取整个应用的内容区域
-                Activity activity = getActivityFromContext(context);
-                if (activity == null) return;
+				val contentView = activity.findViewById<View>(android.R.id.content)
+				if (contentView == null || contentView.height == 0) return@Runnable
 
-                View contentView = activity.findViewById(android.R.id.content);
-                if (contentView == null || contentView.getHeight() == 0) return;
+				// 获取中心位置
+				val contentLocation = IntArray(2)
+				contentView.getLocationOnScreen(contentLocation)
+				val contentCenterY = contentLocation[1] + contentView.height / 2
 
-                // 获取中心位置
-                int[] contentLocation = new int[2];
-                contentView.getLocationOnScreen(contentLocation);
-                int contentCenterY = contentLocation[1] + contentView.getHeight() / 2;
+				val viewLocation = IntArray(2)
+				view.getLocationOnScreen(viewLocation)
+				val viewTop = viewLocation[1]
 
-                int[] viewLocation = new int[2];
-                view.getLocationOnScreen(viewLocation);
-                int viewTop = viewLocation[1];
+				val contentHeight = contentLayout.height
+				val targetTop = contentCenterY - viewTop - contentHeight / 2
 
-                int contentHeight = contentLayout.getHeight();
-                int targetTop = contentCenterY - viewTop - contentHeight / 2;
+				val layoutParams = contentLayout.layoutParams as FrameLayout.LayoutParams
+				layoutParams.gravity = Gravity.CENTER_HORIZONTAL or Gravity.TOP
+				layoutParams.topMargin = max(0, targetTop)
+				contentLayout.layoutParams = layoutParams
+			}
 
-                FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) contentLayout.getLayoutParams();
-                layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.TOP;
-                layoutParams.topMargin = Math.max(0, targetTop);
-                contentLayout.setLayoutParams(layoutParams);
-            };
+			contentLayout.viewTreeObserver.addOnGlobalLayoutListener { updatePosition.run() }
+		}
+	}
 
-            contentLayout.getViewTreeObserver().addOnGlobalLayoutListener(updatePosition::run);
-        }
-    }
-
-    private Activity getActivityFromContext(Context context) {
-        while (context instanceof ContextWrapper) {
-            if (context instanceof Activity) {
-                return (Activity) context;
-            }
-            context = ((ContextWrapper) context).getBaseContext();
-        }
-        return null;
-    }
+	private fun getActivityFromContext(context: Context?): Activity? {
+		var context = context
+		while (context is ContextWrapper) {
+			if (context is Activity) {
+				return context
+			}
+			context = context.baseContext
+		}
+		return null
+	}
 }

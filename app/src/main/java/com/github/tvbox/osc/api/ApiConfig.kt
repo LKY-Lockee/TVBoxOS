@@ -45,7 +45,6 @@ import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Locale
-import kotlin.concurrent.Volatile
 
 /**
  * @author pj567
@@ -54,8 +53,6 @@ import kotlin.concurrent.Volatile
 class ApiConfig private constructor() {
 	private val sourceBeanList = LinkedHashMap<String, SourceBean>()
 	val channelGroupList: MutableList<LiveChannelGroup>
-
-	@JvmField
 	val parseBeanList: MutableList<ParseBean>
 	private val emptyHome = SourceBean()
 	private val jarLoader = JarLoader()
@@ -64,23 +61,24 @@ class ApiConfig private constructor() {
 	private val gson: Gson
 	private val userAgent = "okhttp/3.15"
 	private val requestAccept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
-
-	@JvmField
 	val liveSettingGroupList: MutableList<LiveSettingGroup> = ArrayList()
 	private var mHomeSource: SourceBean? = null
 	private var mDefaultParse: ParseBean? = null
-	var vipParseFlags: MutableList<String> = ArrayList()
-		private set
 	private var myHosts: MutableMap<String, String> = HashMap()
-	var ijkCodes: MutableList<IJKCode> = ArrayList()
-		private set
-	var spider: String? = null
-		private set
 	private var defaultLiveObjString = "{\"lives\":[{\"name\":\"txt_m3u\",\"type\":0,\"url\":\"txt_m3u_url\"}]}"
 	private var tempKey: String? = null
 	private var liveSpider = ""
 	private var currentLiveSpider: String? = null
 	private var searchSourceBeanList: MutableList<SourceBean>
+
+	var vipParseFlags: MutableList<String> = ArrayList()
+		private set
+
+	var ijkCodes: MutableList<IJKCode> = ArrayList()
+		private set
+
+	var spider: String? = null
+		private set
 
 	init {
 		clearLoader()
@@ -166,7 +164,6 @@ class ApiConfig private constructor() {
 								callback.notice("直播配置拉取失败")
 							}
 
-							@Throws(Throwable::class)
 							override fun convertResponse(response: okhttp3.Response): String {
 								var result: String?
 								result = findResult(response.body.string(), tempKey)
@@ -232,7 +229,6 @@ class ApiConfig private constructor() {
 					callback.error("拉取配置失败\n" + (if (response.exception != null) response.exception.message else ""))
 				}
 
-				@Throws(Throwable::class)
 				override fun convertResponse(response: okhttp3.Response): String {
 					var result: String?
 					result = findResult(response.body.string(), tempKey)
@@ -344,7 +340,6 @@ class ApiConfig private constructor() {
 			})
 	}
 
-	@Throws(Throwable::class)
 	private fun parseJson(apiUrl: String, f: File) {
 		val bReader = BufferedReader(InputStreamReader(Files.newInputStream(f.toPath()), StandardCharsets.UTF_8))
 		val sb = StringBuilder()
@@ -597,7 +592,6 @@ class ApiConfig private constructor() {
 		LOG.i("echo-default-config-----------load")
 	}
 
-	@Throws(Throwable::class)
 	private fun parseLiveJson(apiUrl: String?, f: File) {
 		val bReader = BufferedReader(InputStreamReader(Files.newInputStream(f.toPath()), StandardCharsets.UTF_8))
 		val sb = StringBuilder()
@@ -857,7 +851,7 @@ class ApiConfig private constructor() {
 		if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false)) {
 			apiString = currentLiveSpider ?: ""
 		} else {
-			val sourceBean: SourceBean = (get() ?: return null).homeSourceBean
+			val sourceBean: SourceBean = homeSourceBean
 			apiString = sourceBean.api
 		}
 		return if (apiString.contains(".py")) pyLoader.proxyInvoke(param) else jarLoader.proxyInvoke(param)
@@ -989,21 +983,7 @@ class ApiConfig private constructor() {
 	}
 
 	companion object {
-		@Volatile
-		private var instance: ApiConfig? = null
 		private var jarCache = "true"
-
-		@JvmStatic
-		fun get(): ApiConfig? {
-			if (instance == null) {
-				synchronized(ApiConfig::class.java) {
-					if (instance == null) {
-						instance = ApiConfig()
-					}
-				}
-			}
-			return instance
-		}
 
 		fun findResult(json: String, configKey: String?): String {
 			var json = json
