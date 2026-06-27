@@ -1,9 +1,9 @@
 package com.github.catvod.crawler
 
-import android.content.*
-import com.github.tvbox.osc.util.*
-import okhttp3.*
-import org.json.*
+import android.content.Context
+import com.github.tvbox.osc.util.OkGoHelper
+import okhttp3.Dns
+import org.json.JSONObject
 
 open class Spider {
 	protected var mContext: Context? = null

@@ -16,14 +16,25 @@
 
 package okhttp3.dnsoverhttps
 
-import okhttp3.*
+import okhttp3.CacheControl
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.Dns
+import okhttp3.HttpUrl
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.internal.platform.*
+import okhttp3.Response
+import okhttp3.internal.platform.Platform
 import okhttp3.internal.publicsuffix.PublicSuffixDatabase.Companion.get
-import java.io.*
-import java.net.*
-import java.util.concurrent.*
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.net.InetAddress
+import java.net.UnknownHostException
+import java.util.concurrent.CountDownLatch
 
 /**
  * DNS over HTTPS implementation.

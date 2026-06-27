@@ -1,5 +1,5 @@
-package com.github.tvbox.osc.base;
+package com.github.tvbox.osc.base
 
-public interface BackPressProvider {
-    boolean handleBackPress();
+interface BackPressProvider {
+	fun handleBackPress(): Boolean
 }

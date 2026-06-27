@@ -1,165 +1,147 @@
-package com.github.tvbox.osc.base;
+package com.github.tvbox.osc.base
 
-import android.content.Context;
-import android.content.Intent;
-import android.content.res.Resources;
-import android.os.Bundle;
-import android.os.Looper;
-import android.util.DisplayMetrics;
-import android.view.View;
-
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.PermissionChecker;
-
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.callback.EmptyCallback;
-import com.github.tvbox.osc.callback.LoadingCallback;
-import com.github.tvbox.osc.util.AppManager;
-import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.kingja.loadsir.callback.Callback;
-import com.kingja.loadsir.core.LoadService;
-import com.kingja.loadsir.core.LoadSir;
-
-import me.jessyan.autosize.AutoSizeCompat;
-import me.jessyan.autosize.internal.CustomAdapt;
+import android.content.Context
+import android.content.Intent
+import android.content.res.Resources
+import android.os.Bundle
+import android.os.Looper
+import android.view.View
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.PermissionChecker
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.callback.EmptyCallback
+import com.github.tvbox.osc.callback.LoadingCallback
+import com.github.tvbox.osc.util.AppManager
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.MaterialToolbar
+import com.kingja.loadsir.core.LoadService
+import com.kingja.loadsir.core.LoadSir
+import me.jessyan.autosize.AutoSizeCompat
+import me.jessyan.autosize.internal.CustomAdapt
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * @author pj567
  * @date :2020/12/17
- * @description:
  */
-public abstract class BaseActivity extends AppCompatActivity implements CustomAdapt {
-    private static float screenRatio = -100.0f;
-    protected Context mContext;
-    private LoadService<?> mLoadService;
+abstract class BaseActivity : AppCompatActivity(), CustomAdapt {
+	protected lateinit var mContext: Context
+	protected abstract val layoutResID: Int
+	private var mLoadService: LoadService<*>? = null
 
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        try {
-            if (screenRatio < 0) {
-                DisplayMetrics dm = new DisplayMetrics();
-                getWindowManager().getDefaultDisplay().getMetrics(dm);
-                int screenWidth = dm.widthPixels;
-                int screenHeight = dm.heightPixels;
-                screenRatio = (float) Math.max(screenWidth, screenHeight) / (float) Math.min(screenWidth, screenHeight);
-            }
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-        super.onCreate(savedInstanceState);
-        setContentView(getLayoutResID());
-        mContext = this;
-        AppManager.getInstance().addActivity(this);
-        setupAppBarTransparency();
-        init();
-    }
+	fun jumpActivity(clazz: Class<out BaseActivity>) {
+		val intent = Intent(mContext, clazz)
+		startActivity(intent)
+	}
 
-    /**
-     * 自动为 AppBarLayout 设置透明度渐变效果
-     * 当标题栏向上收起时，透明度会逐渐降低，避免与状态栏内容重叠
-     */
-    private void setupAppBarTransparency() {
-        try {
-            AppBarLayout appBarLayout = findViewById(R.id.appBarLayout);
-            MaterialToolbar appBar = findViewById(R.id.appBar);
+	fun jumpActivity(clazz: Class<out BaseActivity>, bundle: Bundle) {
+		val intent = Intent(mContext, clazz)
+		intent.putExtras(bundle)
+		startActivity(intent)
+	}
 
-            if (appBarLayout != null && appBar != null) {
-                appBarLayout.addOnOffsetChangedListener(
-                        (appBarLayout1, verticalOffset) -> {
-                            int totalScrollRange = appBarLayout1.getTotalScrollRange();
-                            if (totalScrollRange == 0) return;
+	fun hasPermission(permission: String): Boolean {
+		var has = true
+		try {
+			has = PermissionChecker.checkSelfPermission(this, permission) == PermissionChecker.PERMISSION_GRANTED
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+		return has
+	}
 
-                            // 计算滚动进度（0.0 = 完全展开，1.0 = 完全收起）
-                            float scrollProgress = Math.abs(verticalOffset) / (float) totalScrollRange;
+	override fun onCreate(savedInstanceState: Bundle?) {
+		try {
+			if (screenRatio < 0) {
+				val dm = resources.displayMetrics
+				val screenWidth = dm.widthPixels
+				val screenHeight = dm.heightPixels
+				screenRatio = max(screenWidth, screenHeight).toFloat() / min(screenWidth, screenHeight).toFloat()
+			}
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+		super.onCreate(savedInstanceState)
+		setContentView(this.layoutResID)
+		mContext = this
+		AppManager.getInstance().addActivity(this)
+		setupAppBarTransparency()
+		init()
+	}
 
-                            // 设置标题栏透明度（收起时变透明）
-                            appBar.setAlpha(1.0f - scrollProgress);
-                        }
-                );
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	override fun onResume() {
+		super.onResume()
+	}
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-    }
+	override fun getResources(): Resources {
+		if (Looper.myLooper() == Looper.getMainLooper()) {
+			AutoSizeCompat.autoConvertDensityOfCustomAdapt(super.getResources(), this)
+		}
+		return super.getResources()
+	}
 
-    @Override
-    public Resources getResources() {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            AutoSizeCompat.autoConvertDensityOfCustomAdapt(super.getResources(), this);
-        }
-        return super.getResources();
-    }
+	override fun getSizeInDp(): Float {
+		return (if (isBaseOnWidth) 1280 else 720).toFloat()
+	}
 
-    public boolean hasPermission(String permission) {
-        boolean has = true;
-        try {
-            has = PermissionChecker.checkSelfPermission(this, permission) == PermissionChecker.PERMISSION_GRANTED;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return has;
-    }
+	override fun isBaseOnWidth(): Boolean {
+		return !(screenRatio >= 4.0f)
+	}
 
-    protected abstract int getLayoutResID();
+	override fun onDestroy() {
+		super.onDestroy()
+		AppManager.getInstance().finishActivity(this)
+	}
 
-    protected abstract void init();
+	protected abstract fun init()
 
-    protected void setLoadSir(View view) {
-        if (mLoadService == null) {
-            mLoadService = LoadSir.getDefault().register(view, (Callback.OnReloadListener) v -> {
-            });
-        }
-    }
+	protected fun setLoadSir(view: View?) {
+		if (mLoadService == null) {
+			mLoadService = LoadSir.getDefault().register(view) { v: View? -> }
+		}
+	}
 
-    protected void showLoading() {
-        if (mLoadService != null) {
-            mLoadService.showCallback(LoadingCallback.class);
-        }
-    }
+	protected fun showLoading() {
+		mLoadService?.showCallback(LoadingCallback::class.java)
+	}
 
-    protected void showEmpty() {
-        if (null != mLoadService) {
-            mLoadService.showCallback(EmptyCallback.class);
-        }
-    }
+	protected fun showEmpty() {
+		mLoadService?.showCallback(EmptyCallback::class.java)
+	}
 
-    protected void showSuccess() {
-        if (null != mLoadService) {
-            mLoadService.showSuccess();
-        }
-    }
+	protected fun showSuccess() {
+		mLoadService?.showSuccess()
+	}
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        AppManager.getInstance().finishActivity(this);
-    }
+	/**
+	 * 自动为 AppBarLayout 设置透明度渐变效果
+	 * 当标题栏向上收起时，透明度会逐渐降低，避免与状态栏内容重叠
+	 */
+	private fun setupAppBarTransparency() {
+		try {
+			val appBarLayout = findViewById<AppBarLayout>(R.id.appBarLayout)
+			val appBar = findViewById<MaterialToolbar>(R.id.appBar)
 
-    public void jumpActivity(Class<? extends BaseActivity> clazz) {
-        Intent intent = new Intent(mContext, clazz);
-        startActivity(intent);
-    }
+			if (appBarLayout != null && appBar != null) {
+				appBarLayout.addOnOffsetChangedListener { appBarLayout1: AppBarLayout?, verticalOffset: Int ->
+					val totalScrollRange = (appBarLayout1 ?: return@addOnOffsetChangedListener).totalScrollRange
+					if (totalScrollRange == 0) return@addOnOffsetChangedListener
 
-    public void jumpActivity(Class<? extends BaseActivity> clazz, Bundle bundle) {
-        Intent intent = new Intent(mContext, clazz);
-        intent.putExtras(bundle);
-        startActivity(intent);
-    }
+					// 计算滚动进度（0.0 = 完全展开，1.0 = 完全收起）
+					val scrollProgress = abs(verticalOffset) / totalScrollRange.toFloat()
 
-    @Override
-    public float getSizeInDp() {
-        return isBaseOnWidth() ? 1280 : 720;
-    }
+					// 设置标题栏透明度（收起时变透明）
+					appBar.alpha = 1.0f - scrollProgress
+				}
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+	}
 
-    @Override
-    public boolean isBaseOnWidth() {
-        return !(screenRatio >= 4.0f);
-    }
+	companion object {
+		private var screenRatio = -100.0f
+	}
 }

@@ -1,9 +1,9 @@
 package com.github.catvod.crawler.python
 
-import com.github.catvod.crawler.*
+import com.github.catvod.crawler.Spider
 
 interface IPyLoader {
-    fun clear()
+	fun clear()
 
 	fun setConfig(jsonStr: String?)
 

@@ -1,6 +1,6 @@
 package com.github.catvod.crawler
 
-import android.util.*
+import android.util.Log
 
 object SpiderDebug {
 	fun log(th: Throwable) {

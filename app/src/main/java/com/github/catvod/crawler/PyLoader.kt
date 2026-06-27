@@ -1,14 +1,16 @@
 package com.github.catvod.crawler
 
-import android.*
-import android.content.pm.*
-import android.util.*
-import androidx.core.content.*
-import com.github.catvod.crawler.python.*
-import com.github.tvbox.osc.base.*
-import com.github.tvbox.osc.util.*
-import com.undcover.freedom.pyramid.*
-import java.util.concurrent.*
+import android.Manifest
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.core.content.ContextCompat
+import com.github.catvod.crawler.python.IPyLoader
+import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.util.LOG
+import com.github.tvbox.osc.util.MD5
+import com.undcover.freedom.pyramid.PythonLoader
+import com.undcover.freedom.pyramid.PythonSpider
+import java.util.concurrent.ConcurrentHashMap
 
 class PyLoader : IPyLoader {
 	private val pythonLoader: PythonLoader = PythonLoader.instance.setApplication(App.instance)

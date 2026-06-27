@@ -1,22 +1,20 @@
-package com.github.tvbox.osc.base;
+package com.github.tvbox.osc.base
 
-import androidx.annotation.MenuRes;
+import androidx.annotation.MenuRes
 
-public interface ToolbarMenuProvider {
-    @MenuRes
-    default int getMenuResId() {
-        return 0;
-    }
+interface ToolbarMenuProvider {
+	@get:MenuRes
+	val menuResId: Int
+		get() = 0
 
-    default boolean onMenuItemClick(int itemId) {
-        return false;
-    }
+	val toolbarTitle: String?
+		get() = null
 
-    default String getToolbarTitle() {
-        return null;
-    }
+	fun onMenuItemClick(itemId: Int): Boolean {
+		return false
+	}
 
-    default boolean enableAppBarScroll() {
-        return false;
-    }
+	fun enableAppBarScroll(): Boolean {
+		return false
+	}
 }

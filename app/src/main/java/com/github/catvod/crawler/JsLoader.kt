@@ -1,14 +1,16 @@
 package com.github.catvod.crawler
 
-import android.util.*
-import com.github.tvbox.osc.base.*
-import com.github.tvbox.osc.util.*
-import com.github.tvbox.osc.util.js.*
-import com.lzy.okgo.*
-import dalvik.system.*
-import java.io.*
-import java.nio.file.*
-import java.util.concurrent.*
+import android.util.Log
+import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.util.FileUtils
+import com.github.tvbox.osc.util.LOG
+import com.github.tvbox.osc.util.MD5
+import com.github.tvbox.osc.util.js.JsSpider
+import com.lzy.okgo.OkGo
+import dalvik.system.DexClassLoader
+import java.io.File
+import java.nio.file.Files
+import java.util.concurrent.ConcurrentHashMap
 
 class JsLoader {
 	/**

@@ -1,16 +1,17 @@
 package com.github.catvod.crawler
 
-import android.content.*
-import android.util.*
-import com.github.tvbox.osc.base.*
-import com.github.tvbox.osc.util.*
-import com.lzy.okgo.*
-import dalvik.system.*
-import org.json.*
-import java.io.*
-import java.lang.reflect.*
-import java.nio.file.*
-import java.util.concurrent.*
+import android.content.Context
+import android.util.Log
+import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.util.FileUtils
+import com.github.tvbox.osc.util.MD5
+import com.lzy.okgo.OkGo
+import dalvik.system.DexClassLoader
+import org.json.JSONObject
+import java.io.File
+import java.lang.reflect.Method
+import java.nio.file.Files
+import java.util.concurrent.ConcurrentHashMap
 
 class JarLoader {
 	private val classLoaders = ConcurrentHashMap<String, DexClassLoader>()

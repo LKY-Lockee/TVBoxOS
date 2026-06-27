@@ -1,16 +1,25 @@
 package com.undcover.freedom.pyramid
 
-import android.app.*
-import com.chaquo.python.*
-import com.chaquo.python.android.*
-import com.github.catvod.crawler.*
-import com.github.tvbox.osc.util.*
-import com.github.tvbox.osc.util.urlhttp.*
-import com.github.tvbox.osc.util.urlhttp.OKCallBack.*
-import okhttp3.*
-import org.json.*
-import java.io.*
-import java.util.concurrent.*
+import android.app.Application
+import com.chaquo.python.PyObject
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
+import com.github.catvod.crawler.Spider
+import com.github.catvod.crawler.SpiderNull
+import com.github.tvbox.osc.util.OkGoHelper
+import com.github.tvbox.osc.util.urlhttp.OKCallBack.OKCallBackDefault
+import com.github.tvbox.osc.util.urlhttp.OkHttpUtil
+import okhttp3.Call
+import okhttp3.Response
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.InputStream
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 class PythonLoader {
 	var pyInstance: Python? = null

@@ -1,12 +1,16 @@
 package com.undcover.freedom.pyramid
 
-import android.content.*
-import android.util.*
-import androidx.core.net.*
-import com.chaquo.python.*
-import com.github.catvod.crawler.*
-import org.json.*
-import java.io.*
+import android.content.Context
+import android.util.Base64
+import android.util.Log
+import androidx.core.net.toUri
+import com.chaquo.python.PyObject
+import com.github.catvod.crawler.Spider
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.ByteArrayInputStream
+import java.io.File
 
 class PythonSpider(private val name: String, private val cachePath: String?) : Spider() {
 	var loadSuccess: Boolean = false

@@ -1,6 +1,6 @@
 package com.p2p
 
-import java.io.*
+import java.io.File
 
 class P2PClass(str: String) {
 	var path: String

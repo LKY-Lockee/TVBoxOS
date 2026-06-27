@@ -1,17 +1,21 @@
 package com.github.tvbox.osc.util.thunder
 
-import android.content.*
-import android.text.*
-import androidx.core.content.*
-import com.github.tvbox.osc.base.*
-import com.github.tvbox.osc.bean.Movie.Video.*
-import com.github.tvbox.osc.util.*
-import com.xunlei.downloadlib.*
-import com.xunlei.downloadlib.android.*
-import com.xunlei.downloadlib.parameter.*
-import java.io.*
-import java.util.*
-import java.util.concurrent.*
+import android.content.Context
+import android.text.TextUtils
+import androidx.core.content.edit
+import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.bean.Movie.Video.UrlBean
+import com.github.tvbox.osc.util.FileUtils
+import com.xunlei.downloadlib.XLDownloadManager
+import com.xunlei.downloadlib.XLTaskHelper
+import com.xunlei.downloadlib.android.XLUtil
+import com.xunlei.downloadlib.parameter.TorrentFileInfo
+import com.xunlei.downloadlib.parameter.XLTaskInfo
+import java.io.File
+import java.util.Locale
+import java.util.Random
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 object Thunder {
 	private var cacheRoot = ""
