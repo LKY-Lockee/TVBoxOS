@@ -1,39 +1,35 @@
-package com.github.tvbox.osc.cache;
+package com.github.tvbox.osc.cache
 
-import androidx.room.Dao;
-import androidx.room.Delete;
-import androidx.room.Insert;
-import androidx.room.OnConflictStrategy;
-import androidx.room.Query;
-
-import java.util.List;
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 
 /**
  * @author pj567
- * @date :2021/1/7
- * @description:
+ * @date 2021/1/7
  */
 @Dao
-public interface VodCollectDao {
+interface VodCollectDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    long insert(VodCollect record);
-
-    @Query("select * from vodCollect  order by updateTime desc")
-    List<VodCollect> getAll();
-
-    @Query("select * from vodCollect where `id`=:id")
-    VodCollect getVodCollect(int id);
-
-    @Query("delete from vodCollect where `id`=:id")
-    void delete(int id);
-
-    @Query("select * from vodCollect where `sourceKey`=:sourceKey and `vodId`=:vodId")
-    VodCollect getVodCollect(String sourceKey, String vodId);
+    fun insert(record: VodCollect): Long
 
     @Delete
-    int delete(VodCollect record);
+    fun delete(record: VodCollect): Int
 
-    @Query("DELETE FROM vodCollect")
-    void deleteAll();
+    @Query("delete from vodCollect where `id`=:id")
+    fun delete(id: Int)
 
+    @Query("delete from vodCollect")
+    fun deleteAll()
+
+    @Query("select * from vodCollect where `id`=:id")
+    fun getVodCollect(id: Int): VodCollect?
+
+    @Query("select * from vodCollect where `sourceKey`=:sourceKey and `vodId`=:vodId")
+    fun getVodCollect(sourceKey: String, vodId: String): VodCollect?
+
+    @Query("select * from vodCollect order by updateTime desc")
+    fun getAll(): List<VodCollect>
 }

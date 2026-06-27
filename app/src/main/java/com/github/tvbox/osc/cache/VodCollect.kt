@@ -1,31 +1,26 @@
-package com.github.tvbox.osc.cache;
+package com.github.tvbox.osc.cache
 
-import androidx.room.ColumnInfo;
-import androidx.room.Entity;
-import androidx.room.PrimaryKey;
-
-import java.io.Serializable;
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 @Entity(tableName = "vodCollect")
-public class VodCollect implements Serializable {
-    @ColumnInfo(name = "vodId")
-    public String vodId;
-    @ColumnInfo(name = "updateTime")
-    public long updateTime;
-    @ColumnInfo(name = "sourceKey")
-    public String sourceKey;
-    @ColumnInfo(name = "name")
-    public String name;
-    @ColumnInfo(name = "pic")
-    public String pic;
-    @PrimaryKey(autoGenerate = true)
-    private int id;
+class VodCollect {
+	@PrimaryKey(autoGenerate = true)
+	var id: Int = 0
 
-    public int getId() {
-        return id;
-    }
+	@ColumnInfo(name = "vodId")
+	var vodId: String = ""
 
-    public void setId(int id) {
-        this.id = id;
-    }
+	@ColumnInfo(name = "updateTime")
+	var updateTime: Long = 0
+
+	@ColumnInfo(name = "sourceKey")
+	var sourceKey: String = ""
+
+	@ColumnInfo(name = "name")
+	var name: String = ""
+
+	@ColumnInfo(name = "pic")
+	var pic: String = ""
 }

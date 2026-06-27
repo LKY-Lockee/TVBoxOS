@@ -1,44 +1,40 @@
-package com.github.tvbox.osc.cache;
+package com.github.tvbox.osc.cache
 
-import androidx.room.Dao;
-import androidx.room.Delete;
-import androidx.room.Insert;
-import androidx.room.OnConflictStrategy;
-import androidx.room.Query;
-
-import java.util.List;
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 
 /**
  * @author pj567
- * @date :2021/1/7
- * @description:
+ * @date 2021/1/7
  */
 @Dao
-public interface VodRecordDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    long insert(VodRecord record);
+interface VodRecordDao {
+	@Query("select count(*) from vodRecord")
+	fun getCount(): Int
 
-    @Query("select * from vodRecord order by updateTime desc limit :size")
-    List<VodRecord> getAll(int size);
+	@Insert(onConflict = OnConflictStrategy.REPLACE)
+	fun insert(record: VodRecord): Long
 
-    @Query("select * from vodRecord where `sourceKey`=:sourceKey and `vodId`=:vodId")
-    VodRecord getVodRecord(String sourceKey, String vodId);
+	@Delete
+	fun delete(record: VodRecord): Int
 
-    @Delete
-    int delete(VodRecord record);
+	@Query("delete from vodRecord")
+	fun deleteAll()
 
-    @Query("select count(*) from vodRecord")
-    int getCount();
+	@Query("select * from vodRecord where `sourceKey`=:sourceKey and `vodId`=:vodId")
+	fun getVodRecord(sourceKey: String, vodId: String): VodRecord?
 
-    @Query("DELETE FROM vodRecord")
-    void deleteAll();
+	@Query("select * from vodRecord order by updateTime desc limit :size")
+	fun getAll(size: Int): List<VodRecord>
 
-    /**
-     * 保留最新指定条数, 其他删除.
-     *
-     * @param size 保留条数
-     * @return
-     */
-    @Query("DELETE FROM vodRecord where id NOT IN (SELECT id FROM vodRecord ORDER BY updateTime desc LIMIT :size)")
-    int reserver(int size);
+	/**
+	 * 保留最新指定条数, 其他删除.
+	 * 
+	 * @param size 保留条数
+	 */
+	@Query("delete from vodRecord where id not in (select id from vodRecord order by updateTime desc limit :size)")
+	fun reserver(size: Int): Int
 }

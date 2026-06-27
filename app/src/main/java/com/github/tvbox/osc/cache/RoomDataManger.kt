@@ -1,151 +1,132 @@
-package com.github.tvbox.osc.cache;
+package com.github.tvbox.osc.cache
 
-import android.text.TextUtils;
-
-import com.github.tvbox.osc.bean.VodInfo;
-import com.github.tvbox.osc.data.AppDataManager;
-import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.HistoryHelper;
-import com.google.gson.ExclusionStrategy;
-import com.google.gson.FieldAttributes;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-import com.orhanobut.hawk.Hawk;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.github.tvbox.osc.bean.VodInfo
+import com.github.tvbox.osc.data.AppDataManager
+import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.util.HistoryHelper
+import com.google.gson.ExclusionStrategy
+import com.google.gson.FieldAttributes
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
+import com.orhanobut.hawk.Hawk
 
 /**
  * @author pj567
  * @date :2021/1/7
- * @description:
  */
-public class RoomDataManger {
-    static final ExclusionStrategy vodInfoStrategy = new ExclusionStrategy() {
-        @Override
-        public boolean shouldSkipField(FieldAttributes field) {
-            if (field.getDeclaringClass() == VodInfo.class && field.getName().equals("seriesFlags")) {
-                return true;
-            }
-            return field.getDeclaringClass() == VodInfo.class && field.getName().equals("seriesMap");
-        }
+object RoomDataManger {
+	private val vodInfoStrategy = object : ExclusionStrategy {
+		override fun shouldSkipField(field: FieldAttributes): Boolean {
+			return field.declaringClass == VodInfo::class.java && field.name in setOf("seriesFlags", "seriesMap")
+		}
 
-        @Override
-        public boolean shouldSkipClass(Class<?> clazz) {
-            return false;
-        }
-    };
+		override fun shouldSkipClass(clazz: Class<*>): Boolean {
+			return false
+		}
+	}
 
-    private static Gson getVodInfoGson() {
-        return new GsonBuilder().addSerializationExclusionStrategy(vodInfoStrategy).create();
-    }
+	private val vodInfoGson: Gson by lazy {
+		GsonBuilder().addSerializationExclusionStrategy(vodInfoStrategy).create()
+	}
 
-    public static void insertVodRecord(String sourceKey, VodInfo vodInfo) {
-        VodRecord record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodInfo.id);
-        if (record == null) {
-            record = new VodRecord();
-        }
-        record.sourceKey = sourceKey;
-        record.vodId = vodInfo.id;
-        record.updateTime = System.currentTimeMillis();
-        record.dataJson = getVodInfoGson().toJson(vodInfo);
-        AppDataManager.get().getVodRecordDao().insert(record);
-    }
+	fun insertVodRecord(sourceKey: String, vodInfo: VodInfo) {
+		var record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodInfo.id)
+		if (record == null) {
+			record = VodRecord()
+		}
+		record.sourceKey = sourceKey
+		record.vodId = vodInfo.id
+		record.updateTime = System.currentTimeMillis()
+		record.dataJson = vodInfoGson.toJson(vodInfo)
+		AppDataManager.get().getVodRecordDao().insert(record)
+	}
 
-    public static VodInfo getVodInfo(String sourceKey, String vodId) {
-        VodRecord record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodId);
-        try {
-            if (record != null && record.dataJson != null && !TextUtils.isEmpty(record.dataJson)) {
-                VodInfo vodInfo = getVodInfoGson().fromJson(record.dataJson, new TypeToken<VodInfo>() {
-                }.getType());
-                if (vodInfo.name == null)
-                    return null;
-                return vodInfo;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
+	fun insertVodCollect(sourceKey: String, vodInfo: VodInfo) {
+		val existing = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodInfo.id)
+		if (existing != null) {
+			return
+		}
+		val record = VodCollect()
+		record.sourceKey = sourceKey
+		record.vodId = vodInfo.id
+		record.updateTime = System.currentTimeMillis()
+		record.name = vodInfo.name.orEmpty()
+		record.pic = vodInfo.pic.orEmpty()
+		AppDataManager.get().getVodCollectDao().insert(record)
+	}
 
-    public static void deleteVodRecord(String sourceKey, VodInfo vodInfo) {
-        VodRecord record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodInfo.id);
-        if (record != null) {
-            AppDataManager.get().getVodRecordDao().delete(record);
-        }
-    }
+	fun deleteVodRecord(sourceKey: String, vodInfo: VodInfo) {
+		val record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodInfo.id)
+		if (record != null) {
+			AppDataManager.get().getVodRecordDao().delete(record)
+		}
+	}
 
-    public static List<VodInfo> getAllVodRecord(int limit) {
-        int count = AppDataManager.get().getVodRecordDao().getCount();
-        Integer index = Hawk.get(HawkConfig.HISTORY_NUM, 0);
-        int hisNum = HistoryHelper.getHisNum(index);
-        if (count > hisNum) {
-            AppDataManager.get().getVodRecordDao().reserver(hisNum);
-        }
-        List<VodRecord> recordList = AppDataManager.get().getVodRecordDao().getAll(limit);
-        List<VodInfo> vodInfoList = new ArrayList<>();
-        if (recordList != null) {
-            for (VodRecord record : recordList) {
-                VodInfo info = null;
-                try {
-                    if (record.dataJson != null && !TextUtils.isEmpty(record.dataJson)) {
-                        info = getVodInfoGson().fromJson(record.dataJson, new TypeToken<VodInfo>() {
-                        }.getType());
-                        info.sourceKey = record.sourceKey;
-//                        SourceBean sourceBean = ApiConfig.get().getSource(info.sourceKey);
-                        if (info.name == null)
-                            info = null;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                if (info != null)
-                    vodInfoList.add(info);
-            }
-        }
-        return vodInfoList;
-    }
+	fun deleteVodCollect(id: Int) {
+		AppDataManager.get().getVodCollectDao().delete(id)
+	}
 
-    public static void insertVodCollect(String sourceKey, VodInfo vodInfo) {
-        VodCollect record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodInfo.id);
-        if (record != null) {
-            return;
-        }
-        record = new VodCollect();
-        record.sourceKey = sourceKey;
-        record.vodId = vodInfo.id;
-        record.updateTime = System.currentTimeMillis();
-        record.name = vodInfo.name;
-        record.pic = vodInfo.pic;
-        AppDataManager.get().getVodCollectDao().insert(record);
-    }
+	fun deleteVodCollect(sourceKey: String, vodInfo: VodInfo) {
+		val record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodInfo.id)
+		if (record != null) {
+			AppDataManager.get().getVodCollectDao().delete(record)
+		}
+	}
 
-    public static void deleteVodCollect(int id) {
-        AppDataManager.get().getVodCollectDao().delete(id);
-    }
+	fun deleteVodRecordAll() {
+		AppDataManager.get().getVodRecordDao().deleteAll()
+	}
 
-    public static void deleteVodCollect(String sourceKey, VodInfo vodInfo) {
-        VodCollect record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodInfo.id);
-        if (record != null) {
-            AppDataManager.get().getVodCollectDao().delete(record);
-        }
-    }
+	fun deleteVodCollectAll() {
+		AppDataManager.get().getVodCollectDao().deleteAll()
+	}
 
-    public static void deleteVodCollectAll() {
-        AppDataManager.get().getVodCollectDao().deleteAll();
-    }
+	fun getVodInfo(sourceKey: String, vodId: String): VodInfo? {
+		val record = AppDataManager.get().getVodRecordDao().getVodRecord(sourceKey, vodId)
+		try {
+			if (record != null && record.dataJson.isNotEmpty()) {
+				val vodInfo = vodInfoGson.fromJson<VodInfo>(record.dataJson, object : TypeToken<VodInfo>() {}.type)
+				if (vodInfo.name == null) return null
+				return vodInfo
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+		return null
+	}
 
-    public static void deleteVodRecordAll() {
-        AppDataManager.get().getVodRecordDao().deleteAll();
-    }
+	fun getAllVodRecord(limit: Int): List<VodInfo> {
+		val count = AppDataManager.get().getVodRecordDao().getCount()
+		val index = Hawk.get(HawkConfig.HISTORY_NUM, 0)
+		val hisNum = HistoryHelper.getHisNum(index)
+		if (count > hisNum) {
+			AppDataManager.get().getVodRecordDao().reserver(hisNum)
+		}
+		val recordList = AppDataManager.get().getVodRecordDao().getAll(limit)
+		val vodInfoList = mutableListOf<VodInfo>()
+		for (record in recordList) {
+			try {
+				if (record.dataJson.isNotEmpty()) {
+					val info = vodInfoGson.fromJson<VodInfo>(record.dataJson, object : TypeToken<VodInfo>() {}.type)
+					info.sourceKey = record.sourceKey
+					if (info.name != null) {
+						vodInfoList.add(info)
+					}
+				}
+			} catch (e: Exception) {
+				e.printStackTrace()
+			}
+		}
+		return vodInfoList
+	}
 
-    public static boolean isVodCollect(String sourceKey, String vodId) {
-        VodCollect record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodId);
-        return record != null;
-    }
+	fun getAllVodCollect(): List<VodCollect> {
+		return AppDataManager.get().getVodCollectDao().getAll()
+	}
 
-    public static List<VodCollect> getAllVodCollect() {
-        return AppDataManager.get().getVodCollectDao().getAll();
-    }
+	fun isVodCollect(sourceKey: String, vodId: String): Boolean {
+		val record = AppDataManager.get().getVodCollectDao().getVodCollect(sourceKey, vodId)
+		return record != null
+	}
 }
