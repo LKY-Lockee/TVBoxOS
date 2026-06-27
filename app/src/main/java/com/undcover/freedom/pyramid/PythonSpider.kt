@@ -100,7 +100,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 
 	/**
 	 * 首页数据内容
-	 *
+	 * 
 	 * @param filter 是否开启筛选
 	 */
 	override fun homeContent(filter: Boolean): String {

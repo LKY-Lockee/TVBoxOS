@@ -13,13 +13,13 @@ class PyLog {
 
 	/**
 	 * 设置内设Log的过滤，添加需要输出的Log
-	 *
+	 * 
 	 * FILTER_LC 生命周期
-	 *
+	 * 
 	 * FILTER_NW 网络请求
-	 *
+	 * 
 	 * FILTER_AM AtyManager
-	 *
+	 * 
 	 * FILTER_FW 框架
 	 */
 	fun setFilter(filter: Int): PyLog {
