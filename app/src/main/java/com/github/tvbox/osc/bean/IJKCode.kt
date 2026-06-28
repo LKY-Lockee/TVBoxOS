@@ -1,44 +1,22 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import com.github.tvbox.osc.util.HawkConfig;
-import com.orhanobut.hawk.Hawk;
-
-import java.util.LinkedHashMap;
+import com.github.tvbox.osc.util.HawkConfig
+import com.orhanobut.hawk.Hawk
 
 /**
  * @author pj567
- * @date :2021/3/8
- * @description:
+ * @date 2021/3/8
  */
-public class IJKCode {
-    private String name;
-    private LinkedHashMap<String, String> option;
-    private boolean selected;
+class IJKCode {
+	var name: String? = null
+	var option: LinkedHashMap<String, String>? = null
+	var isSelected: Boolean = false
+		private set
 
-    public void selected(boolean selected) {
-        this.selected = selected;
-        if (selected) {
-            Hawk.put(HawkConfig.IJK_CODEC, name);
-        }
-    }
-
-    public boolean isSelected() {
-        return selected;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public LinkedHashMap<String, String> getOption() {
-        return option;
-    }
-
-    public void setOption(LinkedHashMap<String, String> option) {
-        this.option = option;
-    }
+	fun selected(selected: Boolean) {
+		isSelected = selected
+		if (selected) {
+			Hawk.put(HawkConfig.IJK_CODEC, name)
+		}
+	}
 }

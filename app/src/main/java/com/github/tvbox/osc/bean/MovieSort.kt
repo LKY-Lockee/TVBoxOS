@@ -1,89 +1,63 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import com.thoughtworks.xstream.annotations.XStreamAlias;
-import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
-import com.thoughtworks.xstream.annotations.XStreamConverter;
-import com.thoughtworks.xstream.annotations.XStreamImplicit;
-import com.thoughtworks.xstream.converters.extended.ToAttributedValueConverter;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
+import com.thoughtworks.xstream.annotations.XStreamAlias
+import com.thoughtworks.xstream.annotations.XStreamAsAttribute
+import com.thoughtworks.xstream.annotations.XStreamConverter
+import com.thoughtworks.xstream.annotations.XStreamImplicit
+import com.thoughtworks.xstream.converters.extended.ToAttributedValueConverter
+import java.io.Serializable
 
 /**
  * @author pj567
- * @date :2020/12/18
- * @description:
+ * @date 2020/12/18
  */
 @XStreamAlias("class")
-public class MovieSort implements Serializable {
-    @XStreamImplicit(itemFieldName = "ty")
-    public List<SortData> sortList;
+class MovieSort : Serializable {
+	@XStreamImplicit(itemFieldName = "ty")
+	var sortList: MutableList<SortData>? = null
 
-    @XStreamAlias("ty")
-    @XStreamConverter(value = ToAttributedValueConverter.class, strings = {"name"})
-    public static class SortData implements Serializable, Comparable<SortData> {
-        public final int sort = -1;
-        public final boolean select = false;
-        public final HashMap<String, String> filterSelect = new HashMap<>();
-        @XStreamAsAttribute
-        public String id;
-        public String name;
-        public ArrayList<SortFilter> filters = new ArrayList<>();
-        public String flag; // 类型
+	@XStreamAlias("ty")
+	@XStreamConverter(value = ToAttributedValueConverter::class, strings = ["name"])
+	class SortData : Serializable, Comparable<SortData> {
+		val sort: Int = -1
+		val select: Boolean = false
+		val filterSelect: HashMap<String, String> = HashMap()
 
-        public SortData() {
-        }
+		@XStreamAsAttribute
+		var id: String? = null
+		var name: String? = null
+		var filters: MutableList<SortFilter> = mutableListOf()
 
-        public SortData(String id, String name) {
-            this.id = id;
-            this.name = name;
-        }
+		/**
+		 * 类型
+		 */
+		var flag: String? = null
 
-        public int filterSelectCount() {
-            int count = 0;
-            for (String filter : filterSelect.values()) {
-                if (filter != null && !filter.isEmpty()) {
-                    count++;
-                }
-            }
-            return count;
-        }
+		constructor()
 
-        @Override
-        public int compareTo(SortData o) {
-            return 0;
-        }
+		constructor(id: String?, name: String?) {
+			this.id = id
+			this.name = name
+		}
 
-        @Override
-        public String toString() {
-            return "SortData{" +
-                    "id='" + id + '\'' +
-                    ", name='" + name + '\'' +
-                    ", sort=" + sort +
-                    ", select=" + select +
-                    ", filters=" + filters +
-                    ", filterSelect=" + filterSelect +
-                    ", flag='" + flag + '\'' +
-                    '}';
-        }
-    }
+		override fun compareTo(other: SortData): Int = 0
 
-    public static class SortFilter {
-        public String key;
-        public String name;
-        public LinkedHashMap<String, String> values;
+		override fun toString(): String {
+			return "SortData{id='$id', name='$name', sort=$sort, select=$select, filters=$filters, filterSelect=$filterSelect, flag='$flag'}"
+		}
 
-        @Override
-        public String toString() {
-            return "SortFilter{" +
-                    "key='" + key + '\'' +
-                    ", name='" + name + '\'' +
-                    ", values=" + values +
-                    '}';
-        }
-    }
+		fun filterSelectCount(): Int {
+			return filterSelect.values.count { it.isNotEmpty() }
+		}
+	}
 
+	class SortFilter {
+		var key: String? = null
+		var name: String? = null
+		var values: LinkedHashMap<String, String>? = null
+
+		override fun toString(): String {
+			return "SortFilter{key='$key', name='$name', values=$values}"
+		}
+	}
 }

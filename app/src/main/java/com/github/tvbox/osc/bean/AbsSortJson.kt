@@ -1,48 +1,44 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import com.google.gson.annotations.SerializedName;
+import com.github.tvbox.osc.bean.AbsJson.AbsJsonVod
+import com.github.tvbox.osc.bean.MovieSort.SortData
+import com.google.gson.annotations.SerializedName
+import java.io.Serializable
 
-import java.io.Serializable;
-import java.util.ArrayList;
+class AbsSortJson : Serializable {
+	@SerializedName(value = "class")
+	var classes: List<AbsJsonClass>? = null
+	var list: List<AbsJsonVod>? = null
 
-public class AbsSortJson implements Serializable {
+	fun toAbsSortXml(): AbsSortXml {
+		val absSortXml = AbsSortXml()
+		val movieSort = MovieSort()
+		movieSort.sortList = classes.orEmpty().map { cls ->
+			SortData().apply {
+				id = cls.typeId
+				name = cls.typeName
+				flag = cls.typeFlag
+			}
+		}.toMutableList()
 
-    @SerializedName(value = "class")
-    public ArrayList<AbsJsonClass> classes;
+		absSortXml.list = list?.takeIf { it.isNotEmpty() }?.let { vods ->
+			Movie().apply {
+				videoList = vods.map { it.toXmlVideo() }.toMutableList()
+			}
+		}
 
-    @SerializedName(value = "list")
-    public ArrayList<AbsJson.AbsJsonVod> list;
+		absSortXml.classes = movieSort
+		return absSortXml
+	}
 
-    public AbsSortXml toAbsSortXml() {
-        AbsSortXml absSortXml = new AbsSortXml();
-        MovieSort movieSort = new MovieSort();
-        movieSort.sortList = new ArrayList<>();
-        for (AbsJsonClass cls : classes) {
-            MovieSort.SortData sortData = new MovieSort.SortData();
-            sortData.id = cls.type_id;
-            sortData.name = cls.type_name;
-            sortData.flag = cls.type_flag;
-            movieSort.sortList.add(sortData);
-        }
-        if (list != null && !list.isEmpty()) {
-            Movie movie = new Movie();
-            ArrayList<Movie.Video> videos = new ArrayList<>();
-            for (AbsJson.AbsJsonVod vod : list) {
-                videos.add(vod.toXmlVideo());
-            }
-            movie.videoList = videos;
-            absSortXml.list = movie;
-        } else {
-            absSortXml.list = null;
-        }
-        absSortXml.classes = movieSort;
-        return absSortXml;
-    }
+	class AbsJsonClass : Serializable {
+		@SerializedName("type_id")
+		var typeId: String? = null
 
-    public class AbsJsonClass implements Serializable {
-        public String type_id;
-        public String type_name;
-        public String type_flag;
-    }
+		@SerializedName("type_name")
+		var typeName: String? = null
 
+		@SerializedName("type_flag")
+		var typeFlag: String? = null
+	}
 }

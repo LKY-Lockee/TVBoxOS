@@ -2,6 +2,7 @@ package com.github.tvbox.osc.cache
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.io.Serializable
 
 /**
  * @author pj567
@@ -11,4 +12,4 @@ import androidx.room.PrimaryKey
 class Cache(
 	@PrimaryKey val key: String,
 	val data: ByteArray
-)
+) : Serializable

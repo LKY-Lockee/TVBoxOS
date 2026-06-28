@@ -1,133 +1,84 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import java.util.ArrayList;
+class SourceBean {
+	var key: String? = null
+	var name: String? = null
+	var api: String? = null
 
-public class SourceBean {
-    private String key;
-    private String name;
-    private String api;
-    private int type;   // 0 xml 1 json 3 Spider
-    private int searchable; // 是否可搜索
-    private int quickSearch; // 是否可以快速搜索
-    private int filterable; // 是否可以站点选择
-    private String playerUrl; // 站点解析Url
-    private String ext; // 扩展数据
-    private String jar; // 自定义jar
-    private ArrayList<String> categories = null; // 分类&排序
-    private int playerType; // 0 system 1 ikj 2 exo 10 mxplayer -1 以参数设置页面的为准
-    private String clickSelector; // 需要点击播放的嗅探站点selector   ddrk.me;#id
-    private String style; // 展示风格
+	/**
+	 * 0 xml
+	 * 
+	 * 1 json
+	 * 
+	 * 3 Spider
+	 */
+	var type: Int = 0
 
-    public String getKey() {
-        return key;
-    }
+	/**
+	 * 是否可以站点选择
+	 */
+	var filterable: Int = 0
 
-    public void setKey(String key) {
-        this.key = key;
-    }
+	/**
+	 * 站点解析Url
+	 */
+	var playerUrl: String? = null
 
-    public String getName() {
-        return name;
-    }
+	/**
+	 * 扩展数据
+	 */
+	var ext: String? = null
 
-    public void setName(String name) {
-        this.name = name;
-    }
+	/**
+	 * 自定义jar
+	 */
+	var jar: String? = null
 
-    public String getApi() {
-        return api;
-    }
+	/**
+	 * 分类&排序
+	 */
+	var categories: List<String>? = null
 
-    public void setApi(String api) {
-        this.api = api;
-    }
+	/**
+	 * 0 system
+	 * 
+	 * 1 ikj
+	 * 
+	 * 2 exo
+	 * 
+	 * 10 mxplayer
+	 * 
+	 * -1 以参数设置页面的为准
+	 */
+	var playerType: Int = 0
 
-    public String getPlayerUrl() {
-        return playerUrl;
-    }
+	/**
+	 * 需要点击播放的嗅探站点selector
+	 * 
+	 * ddrk.me;#id
+	 */
+	var clickSelector: String? = null
 
-    public void setPlayerUrl(String playerUrl) {
-        this.playerUrl = playerUrl;
-    }
+	/**
+	 * 展示风格
+	 */
+	var style: String? = null
 
-    public int getType() {
-        return type;
-    }
+	/**
+	 * 是否可搜索
+	 */
+	var searchable: Int = 0
+		private set
 
-    public void setType(int type) {
-        this.type = type;
-    }
+	/**
+	 * 是否可以快速搜索
+	 */
+	var quickSearch: Int = 0
+		private set
 
-    public boolean isSearchable() {
-        return searchable != 0;
-    }
+	val isSearchable: Boolean
+		get() = searchable != 0
 
-    public void setSearchable(int searchable) {
-        this.searchable = searchable;
-    }
-
-    public boolean isQuickSearch() {
-        return quickSearch != 0;
-    }
-
-    public void setQuickSearch(int quickSearch) {
-        this.quickSearch = quickSearch;
-    }
-
-    public int getFilterable() {
-        return filterable;
-    }
-
-    public void setFilterable(int filterable) {
-        this.filterable = filterable;
-    }
-
-    public String getExt() {
-        return ext;
-    }
-
-    public void setExt(String ext) {
-        this.ext = ext;
-    }
-
-    public ArrayList<String> getCategories() {
-        return categories;
-    }
-
-    public void setCategories(ArrayList<String> categories) {
-        this.categories = categories;
-    }
-
-    public String getJar() {
-        return jar;
-    }
-
-    public void setJar(String jar) {
-        this.jar = jar;
-    }
-
-    public int getPlayerType() {
-        return playerType;
-    }
-
-    public void setPlayerType(int playerType) {
-        this.playerType = playerType;
-    }
-
-    public String getClickSelector() {
-        return clickSelector;
-    }
-
-    public void setClickSelector(String clickSelector) {
-        this.clickSelector = clickSelector;
-    }
-
-
-    public String getStyle() {
-        return style;
-    }
-
-    public void setStyle(String style) {
-        this.style = style;
-    }
+	val isQuickSearch: Boolean
+		get() = quickSearch != 0
 }

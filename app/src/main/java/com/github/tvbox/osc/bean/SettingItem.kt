@@ -1,94 +1,50 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
 /**
  * 设置项数据模型 - Material 3风格
  */
-public class SettingItem {
-    public static final int TYPE_CATEGORY = 0;      // 分类标题
-    public static final int TYPE_PREFERENCE = 1;    // 普通设置项
-    public static final int TYPE_SWITCH = 2;        // 开关设置项
+class SettingItem(val type: Int, val title: String?) {
+	var summary: String? = null
+	var value: String? = null
+	var switchState: Boolean = false
+	var onClickListener: OnClickListener? = null
 
-    private int type;
-    private String title;
-    private String summary;
-    private String value;
-    private boolean switchState;
-    private OnClickListener onClickListener;
+	interface OnClickListener {
+		fun onClick(item: SettingItem?)
+	}
 
-    public SettingItem(int type, String title) {
-        this.type = type;
-        this.title = title;
-    }
+	companion object {
+		/**
+		 * 分类标题
+		 */
+		const val TYPE_CATEGORY: Int = 0
 
-    public static SettingItem createCategory(String title) {
-        return new SettingItem(TYPE_CATEGORY, title);
-    }
+		/**
+		 * 普通设置项
+		 */
+		const val TYPE_PREFERENCE: Int = 1
 
-    public static SettingItem createPreference(String title, String value, OnClickListener listener) {
-        SettingItem item = new SettingItem(TYPE_PREFERENCE, title);
-        item.value = value;
-        item.onClickListener = listener;
-        return item;
-    }
+		/**
+		 * 开关设置项
+		 */
+		const val TYPE_SWITCH: Int = 2
 
-    public static SettingItem createSwitch(String title, boolean checked, OnClickListener listener) {
-        SettingItem item = new SettingItem(TYPE_SWITCH, title);
-        item.switchState = checked;
-        item.onClickListener = listener;
-        return item;
-    }
+		fun createCategory(title: String?): SettingItem {
+			return SettingItem(TYPE_CATEGORY, title)
+		}
 
-    public int getType() {
-        return type;
-    }
+		fun createPreference(title: String?, value: String?, listener: OnClickListener?): SettingItem {
+			return SettingItem(TYPE_PREFERENCE, title).apply {
+				this.value = value
+				this.onClickListener = listener
+			}
+		}
 
-    public void setType(int type) {
-        this.type = type;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public SettingItem setSummary(String summary) {
-        this.summary = summary;
-        return this;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
-    }
-
-    public boolean isSwitchState() {
-        return switchState;
-    }
-
-    public void setSwitchState(boolean switchState) {
-        this.switchState = switchState;
-    }
-
-    public OnClickListener getOnClickListener() {
-        return onClickListener;
-    }
-
-    public void setOnClickListener(OnClickListener onClickListener) {
-        this.onClickListener = onClickListener;
-    }
-
-    public interface OnClickListener {
-        void onClick(SettingItem item);
-    }
+		fun createSwitch(title: String?, checked: Boolean, listener: OnClickListener?): SettingItem {
+			return SettingItem(TYPE_SWITCH, title).apply {
+				this.switchState = checked
+				this.onClickListener = listener
+			}
+		}
+	}
 }
-

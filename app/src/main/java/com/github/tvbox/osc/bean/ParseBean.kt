@@ -1,70 +1,58 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import android.util.Base64;
-
-import com.github.tvbox.osc.util.DefaultConfig;
+import android.util.Base64
+import com.github.tvbox.osc.util.DefaultConfig
 
 /**
  * @author pj567
- * @date :2021/3/8
- * @description:
+ * @date 2021/3/8
  */
-public class ParseBean {
+class ParseBean {
+	var name: String? = null
 
-    private String name;
-    private String url;
-    private String ext;
-    private int type;   // 0 普通嗅探 1 json 2 Json扩展 3 聚合
+	/**
+	 * 0 普通嗅探
+	 * 
+	 * 1 json
+	 * 
+	 * 2 Json扩展
+	 * 
+	 * 3 聚合
+	 */
+	var type: Int = 0
+	var isDefault: Boolean = false
 
-    private boolean isDefault = false;
+	var url: String? = null
+		private set
 
-    public String getName() {
-        return name;
-    }
+	var ext: String? = null
+		private set
 
-    public void setName(String name) {
-        this.name = name;
-    }
+	fun getUrl(): String = DefaultConfig.checkReplaceProxy(url)
 
-    public String getUrl() {
-        return DefaultConfig.checkReplaceProxy(url);
-    }
+	fun setUrl(url: String) {
+		this.url = url
+	}
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
+	fun setExt(ext: String) {
+		this.ext = ext
+	}
 
-    public boolean isDefault() {
-        return isDefault;
-    }
+	fun mixUrl(): String? {
+		val currentExt = ext ?: return null
+		val currentUrl = url ?: return null
 
-    public void setDefault(boolean b) {
-        isDefault = b;
-    }
+		if (currentExt.isEmpty()) return currentUrl
 
-    public int getType() {
-        return type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
-    }
-
-    public String getExt() {
-        return ext;
-    }
-
-    public void setExt(String ext) {
-        this.ext = ext;
-    }
-
-    public String mixUrl() {
-        if (!ext.isEmpty()) {
-            int idx = url.indexOf("?");
-            if (idx > 0) {
-                return url.substring(0, idx + 1) + "cat_ext=" + Base64.encodeToString(ext.getBytes(), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP) + "&" + url.substring(idx + 1);
-            }
-        }
-        return url;
-    }
+		val idx = currentUrl.indexOf("?")
+		return if (idx > 0) {
+			val encodedExt = Base64.encodeToString(
+				currentExt.toByteArray(),
+				Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP
+			)
+			"${currentUrl.substring(0, idx + 1)}cat_ext=$encodedExt&${currentUrl.substring(idx + 1)}"
+		} else {
+			currentUrl
+		}
+	}
 }

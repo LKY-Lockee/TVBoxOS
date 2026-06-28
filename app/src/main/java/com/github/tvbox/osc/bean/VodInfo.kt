@@ -1,157 +1,192 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import static com.github.tvbox.osc.util.RegexUtils.getPattern;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Set;
+import com.github.tvbox.osc.util.RegexUtils
+import java.io.Serializable
+import kotlin.math.min
 
 /**
  * @author pj567
- * @date :2020/12/22
- * @description:
+ * @date 2020/12/22
  */
-public class VodInfo implements Serializable {
-    public String last;//时间
-    //内容id
-    public String id;
-    //父级id
-    public int tid;
-    //影片名称 <![CDATA[老爸当家]]>
-    public String name;
-    //类型名称
-    public String type;
-    //视频分类zuidam3u8,zuidall
-    public String dt;
-    //图片
-    public String pic;
-    //语言
-    public String lang;
-    //地区
-    public String area;
-    //年份
-    public int year;
-    public String state;
-    //描述集数或者影片信息<![CDATA[共40集]]>
-    public String note;
-    //演员<![CDATA[张国立,蒋欣,高鑫,曹艳艳,王维维,韩丹彤,孟秀,王新]]>
-    public String actor;
-    //导演<![CDATA[陈国星]]>
-    public String director;
-    public ArrayList<VodSeriesFlag> seriesFlags;
-    public LinkedHashMap<String, List<VodSeries>> seriesMap;
-    public String des;// <![CDATA[权来]
-    public String playFlag = null;
-    public int playIndex = 0;
-    public String playNote = "";
-    public String sourceKey;
-    public String playerCfg = "";
-    public boolean reverseSort = false;
+class VodInfo : Serializable {
+	/**
+	 * 时间
+	 */
+	var last: String? = null
 
-    public void setVideo(Movie.Video video) {
-        last = video.last;
-        id = video.id;
-        tid = video.tid;
-        name = video.name;
-        type = video.type;
-        // dt = video.dt;
-        pic = video.pic;
-        lang = video.lang;
-        area = video.area;
-        year = video.year;
-        state = video.state;
-        note = video.note;
-        actor = video.actor;
-        director = video.director;
-        des = video.des;
-        if (video.urlBean != null && video.urlBean.infoList != null && !video.urlBean.infoList.isEmpty()) {
-            LinkedHashMap<String, List<VodSeries>> tempSeriesMap = new LinkedHashMap<>();
-            seriesFlags = new ArrayList<>();
-            for (Movie.Video.UrlBean.UrlInfo urlInfo : video.urlBean.infoList) {
-                if (urlInfo.beanList != null && !urlInfo.beanList.isEmpty()) {
-                    List<VodSeries> seriesList = new ArrayList<>();
-                    for (Movie.Video.UrlBean.UrlInfo.InfoBean infoBean : urlInfo.beanList) {
-                        seriesList.add(new VodSeries(infoBean.name, infoBean.url));
-                    }
-                    tempSeriesMap.put(urlInfo.flag, seriesList);
-                    seriesFlags.add(new VodSeriesFlag(urlInfo.flag));
-                }
-            }
+	/**
+	 * 内容id
+	 */
+	var id: String? = null
 
-            seriesMap = new LinkedHashMap<>();
-            for (VodSeriesFlag flag : seriesFlags) {
-                List<VodSeries> list = tempSeriesMap.get(flag.name);
-                assert list != null;
-                if (seriesFlags.size() <= 5) {
-                    if (isReverse(list)) Collections.reverse(list);
-                }
-                seriesMap.put(flag.name, list);
-            }
-        }
-    }
+	/**
+	 * 父级id
+	 */
+	var tid: Int = 0
 
-    private int extractNumber(String name) {
-        java.util.regex.Matcher matcher = getPattern("\\d+").matcher(name);
-        if (matcher.find()) {
-            return Integer.parseInt(matcher.group());
-        }
-        return 0;
-    }
+	/**
+	 * 影片名称
+	 */
+	var name: String? = null // <![CDATA[老爸当家]]>
 
-    private boolean isReverse(List<VodInfo.VodSeries> list) {
-        int ascCount = 0, descCount = 0;
-        // 比较最多前 6 个相邻元素对
-        int limit = Math.min(list.size() - 1, 6);
-        for (int i = 0; i < limit; i++) {
-            int current = extractNumber(list.get(i).name);
-            int next = extractNumber(list.get(i + 1).name);
-            if (current < next) {
-                ascCount++;
-                if (ascCount == 2) return false;
-            } else if (current > next) {
-                descCount++;
-                if (descCount == 2) return true;
-            }
-        }
-        return false;
-    }
+	/**
+	 * 类型名称
+	 */
+	var type: String? = null
 
-    public void reverse() {
-        Set<String> flags = seriesMap.keySet();
-        for (String flag : flags) {
-            Collections.reverse(seriesMap.get(flag));
-        }
-    }
+	/**
+	 * 视频分类
+	 */
+	var dt: String? = null // zuidam3u8,zuidall
 
-    public static class VodSeriesFlag implements Serializable {
+	/**
+	 * 图片
+	 */
+	var pic: String? = null
 
-        public String name;
-        public boolean selected;
+	/**
+	 * 语言
+	 */
+	var lang: String? = null
 
-        public VodSeriesFlag() {
+	/**
+	 * 地区
+	 */
+	var area: String? = null
 
-        }
+	/**
+	 * 年份
+	 */
+	var year: Int = 0
+	var state: String? = null
 
-        public VodSeriesFlag(String name) {
-            this.name = name;
-        }
-    }
+	/**
+	 * 描述集数或者影片信息
+	 */
+	var note: String? = null // <![CDATA[共40集]]>
 
-    public static class VodSeries implements Serializable {
+	/**
+	 * 演员
+	 */
+	var actor: String? = null // <![CDATA[张国立,蒋欣,高鑫,曹艳艳,王维维,韩丹彤,孟秀,王新]]>
 
-        public String name;
-        public String url;
-        public boolean selected;
+	/**
+	 * 导演
+	 */
+	var director: String? = null // <![CDATA[陈国星]]>
+	var seriesFlags: List<VodSeriesFlag>? = null
+	var seriesMap: LinkedHashMap<String, MutableList<VodSeries>>? = null
+	var des: String? = null // <![CDATA[权来]
+	var playFlag: String? = null
+	var playIndex: Int = 0
+	var playNote: String = ""
+	var sourceKey: String? = null
+	var playerCfg: String = ""
+	var reverseSort: Boolean = false
 
-        public VodSeries() {
-        }
+	fun setVideo(video: Movie.Video) {
+		last = video.last
+		id = video.id
+		tid = video.tid
+		name = video.name
+		type = video.type
+		pic = video.pic
+		lang = video.lang
+		area = video.area
+		year = video.year
+		state = video.state
+		note = video.note
+		actor = video.actor
+		director = video.director
+		des = video.des
 
-        public VodSeries(String name, String url) {
-            this.name = name;
-            this.url = url;
-        }
-    }
+		val infoList = video.urlBean?.infoList ?: return
+		if (infoList.isEmpty()) return
+
+		val tempSeriesMap = LinkedHashMap<String, MutableList<VodSeries>>()
+		val flags = mutableListOf<VodSeriesFlag>()
+
+		for (urlInfo in infoList) {
+			val beanList = urlInfo.beanList ?: continue
+			if (beanList.isEmpty()) continue
+
+			val seriesList = beanList.map { infoBean ->
+				VodSeries(infoBean.name.orEmpty(), infoBean.url)
+			}.toMutableList()
+
+			urlInfo.flag?.let { flag ->
+				tempSeriesMap[flag] = seriesList
+				flags.add(VodSeriesFlag(flag))
+			}
+		}
+
+		seriesFlags = flags
+		seriesMap = LinkedHashMap()
+		for (flag in flags) {
+			val flagName = flag.name ?: continue
+			val list = tempSeriesMap[flagName] ?: continue
+			if (flags.size <= 5) {
+				if (isReverse(list)) list.reverse()
+			}
+			seriesMap?.put(flagName, list)
+		}
+	}
+
+	private fun extractNumber(name: String): Int {
+		val matcher = RegexUtils.getPattern("\\d+").matcher(name)
+		return if (matcher.find()) {
+			matcher.group().toInt()
+		} else {
+			0
+		}
+	}
+
+	private fun isReverse(list: List<VodSeries>): Boolean {
+		var ascCount = 0
+		var descCount = 0
+		// 比较最多前 6 个相邻元素对
+		val limit = min(list.size - 1, 6)
+		for (i in 0..<limit) {
+			val currentName = list[i].name ?: continue
+			val nextName = list[i + 1].name ?: continue
+			val current = extractNumber(currentName)
+			val next = extractNumber(nextName)
+			if (current < next) {
+				ascCount++
+				if (ascCount == 2) return false
+			} else if (current > next) {
+				descCount++
+				if (descCount == 2) return true
+			}
+		}
+		return false
+	}
+
+	fun reverse() {
+		seriesMap?.values?.forEach { it.reverse() }
+	}
+
+	class VodSeriesFlag : Serializable {
+		var name: String? = null
+		var selected: Boolean = false
+
+		constructor()
+
+		constructor(name: String?) {
+			this.name = name
+		}
+	}
+
+	class VodSeries : Serializable {
+		var name: String? = null
+		var url: String? = null
+		var selected: Boolean = false
+
+		constructor()
+
+		constructor(name: String, url: String?) {
+			this.name = name
+			this.url = url
+		}
+	}
 }

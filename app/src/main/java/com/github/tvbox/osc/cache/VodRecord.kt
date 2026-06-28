@@ -3,13 +3,14 @@ package com.github.tvbox.osc.cache
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.io.Serializable
 
 /**
  * @author pj567
  * @date 2021/1/7
  */
 @Entity(tableName = "vodRecord")
-class VodRecord {
+class VodRecord : Serializable {
 	@PrimaryKey(autoGenerate = true)
 	var id: Int = 0
 

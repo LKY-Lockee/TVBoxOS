@@ -1,19 +1,15 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import com.thoughtworks.xstream.annotations.XStreamAlias;
-
-import java.io.Serializable;
+import com.thoughtworks.xstream.annotations.XStreamAlias
+import java.io.Serializable
 
 /**
  * @author pj567
- * @date :2020/12/18
- * @description:
+ * @date 2020/12/18
  */
 @XStreamAlias("rss")
-public class AbsXml implements Serializable {
-    @XStreamAlias("list")
-    public Movie movie;
-
-    @XStreamAlias("msg")
-    public String msg;
+class AbsXml : Serializable {
+	@XStreamAlias("list")
+	var movie: Movie? = null
+	var msg: String? = null
 }

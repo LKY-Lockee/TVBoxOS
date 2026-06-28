@@ -1,156 +1,155 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import androidx.annotation.NonNull;
+import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.util.PlayerHelper
+import com.orhanobut.hawk.Hawk
+import org.json.JSONException
+import org.json.JSONObject
+import xyz.doikki.videoplayer.player.VideoView
 
-import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.PlayerHelper;
-import com.orhanobut.hawk.Hawk;
+class LivePlayerManager {
+	val defaultPlayerConfig: JSONObject = JSONObject()
+	var currentPlayerConfig: JSONObject? = null
+	private var currentApi: String? = ""
 
-import org.json.JSONException;
-import org.json.JSONObject;
+	val livePlayerType: Int
+		get() {
+			val config = currentPlayerConfig ?: return 0
+			return try {
+				when (config.getInt("pl")) {
+					0 -> 0
+					1 -> if (config.getString("ijk") == "硬解码") 1 else 2
+					2 -> 3
+					else -> 0
+				}
+			} catch (e: JSONException) {
+				e.printStackTrace()
+				0
+			}
+		}
 
-import xyz.doikki.videoplayer.player.VideoView;
+	val livePlayerScale: Int
+		get() {
+			val config = currentPlayerConfig ?: return 0
+			return try {
+				config.getInt("sc")
+			} catch (e: JSONException) {
+				e.printStackTrace()
+				0
+			}
+		}
 
-public class LivePlayerManager {
-    final JSONObject defaultPlayerConfig = new JSONObject();
-    JSONObject currentPlayerConfig;
-    private String currentApi = "";
+	fun init(videoView: VideoView?) {
+		try {
+			currentApi = Hawk.get(HawkConfig.LIVE_API_URL, "")
+			defaultPlayerConfig.put("pl", Hawk.get(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 0)))
+			defaultPlayerConfig.put("ijk", Hawk.get(HawkConfig.IJK_CODEC, "硬解码"))
+			defaultPlayerConfig.put("pr", Hawk.get(HawkConfig.PLAY_RENDER, 0))
+			defaultPlayerConfig.put("sc", Hawk.get(HawkConfig.PLAY_SCALE, 0))
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
+		getDefaultLiveChannelPlayer(videoView)
+	}
 
-    public void init(VideoView videoView) {
-        try {
-            currentApi = Hawk.get(HawkConfig.LIVE_API_URL, "");
-            defaultPlayerConfig.put("pl", Hawk.get(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 0)));
-            defaultPlayerConfig.put("ijk", Hawk.get(HawkConfig.IJK_CODEC, "硬解码"));
-            defaultPlayerConfig.put("pr", Hawk.get(HawkConfig.PLAY_RENDER, 0));
-            defaultPlayerConfig.put("sc", Hawk.get(HawkConfig.PLAY_SCALE, 0));
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        getDefaultLiveChannelPlayer(videoView);
-    }
+	fun getDefaultLiveChannelPlayer(videoView: VideoView?) {
+		PlayerHelper.updateCfg(videoView, defaultPlayerConfig)
+		try {
+			currentPlayerConfig = JSONObject(defaultPlayerConfig.toString())
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
+	}
 
-    public void getDefaultLiveChannelPlayer(VideoView videoView) {
-        PlayerHelper.updateCfg(videoView, defaultPlayerConfig);
-        try {
-            currentPlayerConfig = new JSONObject(defaultPlayerConfig.toString());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
+	fun getLiveChannelPlayer(videoView: VideoView, channelName: String?) {
+		val cfgKey = currentCfgKey(channelName)
+		val playerConfig = Hawk.get<JSONObject?>(cfgKey, null)
+		if (playerConfig == null) {
+			if (currentPlayerConfig.toString() != defaultPlayerConfig.toString()) {
+				getDefaultLiveChannelPlayer(videoView)
+			}
+			return
+		}
+		if (playerConfig.toString() == currentPlayerConfig.toString()) return
 
-    public void getLiveChannelPlayer(VideoView videoView, String channelName) {
-        channelName = currentCfgKey(channelName);
-        JSONObject playerConfig = Hawk.get(channelName, null);
-        if (playerConfig == null) {
-            if (!currentPlayerConfig.toString().equals(defaultPlayerConfig.toString()))
-                getDefaultLiveChannelPlayer(videoView);
-            return;
-        }
-        if (playerConfig.toString().equals(currentPlayerConfig.toString()))
-            return;
+		try {
+			val curCfg = currentPlayerConfig ?: return
+			if (playerConfig.getInt("pl") == curCfg.getInt("pl") &&
+				playerConfig.getInt("pr") == curCfg.getInt("pr") &&
+				playerConfig.getString("ijk") == curCfg.getString("ijk")
+			) {
+				videoView.setScreenScaleType(playerConfig.getInt("sc"))
+			} else {
+				PlayerHelper.updateCfg(videoView, playerConfig)
+			}
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
 
-        try {
-            if (playerConfig.getInt("pl") == currentPlayerConfig.getInt("pl")
-                    && playerConfig.getInt("pr") == currentPlayerConfig.getInt("pr")
-                    && playerConfig.getString("ijk").equals(currentPlayerConfig.getString("ijk"))) {
-                videoView.setScreenScaleType(playerConfig.getInt("sc"));
-            } else {
-                PlayerHelper.updateCfg(videoView, playerConfig);
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+		currentPlayerConfig = playerConfig
+	}
 
-        currentPlayerConfig = playerConfig;
-    }
+	fun changeLivePlayerType(videoView: VideoView?, playerType: Int, channelName: String?) {
+		val cfgKey = currentCfgKey(channelName)
+		val playerConfig = currentPlayerConfig ?: return
 
-    public int getLivePlayerType() {
-        int playerTypeIndex = 0;
-        try {
-            int playerType = currentPlayerConfig.getInt("pl");
-            String ijkCodec = currentPlayerConfig.getString("ijk");
-            switch (playerType) {
-                case 0:
-                    break;
-                case 1:
-                    if (ijkCodec.equals("硬解码"))
-                        playerTypeIndex = 1;
-                    else
-                        playerTypeIndex = 2;
-                    break;
-                case 2:
-                    playerTypeIndex = 3;
-                    break;
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return playerTypeIndex;
-    }
+		try {
+			when (playerType) {
+				0 -> {
+					playerConfig.put("pl", 0)
+					playerConfig.put("ijk", "软解码")
+				}
 
-    public int getLivePlayerScale() {
-        try {
-            return currentPlayerConfig.getInt("sc");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
+				1 -> {
+					playerConfig.put("pl", 1)
+					playerConfig.put("ijk", "硬解码")
+				}
 
-    public void changeLivePlayerType(VideoView videoView, int playerType, String channelName) {
-        channelName = currentCfgKey(channelName);
-        JSONObject playerConfig = currentPlayerConfig;
-        try {
-            switch (playerType) {
-                case 0:
-                    playerConfig.put("pl", 0);
-                    playerConfig.put("ijk", "软解码");
-                    break;
-                case 1:
-                    playerConfig.put("pl", 1);
-                    playerConfig.put("ijk", "硬解码");
-                    break;
-                case 2:
-                    playerConfig.put("pl", 1);
-                    playerConfig.put("ijk", "软解码");
-                    break;
-                case 3:
-                    playerConfig.put("pl", 2);
-                    playerConfig.put("ijk", "软解码");
-                    break;
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        PlayerHelper.updateCfg(videoView, playerConfig);
+				2 -> {
+					playerConfig.put("pl", 1)
+					playerConfig.put("ijk", "软解码")
+				}
 
-        if (playerConfig.toString().equals(defaultPlayerConfig.toString()))
-            Hawk.delete(channelName);
-        else
-            Hawk.put(channelName, playerConfig);
+				3 -> {
+					playerConfig.put("pl", 2)
+					playerConfig.put("ijk", "软解码")
+				}
+			}
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
+		PlayerHelper.updateCfg(videoView, playerConfig)
 
-        currentPlayerConfig = playerConfig;
-    }
+		if (playerConfig.toString() == defaultPlayerConfig.toString()) {
+			Hawk.delete(cfgKey)
+		} else {
+			Hawk.put(cfgKey, playerConfig)
+		}
 
-    public void changeLivePlayerScale(@NonNull VideoView videoView, int playerScale, String channelName) {
-        channelName = currentCfgKey(channelName);
-        videoView.setScreenScaleType(playerScale);
+		currentPlayerConfig = playerConfig
+	}
 
-        JSONObject playerConfig = currentPlayerConfig;
-        try {
-            playerConfig.put("sc", playerScale);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        if (playerConfig.toString().equals(defaultPlayerConfig.toString()))
-            Hawk.delete(channelName);
-        else
-            Hawk.put(channelName, playerConfig);
+	fun changeLivePlayerScale(videoView: VideoView, playerScale: Int, channelName: String?) {
+		val cfgKey = currentCfgKey(channelName)
+		videoView.setScreenScaleType(playerScale)
 
-        currentPlayerConfig = playerConfig;
-    }
+		val playerConfig = currentPlayerConfig ?: return
+		try {
+			playerConfig.put("sc", playerScale)
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
 
-    private String currentCfgKey(String channelName) {
-        return currentApi + "_" + channelName;
-    }
+		if (playerConfig.toString() == defaultPlayerConfig.toString()) {
+			Hawk.delete(cfgKey)
+		} else {
+			Hawk.put(cfgKey, playerConfig)
+		}
+
+		currentPlayerConfig = playerConfig
+	}
+
+	private fun currentCfgKey(channelName: String?): String {
+		return "${currentApi}_$channelName"
+	}
 }

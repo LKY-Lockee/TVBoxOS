@@ -1,22 +1,16 @@
-package com.github.tvbox.osc.bean;
+package com.github.tvbox.osc.bean
 
-import com.thoughtworks.xstream.annotations.XStreamAlias;
-
-import java.io.Serializable;
-import java.util.List;
+import com.thoughtworks.xstream.annotations.XStreamAlias
+import java.io.Serializable
 
 /**
  * @author pj567
- * @date :2020/12/18
- * @description:
+ * @date 2020/12/18
  */
 @XStreamAlias("rss")
-public class AbsSortXml implements Serializable {
-    @XStreamAlias("class")
-    public MovieSort classes;
-
-    @XStreamAlias("list")
-    public Movie list;
-
-    public List<Movie.Video> videoList;
+class AbsSortXml : Serializable {
+	@XStreamAlias("class")
+	var classes: MovieSort? = null
+	var list: Movie? = null
+	var videoList: MutableList<Movie.Video>? = null
 }
