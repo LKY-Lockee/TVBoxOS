@@ -83,13 +83,6 @@
                 <action android:name="android.content.movie.search.Action" />
             </intent-filter>
         </receiver>
-        <receiver
-                android:name=".receiver.CustomWebReceiver"
-                android:exported="true">
-            <intent-filter>
-                <action android:name="android.content.movie.custom.web.Action" />
-            </intent-filter>
-        </receiver>
 
         <provider
                 android:name="androidx.core.content.FileProvider"
