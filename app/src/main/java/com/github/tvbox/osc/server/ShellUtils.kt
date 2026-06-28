@@ -1,223 +1,125 @@
-package com.github.tvbox.osc.server;
+package com.github.tvbox.osc.server
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
+import java.io.BufferedReader
+import java.io.DataOutputStream
+import java.io.IOException
+import java.io.InputStreamReader
 
 /**
  * @author pj567
- * @date :2021/1/4
- * @description:
+ * @date 2021/1/4
  */
-public class ShellUtils {
-    public static final String COMMAND_SU = "su";
-    public static final String COMMAND_SH = "sh";
-    public static final String COMMAND_EXIT = "exit\n";
-    public static final String COMMAND_LINE_END = "\n";
+object ShellUtils {
+	const val COMMAND_SU: String = "su"
+	const val COMMAND_SH: String = "sh"
+	const val COMMAND_EXIT: String = "exit\n"
+	const val COMMAND_LINE_END: String = "\n"
 
+	/**
+	 * 查看是否有了root权限
+	 */
+	fun checkRootPermission(): Boolean {
+		return execCommand("echo root", isRoot = true, isNeedResultMsg = false).result == 0
+	}
 
-    private ShellUtils() {
-        throw new AssertionError();
-    }
+	/**
+	 * 执行shell命令，默认返回结果
+	 */
+	fun execCommand(command: String, isRoot: Boolean): CommandResult {
+		return execCommand(arrayOf(command), isRoot, true)
+	}
 
+	/**
+	 * 执行shell命令，默认返回结果
+	 */
+	fun execCommand(commands: List<String>, isRoot: Boolean): CommandResult {
+		return execCommand(commands.toTypedArray(), isRoot, true)
+	}
 
-    /**
-     * 查看是否有了root权限
-     *
-     * @return
-     */
-    public static boolean checkRootPermission() {
-        return execCommand("echo root", true, false).result == 0;
-    }
+	/**
+	 * 执行shell命令，默认返回结果
+	 */
+	fun execCommand(commands: Array<String>, isRoot: Boolean): CommandResult {
+		return execCommand(commands, isRoot, true)
+	}
 
+	/**
+	 * Execute shell command
+	 */
+	fun execCommand(command: String, isRoot: Boolean, isNeedResultMsg: Boolean): CommandResult {
+		return execCommand(arrayOf(command), isRoot, isNeedResultMsg)
+	}
 
-    /**
-     * 执行shell命令，默认返回结果
-     *
-     * @param command command
-     * @return
-     * @see ShellUtils#execCommand(String[], boolean, boolean)
-     */
-    public static CommandResult execCommand(String command, boolean isRoot) {
-        return execCommand(new String[]{command}, isRoot, true);
-    }
+	/**
+	 * Execute shell commands
+	 */
+	fun execCommand(commands: List<String>, isRoot: Boolean, isNeedResultMsg: Boolean): CommandResult {
+		return execCommand(commands.toTypedArray(), isRoot, isNeedResultMsg)
+	}
 
+	/**
+	 * Execute shell commands
+	 *
+	 * @return
+	 * * If isNeedResultMsg is false, [CommandResult.successMsg] is null and [CommandResult.errorMsg] is null.
+	 * * If [CommandResult.result] is -1, there maybe some exception.
+	 */
+	fun execCommand(commands: Array<String>, isRoot: Boolean, isNeedResultMsg: Boolean): CommandResult {
+		var result = -1
+		if (commands.isEmpty()) {
+			return CommandResult(result, null, null)
+		}
+		var process: Process? = null
+		var successResult: BufferedReader? = null
+		var errorResult: BufferedReader? = null
+		var successMsg: String? = null
+		var errorMsg: String? = null
+		try {
+			process = Runtime.getRuntime().exec(if (isRoot) COMMAND_SU else COMMAND_SH)
+			DataOutputStream(process.outputStream).use { os ->
+				for (command in commands) {
+					os.write(command.toByteArray())
+					os.writeBytes(COMMAND_LINE_END)
+					os.flush()
+				}
+				os.writeBytes(COMMAND_EXIT)
+				os.flush()
+			}
+			result = process.waitFor()
+			if (isNeedResultMsg) {
+				successResult = BufferedReader(InputStreamReader(process.inputStream))
+				errorResult = BufferedReader(InputStreamReader(process.errorStream))
+				successMsg = successResult.use { it.readText() }
+				errorMsg = errorResult.use { it.readText() }
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		} finally {
+			try {
+				successResult?.close()
+				errorResult?.close()
+			} catch (e: IOException) {
+				e.printStackTrace()
+			}
+			process?.destroy()
+		}
+		return CommandResult(result, successMsg, errorMsg)
+	}
 
-    /**
-     * 执行shell命令，默认返回结果
-     *
-     * @param commands command list
-     * @return
-     * @see ShellUtils#execCommand(String[], boolean, boolean)
-     */
-    public static CommandResult execCommand(List<String> commands, boolean isRoot) {
-        return execCommand(commands == null ? null : commands.toArray(new String[]{}),
-                isRoot, true);
-    }
-
-
-    /**
-     * 执行shell命令，默认返回结果
-     *
-     * @param commands command array
-     * @return
-     * @see ShellUtils#execCommand(String[], boolean, boolean)
-     */
-    public static CommandResult execCommand(String[] commands, boolean isRoot) {
-        return execCommand(commands, isRoot, true);
-    }
-
-
-    /**
-     * execute shell command
-     *
-     * @param command         command
-     * @param isNeedResultMsg whether need result msg
-     * @return
-     * @see ShellUtils#execCommand(String[], boolean, boolean)
-     */
-    public static CommandResult execCommand(String command, boolean isRoot, boolean isNeedResultMsg) {
-        return execCommand(new String[]{command}, isRoot, isNeedResultMsg);
-    }
-
-
-    /**
-     * execute shell commands
-     *
-     * @param commands command list
-     * @return
-     * @see ShellUtils#execCommand(String[], boolean, boolean)
-     */
-    public static CommandResult execCommand(List<String> commands, boolean isRoot, boolean isNeedResultMsg) {
-        return execCommand(commands == null ? null : commands.toArray(new String[]{}),
-                isRoot, isNeedResultMsg);
-    }
-
-
-    /**
-     * execute shell commands
-     *
-     * @param commands command array
-     * @return <ul>
-     * <li>if isNeedResultMsg is false, {@link CommandResult#successMsg}
-     * is null and {@link CommandResult#errorMsg} is null.</li>
-     * <li>if {@link CommandResult#result} is -1, there maybe some
-     * excepiton.</li>
-     * </ul>
-     */
-    public static CommandResult execCommand(String[] commands, boolean isRoot, boolean isNeedResultMsg) {
-        int result = -1;
-        if (commands == null || commands.length == 0) {
-            return new CommandResult(result, null, null);
-        }
-        Process process = null;
-        BufferedReader successResult = null;
-        BufferedReader errorResult = null;
-        StringBuilder successMsg = null;
-        StringBuilder errorMsg = null;
-        DataOutputStream os = null;
-        try {
-            process = Runtime.getRuntime().exec(isRoot ? COMMAND_SU : COMMAND_SH);
-            os = new DataOutputStream(process.getOutputStream());
-            for (String command : commands) {
-                if (command == null) {
-                    continue;
-                }
-                os.write(command.getBytes());
-                os.writeBytes(COMMAND_LINE_END);
-                os.flush();
-            }
-            os.writeBytes(COMMAND_EXIT);
-            os.flush();
-            result = process.waitFor();
-            if (isNeedResultMsg) {
-                successMsg = new StringBuilder();
-                errorMsg = new StringBuilder();
-                successResult = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                errorResult = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                String s;
-                while ((s = successResult.readLine()) != null) {
-                    successMsg.append(s);
-                }
-                while ((s = errorResult.readLine()) != null) {
-                    errorMsg.append(s);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (os != null) {
-                    os.close();
-                }
-                if (successResult != null) {
-                    successResult.close();
-                }
-                if (errorResult != null) {
-                    errorResult.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (process != null) {
-                process.destroy();
-            }
-        }
-        return new CommandResult(result, successMsg == null ? null : successMsg.toString(), errorMsg == null ? null
-                : errorMsg.toString());
-    }
-
-
-    /**
-     * 运行结果
-     * <ul>
-     * <li>{@link CommandResult#result} means result of command, 0 means normal,
-     * else means error, same to excute in linux shell</li>
-     * <li>{@link CommandResult#successMsg} means success message of command
-     * result</li>
-     * <li>{@link CommandResult#errorMsg} means error message of command result</li>
-     * </ul>
-     *
-     * @author <a href="http://www.trinea.cn" target="_blank">Trinea</a>
-     * 2013-5-16
-     */
-    public static class CommandResult {
-
-
-        /**
-         * 运行结果
-         **/
-        public final int result;
-        /**
-         * 运行成功结果
-         **/
-        public String successMsg;
-        /**
-         * 运行失败结果
-         **/
-        public String errorMsg;
-
-
-        public CommandResult(int result) {
-            this.result = result;
-        }
-
-
-        public CommandResult(int result, String successMsg, String errorMsg) {
-            this.result = result;
-            this.successMsg = successMsg;
-            this.errorMsg = errorMsg;
-        }
-
-        @Override
-        public String toString() {
-            return "CommandResult{" +
-                    "result=" + result +
-                    ", successMsg='" + successMsg + '\'' +
-                    ", errorMsg='" + errorMsg + '\'' +
-                    '}';
-        }
-    }
+	/**
+	 * 运行结果
+	 *
+	 * * [result] Result of command, 0 means normal,	else means error, same to execute in Linux shell
+	 * * [successMsg] Success message of command result
+	 * * [errorMsg] Error message of command result
+	 * 
+	 * [Trinea](http://www.trinea.cn)
+	 * 
+	 * 2013-5-16
+	 */
+	data class CommandResult(
+		val result: Int,
+		val successMsg: String? = null,
+		val errorMsg: String? = null
+	)
 }

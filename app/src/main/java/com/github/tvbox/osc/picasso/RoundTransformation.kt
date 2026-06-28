@@ -1,414 +1,391 @@
-package com.github.tvbox.osc.picasso;
+package com.github.tvbox.osc.picasso
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapShader;
-import android.graphics.Canvas;
-import android.graphics.Matrix;
-import android.graphics.Paint;
-import android.graphics.Path;
-import android.graphics.RectF;
-import android.graphics.Shader;
-
-import androidx.annotation.IntDef;
-
-import com.squareup.picasso.Transformation;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Shader
+import androidx.annotation.IntDef
+import androidx.core.graphics.createBitmap
+import com.squareup.picasso.Transformation
 
 /**
- * 描述
- *
  * @author pj567
  * @since 2020/12/22
  */
-public class RoundTransformation implements Transformation {
-    private final String key;
-    private int viewWidth, viewHeight, bottomShapeHeight = 0;
-    @RoundType
-    private int mRoundType = RoundType.NONE;
-    private int diameter;
-    private int radius;
-    private boolean isCenterCorp = true;//垂直方向不是中间裁剪，就是顶部
+class RoundTransformation(private val key: String?) : Transformation {
+	private var viewWidth = 0
+	private var viewHeight = 0
+	private var bottomShapeHeight = 0
 
-    public RoundTransformation(String key) {
-        this.key = key;
-    }
+	@RoundType
+	private var mRoundType = RoundType.NONE
+	private var diameter = 0
+	private var radius = 0
+	private var isCenterCorp = true // 垂直方向不是中间裁剪，就是顶部
 
-    static Path RoundedRect(float left, float top, float right, float bottom, float rx, float ry, boolean tl, boolean tr, boolean br, boolean bl) {
-        Path path = new Path();
-        if (rx < 0) rx = 0;
-        if (ry < 0) ry = 0;
-        float width = right - left;
-        float height = bottom - top;
-        if (rx > width / 2) rx = width / 2;
-        if (ry > height / 2) ry = height / 2;
-        float widthMinusCorners = (width - (2 * rx));
-        float heightMinusCorners = (height - (2 * ry));
+	fun override(width: Int, height: Int): RoundTransformation {
+		this.viewWidth = width
+		this.viewHeight = height
+		return this
+	}
 
-        path.moveTo(right, top + ry);
-        if (tr)
-            path.rQuadTo(0, -ry, -rx, -ry);//top-right corner
-        else {
-            path.rLineTo(0, -ry);
-            path.rLineTo(-rx, 0);
-        }
-        path.rLineTo(-widthMinusCorners, 0);
-        if (tl)
-            path.rQuadTo(-rx, 0, -rx, ry); //top-left corner
-        else {
-            path.rLineTo(-rx, 0);
-            path.rLineTo(0, ry);
-        }
-        path.rLineTo(0, heightMinusCorners);
+	fun centerCorp(centerCorp: Boolean): RoundTransformation {
+		this.isCenterCorp = centerCorp
+		return this
+	}
 
-        if (bl)
-            path.rQuadTo(0, ry, rx, ry);//bottom-left corner
-        else {
-            path.rLineTo(0, ry);
-            path.rLineTo(rx, 0);
-        }
+	fun bottomShapeHeight(shapeHeight: Int): RoundTransformation {
+		this.bottomShapeHeight = shapeHeight
+		return this
+	}
 
-        path.rLineTo(widthMinusCorners, 0);
-        if (br)
-            path.rQuadTo(rx, 0, rx, -ry); //bottom-right corner
-        else {
-            path.rLineTo(rx, 0);
-            path.rLineTo(0, -ry);
-        }
+	fun roundRadius(radius: Int, @RoundType mRoundType: Int): RoundTransformation {
+		this.radius = radius
+		this.diameter = radius * 2
+		this.mRoundType = mRoundType
+		return this
+	}
 
-        path.rLineTo(0, -heightMinusCorners);
+	override fun transform(source: Bitmap): Bitmap {
+		val sourceWidth = source.width
+		val sourceHeight = source.height
+		if (viewWidth == 0 || viewHeight == 0) {
+			viewWidth = sourceWidth
+			viewHeight = sourceHeight
+		}
+		val scale: Float
+		val targetWidth: Int
+		val targetHeight: Int
+		if (sourceWidth != viewWidth || sourceHeight != viewHeight) {
+			if (sourceWidth * 1f / viewWidth > sourceHeight * 1f / viewHeight) {
+				scale = viewHeight.toFloat() / sourceHeight
+				targetWidth = (sourceWidth * scale).toInt()
+				targetHeight = viewHeight
+			} else {
+				scale = viewWidth.toFloat() / sourceWidth
+				targetWidth = viewWidth
+				targetHeight = (sourceHeight * scale).toInt()
+			}
+		} else {
+			scale = 1f
+			targetWidth = sourceWidth
+			targetHeight = sourceHeight
+		}
+		val shader = BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+		if (scale != 1f) {
+			val matrix = Matrix()
+			matrix.setScale(scale, scale)
+			shader.setLocalMatrix(matrix)
+		}
+		val bitmap = createBitmap(targetWidth, targetHeight)
+		bitmap.setHasAlpha(true)
+		val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+		paint.shader = shader
+		val canvas = Canvas(bitmap)
+		val rect = RectF(0f, 0f, targetWidth.toFloat(), targetHeight.toFloat())
+		canvas.drawRoundRect(rect, radius.toFloat(), radius.toFloat(), paint)
 
-        path.close();//Given close, last lineto can be removed.
+		source.recycle()
+		return bitmap
+	}
 
-        return path;
-    }
+	private fun drawBottomLabel(mCanvas: Canvas, mPaint: Paint, left: Float, top: Float, right: Float, bottom: Float) {
+		if (bottomShapeHeight <= 0) return
+		mPaint.shader = null
+		mPaint.color = -0x67000000
+		mCanvas.drawPath(roundedRect(left, bottom - bottomShapeHeight * 2, right, bottom, radius.toFloat(), radius.toFloat(), tl = false, tr = false, br = true, bl = true), mPaint)
+	}
 
-    public RoundTransformation override(int width, int height) {
-        this.viewWidth = width;
-        this.viewHeight = height;
-        return this;
-    }
+	private fun drawRoundRect(mCanvas: Canvas, mPaint: Paint, width: Float, height: Float) {
+		when (mRoundType) {
+			RoundType.NONE -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRect(RectF(0f, 0f, width, height), mPaint)
+			} else {
+				if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+					val dis = (height - viewHeight) / 2f
+					if (isCenterCorp) {
+						mCanvas.translate(0f, -dis)
+						mCanvas.drawRect(RectF(0f, dis, viewWidth.toFloat(), viewHeight + dis), mPaint)
+					} else {
+						mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+					}
+				} else {
+					val dis = (width - viewWidth) / 2f
+					mCanvas.translate(-dis, 0f)
+					mCanvas.drawRect(RectF(dis, 0f, viewWidth + dis, viewHeight.toFloat()), mPaint)
+				}
+			}
 
-    public RoundTransformation centerCorp(boolean centerCorp) {
-        this.isCenterCorp = centerCorp;
-        return this;
-    }
+			RoundType.ALL -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				drawBottomLabel(mCanvas, mPaint, 0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF(0f, dis, viewWidth.toFloat(), viewHeight + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					drawBottomLabel(mCanvas, mPaint, 0f, dis, viewWidth.toFloat(), viewHeight + dis)
+				} else {
+					mCanvas.drawRoundRect(RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					drawBottomLabel(mCanvas, mPaint, 0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(dis, 0f, viewWidth + dis, viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				drawBottomLabel(mCanvas, mPaint, dis, 0f, viewWidth + dis, viewHeight.toFloat())
+			}
 
-    public RoundTransformation bottomShapeHeight(int shapeHeight) {
-        this.bottomShapeHeight = shapeHeight;
-        return this;
-    }
+			RoundType.TOP -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF(0f, 0f, viewWidth.toFloat(), diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(0f, radius.toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF(0f, dis, viewWidth.toFloat(), diameter + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, dis + radius, viewWidth.toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF(0f, 0f, viewWidth.toFloat(), diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, radius.toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(dis, 0f, viewWidth + dis, diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(dis, radius.toFloat(), viewWidth + dis, viewHeight.toFloat()), mPaint)
+			}
 
-    public RoundTransformation roundRadius(int radius, @RoundType int mRoundType) {
-        this.radius = radius;
-        this.diameter = radius * 2;
-        this.mRoundType = mRoundType;
-        return this;
-    }
+			RoundType.RIGHT -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), 0f, viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(0f, 0f, (viewWidth - radius).toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), dis, viewWidth.toFloat(), viewHeight + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, dis, (viewWidth - radius).toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), 0f, viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, 0f, (viewWidth - radius).toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(viewWidth - diameter + dis, 0f, viewWidth + dis, viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(dis, 0f, viewWidth - radius + dis, viewHeight.toFloat()), mPaint)
+			}
 
-    @Override
-    public Bitmap transform(Bitmap source) {
-        final int sourceWidth = source.getWidth();
-        final int sourceHeight = source.getHeight();
-        if (viewWidth == 0 || viewHeight == 0) {
-            viewWidth = sourceWidth;
-            viewHeight = sourceHeight;
-        }
-        final float scale;
-        final int targetWidth;
-        final int targetHeight;
-        if (sourceWidth != viewWidth || sourceHeight != viewHeight) {
-            if (sourceWidth * 1f / viewWidth > sourceHeight * 1f / viewHeight) {
-                scale = (float) viewHeight / sourceHeight;
-                targetWidth = (int) (sourceWidth * scale);
-                targetHeight = viewHeight;
-            } else {
-                scale = (float) viewWidth / sourceWidth;
-                targetWidth = viewWidth;
-                targetHeight = (int) (sourceHeight * scale);
-            }
-        } else {
-            scale = 1f;
-            targetWidth = sourceWidth;
-            targetHeight = sourceHeight;
-        }
-        BitmapShader shader = new BitmapShader(source, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-        if (scale != 1f) {
-            Matrix matrix = new Matrix();
-            matrix.setScale(scale, scale);
-            shader.setLocalMatrix(matrix);
-        }
-        Bitmap bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888);
-        bitmap.setHasAlpha(true);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setShader(shader);
-        Canvas canvas = new Canvas(bitmap);
-        RectF rect = new RectF(0, 0, targetWidth, targetHeight);
-        canvas.drawRoundRect(rect, radius, radius, paint);
+			RoundType.BOTTOM -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF(0f, (viewHeight - diameter).toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), (viewHeight - radius).toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF(0f, viewHeight - diameter + dis, viewWidth.toFloat(), viewHeight + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, dis, viewWidth.toFloat(), viewHeight - radius + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF(0f, (viewHeight - diameter).toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), (viewHeight - radius).toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(dis, (viewHeight - diameter).toFloat(), viewWidth + dis, viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(dis, 0f, viewWidth + dis, (viewHeight - radius).toFloat()), mPaint)
+			}
 
-        source.recycle();
-        return bitmap;
-    }
+			RoundType.LEFT -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF(0f, 0f, diameter.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(radius.toFloat(), 0f, viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF(0f, dis, diameter.toFloat(), viewHeight + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(radius.toFloat(), dis, viewWidth.toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF(0f, 0f, diameter.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(radius.toFloat(), 0f, viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(dis, 0f, diameter + dis, viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(radius + dis, 0f, viewWidth + dis, viewHeight.toFloat()), mPaint)
+			}
 
-    private void drawBottomLabel(Canvas mCanvas, Paint mPaint, float left, float top, float right, float bottom) {
-        if (bottomShapeHeight <= 0)
-            return;
-        mPaint.setShader(null);
-        mPaint.setColor(0x99000000);
-        mCanvas.drawPath(RoundedRect(left, bottom - bottomShapeHeight * 2, right, bottom, radius, radius, false, false, true, true), mPaint);
-    }
+			RoundType.LEFT_TOP -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF(0f, 0f, diameter.toFloat(), diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(radius.toFloat(), 0f, viewWidth.toFloat(), radius.toFloat()), mPaint)
+				mCanvas.drawRect(RectF(0f, radius.toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF(0f, dis, diameter.toFloat(), diameter + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(radius.toFloat(), dis, viewWidth.toFloat(), radius + dis), mPaint)
+					mCanvas.drawRect(RectF(0f, radius + dis, viewWidth.toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF(0f, 0f, diameter.toFloat(), diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(radius.toFloat(), 0f, viewWidth.toFloat(), radius.toFloat()), mPaint)
+					mCanvas.drawRect(RectF(0f, radius.toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(dis, 0f, diameter + dis, diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(radius + dis, 0f, viewWidth + dis, radius.toFloat()), mPaint)
+				mCanvas.drawRect(RectF(dis, radius.toFloat(), viewWidth + dis, viewHeight.toFloat()), mPaint)
+			}
 
-    private void drawRoundRect(Canvas mCanvas, Paint mPaint, float width, float height) {
-        switch (mRoundType) {
-            case RoundType.NONE:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRect(new RectF(0, 0, width, height), mPaint);
-                } else {
-                    if (viewWidth == width && viewHeight != height) {
-                        float dis = (height - viewHeight) / 2f;
-                        if (isCenterCorp) {
-                            mCanvas.translate(0, -dis);
-                            mCanvas.drawRect(new RectF(0, dis, viewWidth, viewHeight + dis), mPaint);
-                        } else {
-                            mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight), mPaint);
-                        }
-                    } else {
-                        float dis = (width - viewWidth) / 2f;
-                        mCanvas.translate(-dis, 0);
-                        mCanvas.drawRect(new RectF(dis, 0, viewWidth + dis, viewHeight), mPaint);
-                    }
-                }
-                break;
-            case RoundType.ALL:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(0, 0, viewWidth, viewHeight), radius, radius, mPaint);
-                    drawBottomLabel(mCanvas, mPaint, 0, 0, viewWidth, viewHeight);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(0, dis, viewWidth, viewHeight + dis), radius, radius, mPaint);
-                        drawBottomLabel(mCanvas, mPaint, 0, dis, viewWidth, viewHeight + dis);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(0, 0, viewWidth, viewHeight), radius, radius, mPaint);
-                        drawBottomLabel(mCanvas, mPaint, 0, 0, viewWidth, viewHeight);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(dis, 0, viewWidth + dis, viewHeight), radius, radius, mPaint);
-                    drawBottomLabel(mCanvas, mPaint, dis, 0, viewWidth + dis, viewHeight);
-                }
-                break;
-            case RoundType.TOP:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(0, 0, viewWidth, diameter), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(0, radius, viewWidth, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(0, dis, viewWidth, diameter + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, dis + radius, viewWidth, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(0, 0, viewWidth, diameter), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, radius, viewWidth, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(dis, 0, viewWidth + dis, diameter), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(dis, radius, viewWidth + dis, viewHeight), mPaint);
-                }
-                break;
-            case RoundType.RIGHT:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(viewWidth - diameter, 0, viewWidth, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(0, 0, viewWidth - radius, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(viewWidth - diameter, dis, viewWidth, viewHeight + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, dis, viewWidth - radius, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(viewWidth - diameter, 0, viewWidth, viewHeight), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, 0, viewWidth - radius, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(viewWidth - diameter + dis, 0, viewWidth + dis, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(dis, 0, viewWidth - radius + dis, viewHeight), mPaint);
-                }
-                break;
-            case RoundType.BOTTOM:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(0, viewHeight - diameter, viewWidth, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight - radius), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(0, viewHeight - diameter + dis, viewWidth, viewHeight + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, dis, viewWidth, viewHeight - radius + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(0, viewHeight - diameter, viewWidth, viewHeight), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight - radius), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(dis, viewHeight - diameter, viewWidth + dis, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(dis, 0, viewWidth + dis, viewHeight - radius), mPaint);
-                }
-                break;
-            case RoundType.LEFT:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(0, 0, diameter, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(radius, 0, viewWidth, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(0, dis, diameter, viewHeight + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(radius, dis, viewWidth, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(0, 0, diameter, viewHeight), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(radius, 0, viewWidth, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(dis, 0, diameter + dis, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(radius + dis, 0, viewWidth + dis, viewHeight), mPaint);
-                }
-                break;
-            case RoundType.LEFT_TOP:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(0, 0, diameter, diameter), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(radius, 0, viewWidth, radius), mPaint);
-                    mCanvas.drawRect(new RectF(0, radius, viewWidth, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(0, dis, diameter, diameter + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(radius, dis, viewWidth, radius + dis), mPaint);
-                        mCanvas.drawRect(new RectF(0, radius + dis, viewWidth, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(0, 0, diameter, diameter), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(radius, 0, viewWidth, radius), mPaint);
-                        mCanvas.drawRect(new RectF(0, radius, viewWidth, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(dis, 0, diameter + dis, diameter), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(radius + dis, 0, viewWidth + dis, radius), mPaint);
-                    mCanvas.drawRect(new RectF(dis, radius, viewWidth + dis, viewHeight), mPaint);
-                }
-                break;
-            case RoundType.LEFT_BOTTOM:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(0, viewHeight - diameter, diameter, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight - radius), mPaint);
-                    mCanvas.drawRect(new RectF(radius, viewHeight - radius, viewWidth, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(0, viewHeight - diameter + dis, diameter, viewHeight + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, dis, viewWidth, viewHeight - radius + dis), mPaint);
-                        mCanvas.drawRect(new RectF(radius, viewHeight - radius + dis, viewWidth, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(0, viewHeight - diameter, diameter, viewHeight), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight - radius), mPaint);
-                        mCanvas.drawRect(new RectF(radius, viewHeight - radius, viewWidth, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(dis, viewHeight - diameter, diameter + dis, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(dis, 0, viewWidth + dis, viewHeight - radius), mPaint);
-                    mCanvas.drawRect(new RectF(radius + dis, viewHeight - radius, viewWidth + dis, viewHeight), mPaint);
-                }
-                break;
-            case RoundType.RIGHT_TOP:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(viewWidth - diameter, 0, viewWidth, diameter), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(0, 0, viewWidth - radius, radius), mPaint);
-                    mCanvas.drawRect(new RectF(0, radius, viewWidth, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(viewWidth - diameter, dis, viewWidth, diameter + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, dis, viewWidth - radius, radius + dis), mPaint);
-                        mCanvas.drawRect(new RectF(0, radius + dis, viewWidth, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(viewWidth - diameter, 0, viewWidth, diameter), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, 0, viewWidth - radius, radius), mPaint);
-                        mCanvas.drawRect(new RectF(0, radius, viewWidth, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(viewWidth - diameter + dis, 0, viewWidth + dis, diameter), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(dis, 0, viewWidth - radius + dis, radius), mPaint);
-                    mCanvas.drawRect(new RectF(dis, radius, viewWidth + dis, viewHeight), mPaint);
-                }
-                break;
-            case RoundType.RIGHT_BOTTOM:
-                if (viewWidth == width && viewHeight == height) {
-                    mCanvas.drawRoundRect(new RectF(viewWidth - diameter, viewHeight - diameter, viewWidth, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight - radius), mPaint);
-                    mCanvas.drawRect(new RectF(0, viewHeight - radius, viewWidth - radius, viewHeight), mPaint);
-                } else if (viewWidth == width && viewHeight != height) {
-                    float dis = (height - viewHeight) / 2f;
-                    if (isCenterCorp) {
-                        mCanvas.translate(0, -dis);
-                        mCanvas.drawRoundRect(new RectF(viewWidth - diameter, viewHeight - diameter + dis, viewWidth, viewHeight + dis), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, dis, viewWidth, viewHeight - radius + dis), mPaint);
-                        mCanvas.drawRect(new RectF(0, viewHeight - radius + dis, viewWidth - radius, viewHeight + dis), mPaint);
-                    } else {
-                        mCanvas.drawRoundRect(new RectF(viewWidth - diameter, viewHeight - diameter, viewWidth, viewHeight), radius, radius, mPaint);
-                        mCanvas.drawRect(new RectF(0, 0, viewWidth, viewHeight - radius), mPaint);
-                        mCanvas.drawRect(new RectF(0, viewHeight - radius, viewWidth - radius, viewHeight), mPaint);
-                    }
-                } else {
-                    float dis = (width - viewWidth) / 2f;
-                    mCanvas.translate(-dis, 0);
-                    mCanvas.drawRoundRect(new RectF(viewWidth - diameter + dis, viewHeight - diameter, viewWidth + dis, viewHeight), radius, radius, mPaint);
-                    mCanvas.drawRect(new RectF(dis, 0, viewWidth + dis, viewHeight - radius), mPaint);
-                    mCanvas.drawRect(new RectF(dis, viewHeight - radius, viewWidth - radius + dis, viewHeight), mPaint);
-                }
-                break;
-        }
-    }
+			RoundType.LEFT_BOTTOM -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF(0f, (viewHeight - diameter).toFloat(), diameter.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), (viewHeight - radius).toFloat()), mPaint)
+				mCanvas.drawRect(RectF(radius.toFloat(), (viewHeight - radius).toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF(0f, viewHeight - diameter + dis, diameter.toFloat(), viewHeight + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, dis, viewWidth.toFloat(), viewHeight - radius + dis), mPaint)
+					mCanvas.drawRect(RectF(radius.toFloat(), viewHeight - radius + dis, viewWidth.toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF(0f, (viewHeight - diameter).toFloat(), diameter.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), (viewHeight - radius).toFloat()), mPaint)
+					mCanvas.drawRect(RectF(radius.toFloat(), (viewHeight - radius).toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(dis, (viewHeight - diameter).toFloat(), diameter + dis, viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(dis, 0f, viewWidth + dis, (viewHeight - radius).toFloat()), mPaint)
+				mCanvas.drawRect(RectF(radius + dis, (viewHeight - radius).toFloat(), viewWidth + dis, viewHeight.toFloat()), mPaint)
+			}
 
-    @Override
-    public String key() {
-        return key;
-    }
+			RoundType.RIGHT_TOP -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), 0f, viewWidth.toFloat(), diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(0f, 0f, (viewWidth - radius).toFloat(), radius.toFloat()), mPaint)
+				mCanvas.drawRect(RectF(0f, radius.toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), dis, viewWidth.toFloat(), diameter + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, dis, (viewWidth - radius).toFloat(), radius + dis), mPaint)
+					mCanvas.drawRect(RectF(0f, radius + dis, viewWidth.toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), 0f, viewWidth.toFloat(), diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, 0f, (viewWidth - radius).toFloat(), radius.toFloat()), mPaint)
+					mCanvas.drawRect(RectF(0f, radius.toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(viewWidth - diameter + dis, 0f, viewWidth + dis, diameter.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(dis, 0f, viewWidth - radius + dis, radius.toFloat()), mPaint)
+				mCanvas.drawRect(RectF(dis, radius.toFloat(), viewWidth + dis, viewHeight.toFloat()), mPaint)
+			}
 
-    @IntDef({RoundType.ALL, RoundType.TOP, RoundType.RIGHT, RoundType.BOTTOM, RoundType.LEFT, RoundType.LEFT_TOP,
-            RoundType.LEFT_BOTTOM, RoundType.RIGHT_TOP, RoundType.RIGHT_BOTTOM, RoundType.NONE})
-    @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-    @Retention(RetentionPolicy.SOURCE)
-    public @interface RoundType {
-        int ALL = 0;
-        int TOP = 1;
-        int RIGHT = 2;
-        int BOTTOM = 3;
-        int LEFT = 4;
-        int LEFT_TOP = 5;
-        int LEFT_BOTTOM = 6;
-        int RIGHT_TOP = 7;
-        int RIGHT_BOTTOM = 8;
-        int NONE = 9;
-    }
+			RoundType.RIGHT_BOTTOM -> if (viewWidth.toFloat() == width && viewHeight.toFloat() == height) {
+				mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), (viewHeight - diameter).toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), (viewHeight - radius).toFloat()), mPaint)
+				mCanvas.drawRect(RectF(0f, (viewHeight - radius).toFloat(), (viewWidth - radius).toFloat(), viewHeight.toFloat()), mPaint)
+			} else if (viewWidth.toFloat() == width && viewHeight.toFloat() != height) {
+				val dis = (height - viewHeight) / 2f
+				if (isCenterCorp) {
+					mCanvas.translate(0f, -dis)
+					mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), viewHeight - diameter + dis, viewWidth.toFloat(), viewHeight + dis), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, dis, viewWidth.toFloat(), viewHeight - radius + dis), mPaint)
+					mCanvas.drawRect(RectF(0f, viewHeight - radius + dis, (viewWidth - radius).toFloat(), viewHeight + dis), mPaint)
+				} else {
+					mCanvas.drawRoundRect(RectF((viewWidth - diameter).toFloat(), (viewHeight - diameter).toFloat(), viewWidth.toFloat(), viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+					mCanvas.drawRect(RectF(0f, 0f, viewWidth.toFloat(), (viewHeight - radius).toFloat()), mPaint)
+					mCanvas.drawRect(RectF(0f, (viewHeight - radius).toFloat(), (viewWidth - radius).toFloat(), viewHeight.toFloat()), mPaint)
+				}
+			} else {
+				val dis = (width - viewWidth) / 2f
+				mCanvas.translate(-dis, 0f)
+				mCanvas.drawRoundRect(RectF(viewWidth - diameter + dis, (viewHeight - diameter).toFloat(), viewWidth + dis, viewHeight.toFloat()), radius.toFloat(), radius.toFloat(), mPaint)
+				mCanvas.drawRect(RectF(dis, 0f, viewWidth + dis, (viewHeight - radius).toFloat()), mPaint)
+				mCanvas.drawRect(RectF(dis, (viewHeight - radius).toFloat(), viewWidth - radius + dis, viewHeight.toFloat()), mPaint)
+			}
+		}
+	}
+
+	override fun key(): String? {
+		return key
+	}
+
+	@IntDef(RoundType.ALL, RoundType.TOP, RoundType.RIGHT, RoundType.BOTTOM, RoundType.LEFT, RoundType.LEFT_TOP, RoundType.LEFT_BOTTOM, RoundType.RIGHT_TOP, RoundType.RIGHT_BOTTOM, RoundType.NONE)
+	@Target(AnnotationTarget.FIELD, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.VALUE_PARAMETER)
+	@Retention(AnnotationRetention.SOURCE)
+	annotation class RoundType {
+		companion object {
+			const val ALL: Int = 0
+			const val TOP: Int = 1
+			const val RIGHT: Int = 2
+			const val BOTTOM: Int = 3
+			const val LEFT: Int = 4
+			const val LEFT_TOP: Int = 5
+			const val LEFT_BOTTOM: Int = 6
+			const val RIGHT_TOP: Int = 7
+			const val RIGHT_BOTTOM: Int = 8
+			const val NONE: Int = 9
+		}
+	}
+
+	companion object {
+		fun roundedRect(left: Float, top: Float, right: Float, bottom: Float, rx: Float, ry: Float, tl: Boolean, tr: Boolean, br: Boolean, bl: Boolean): Path {
+			var rx = rx
+			var ry = ry
+			val path = Path()
+			if (rx < 0) rx = 0f
+			if (ry < 0) ry = 0f
+			val width = right - left
+			val height = bottom - top
+			if (rx > width / 2) rx = width / 2
+			if (ry > height / 2) ry = height / 2
+			val widthMinusCorners = (width - (2 * rx))
+			val heightMinusCorners = (height - (2 * ry))
+
+			path.moveTo(right, top + ry)
+			if (tr) path.rQuadTo(0f, -ry, -rx, -ry) // top-right corner
+			else {
+				path.rLineTo(0f, -ry)
+				path.rLineTo(-rx, 0f)
+			}
+			path.rLineTo(-widthMinusCorners, 0f)
+			if (tl) path.rQuadTo(-rx, 0f, -rx, ry) // top-left corner
+			else {
+				path.rLineTo(-rx, 0f)
+				path.rLineTo(0f, ry)
+			}
+			path.rLineTo(0f, heightMinusCorners)
+
+			if (bl) path.rQuadTo(0f, ry, rx, ry) // bottom-left corner
+			else {
+				path.rLineTo(0f, ry)
+				path.rLineTo(rx, 0f)
+			}
+
+			path.rLineTo(widthMinusCorners, 0f)
+			if (br) path.rQuadTo(rx, 0f, rx, -ry) // bottom-right corner
+			else {
+				path.rLineTo(rx, 0f)
+				path.rLineTo(0f, -ry)
+			}
+
+			path.rLineTo(0f, -heightMinusCorners)
+
+			path.close() // Given close, last lineTo can be removed.
+
+			return path
+		}
+	}
 }

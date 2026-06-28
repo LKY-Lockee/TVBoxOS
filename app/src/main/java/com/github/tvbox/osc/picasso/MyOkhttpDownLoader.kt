@@ -13,100 +13,85 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.tvbox.osc.picasso;
 
-import android.text.TextUtils;
+package com.github.tvbox.osc.picasso
 
-import androidx.annotation.NonNull;
-import androidx.annotation.VisibleForTesting;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.squareup.picasso.Downloader;
-
-import java.io.IOException;
-import java.net.URLDecoder;
-
-import okhttp3.Cache;
-import okhttp3.Call;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import androidx.annotation.VisibleForTesting
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.squareup.picasso.Downloader
+import okhttp3.Cache
+import okhttp3.Call
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.net.URLDecoder
+import java.util.Locale
 
 /**
- * A {@link Downloader} which uses OkHttp to download images.
+ * A [Downloader] which uses OkHttp to download images.
  */
-public final class MyOkhttpDownLoader implements Downloader {
-    @VisibleForTesting
-    final Call.Factory client;
-    private final Cache cache;
+class MyOkhttpDownLoader : Downloader {
+	@VisibleForTesting
+	val client: Call.Factory
+	private val cache: Cache?
 
-    /**
-     * Create a new downloader that uses the specified OkHttp instance. A response cache will not be
-     * automatically configured.
-     */
-    public MyOkhttpDownLoader(OkHttpClient client) {
-        this.client = client;
-        this.cache = client.cache();
-    }
+	/**
+	 * Create a new downloader that uses the specified OkHttp instance. A response cache will not be automatically configured.
+	 */
+	constructor(client: OkHttpClient) {
+		this.client = client
+		this.cache = client.cache
+	}
 
-    /**
-     * Create a new downloader that uses the specified {@link Call.Factory} instance.
-     */
-    public MyOkhttpDownLoader(Call.Factory client) {
-        this.client = client;
-        this.cache = null;
-    }
+	/**
+	 * Create a new downloader that uses the specified [Call.Factory] instance.
+	 */
+	constructor(client: Call.Factory) {
+		this.client = client
+		this.cache = null
+	}
 
-    private static String removeDuplicateSlashes(String paramValue) {
-        return paramValue.replaceAll("//", "/");
-    }
+	override fun load(request: Request): Response {
+		var url = request.url.toString()
 
-    @NonNull
-    @Override
-    public Response load(@NonNull Request request) throws IOException {
-        String url = request.url().toString();
-        String header = null;
-        String cookie = null;
-        String ua = null;
-        String referer = null;
+		// 检查链接里面是否有自定义header
+		val header = if (url.contains("@Headers=")) URLDecoder.decode(url.substringAfter("@Headers=").substringBefore("@"), "UTF-8") else null
+		val cookie = if (url.contains("@Cookie=")) url.substringAfter("@Cookie=").substringBefore("@") else null
+		val ua = if (url.contains("@User-Agent=")) url.substringAfter("@User-Agent=").substringBefore("@") else null
+		val referer = if (url.contains("@Referer=")) url.substringAfter("@Referer=").substringBefore("@") else null
 
-        //检查链接里面是否有自定义header
-        if (url.contains("@Headers=")) {
-            header = url.split("@Headers=")[1].split("@")[0];
-            header = URLDecoder.decode(header, "UTF-8");
-        }
-        if (url.contains("@Cookie=")) cookie = url.split("@Cookie=")[1].split("@")[0];
-        if (url.contains("@User-Agent=")) ua = url.split("@User-Agent=")[1].split("@")[0];
-        if (url.contains("@Referer=")) referer = url.split("@Referer=")[1].split("@")[0];
+		url = url.substringBefore("@")
+		val mRequestBuilder = request.newBuilder().url(url)
+		if (header != null) {
+			val jsonInfo = Gson().fromJson(header, JsonObject::class.java)
+			for (key in jsonInfo.keySet()) {
+				val value = jsonInfo.get(key).asString
+				mRequestBuilder.addHeader(key.uppercase(Locale.getDefault()), removeDuplicateSlashes(value))
+			}
+		} else {
+			if (!cookie.isNullOrEmpty()) {
+				mRequestBuilder.addHeader("Cookie", cookie)
+			}
+			if (!ua.isNullOrEmpty()) {
+				mRequestBuilder.addHeader("User-Agent", ua)
+			} else {
+				val mobileUA = "Dalvik/2.1.0 (Linux; U; Android 13; M2102J2SC Build/TKQ1.220829.002)"
+				mRequestBuilder.addHeader("User-Agent", mobileUA)
+			}
+			if (!referer.isNullOrEmpty()) {
+				mRequestBuilder.addHeader("Referer", referer)
+			}
+		}
+		return client.newCall(mRequestBuilder.build()).execute()
+	}
 
-        url = url.split("@")[0];
-        Request.Builder mRequestBuilder = request.newBuilder().url(url);
-        if (!TextUtils.isEmpty(header)) {
-            JsonObject jsonInfo = new Gson().fromJson(header, JsonObject.class);
-            for (String key : jsonInfo.keySet()) {
-                String val = jsonInfo.get(key).getAsString();
-                mRequestBuilder.addHeader(key.toUpperCase(), removeDuplicateSlashes(val));
-            }
-        } else {
-            if (!TextUtils.isEmpty(cookie)) {
-                mRequestBuilder.addHeader("Cookie", cookie);
-            }
-            if (!TextUtils.isEmpty(ua)) {
-                mRequestBuilder.addHeader("User-Agent", ua);
-            } else {
-                String mobile_UA = "Dalvik/2.1.0 (Linux; U; Android 13; M2102J2SC Build/TKQ1.220829.002)";
-                mRequestBuilder.addHeader("User-Agent", mobile_UA);
-            }
-            if (!TextUtils.isEmpty(referer)) {
-                mRequestBuilder.addHeader("Referer", referer);
-            }
-        }
-        return client.newCall(mRequestBuilder.build()).execute();
-    }
+	override fun shutdown() {
+	}
 
-    @Override
-    public void shutdown() {
-        boolean sharedClient = true;
-    }
+	companion object {
+		private fun removeDuplicateSlashes(paramValue: String): String {
+			return paramValue.replace("//", "/")
+		}
+	}
 }

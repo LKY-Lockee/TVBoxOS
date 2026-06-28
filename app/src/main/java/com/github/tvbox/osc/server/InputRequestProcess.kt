@@ -1,55 +1,41 @@
-package com.github.tvbox.osc.server;
+package com.github.tvbox.osc.server
 
-import java.util.Map;
-
-import fi.iki.elonen.NanoHTTPD;
+import fi.iki.elonen.NanoHTTPD
+import fi.iki.elonen.NanoHTTPD.IHTTPSession
 
 /**
+ * 响应按键和输入
+ *
  * @author pj567
- * @date :2021/1/5
- * @description: 响应按键和输入
+ * @date 2021/1/5
  */
+class InputRequestProcess(private val remoteServer: RemoteServer) : RequestProcess {
+	override fun isRequest(session: IHTTPSession, fileName: String): Boolean {
+		return session.method == NanoHTTPD.Method.POST && fileName == "/action"
+	}
 
-public class InputRequestProcess implements RequestProcess {
-    private final RemoteServer remoteServer;
+	override fun doResponse(session: IHTTPSession, fileName: String, params: Map<String, List<String>>, files: Map<String, String>?): NanoHTTPD.Response {
+		remoteServer.dataReceiver?.let {
+			if (fileName == "/action") {
+				when (val action = params["do"]?.firstOrNull()) {
+					"search" -> {
+						val word = params["word"]?.firstOrNull()?.trim().orEmpty()
+						it.onTextReceived(word)
+					}
 
-    public InputRequestProcess(RemoteServer remoteServer) {
-        this.remoteServer = remoteServer;
-    }
+					"api" -> {
+						val url = params["url"]?.firstOrNull()?.trim().orEmpty()
+						it.onApiReceived(url)
+					}
 
-    @Override
-    public boolean isRequest(NanoHTTPD.IHTTPSession session, String fileName) {
-        if (session.getMethod() == NanoHTTPD.Method.POST) {
-            return fileName.equals("/action");
-        }
-        return false;
-    }
-
-    @Override
-    public NanoHTTPD.Response doResponse(NanoHTTPD.IHTTPSession session, String fileName, Map<String, String> params, Map<String, String> files) {
-        DataReceiver mDataReceiver = remoteServer.getDataReceiver();
-        if (fileName.equals("/action")) {
-            if (params.get("do") != null && mDataReceiver != null) {
-                String action = params.get("do");
-
-                switch (action) {
-                    case "search": {
-                        mDataReceiver.onTextReceived(params.get("word").trim());
-                        break;
-                    }
-                    case "api": {
-                        mDataReceiver.onApiReceived(params.get("url").trim());
-                        break;
-                    }
-                    case "push": {
-                        // 暂未实现
-                        mDataReceiver.onPushReceived(params.get("url").trim());
-                        break;
-                    }
-                }
-            }
-            return RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.OK, "ok");
-        }
-        return RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.NOT_FOUND, "Error 404, file not found.");
-    }
+					"push" -> {
+						val url = params["url"]?.firstOrNull()?.trim().orEmpty()
+						it.onPushReceived(url)
+					}
+				}
+				return RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.OK, "ok")
+			}
+		}
+		return RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.NOT_FOUND, "Error 404, file not found.")
+	}
 }

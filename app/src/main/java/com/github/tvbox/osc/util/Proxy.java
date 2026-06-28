@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.List;
 import java.util.Map;
 
 import okhttp3.OkHttpClient;
@@ -17,9 +18,9 @@ import okhttp3.Response;
 
 public class Proxy {
 
-    public static Object[] proxy(Map<String, String> params) {
+    public static Object[] proxy(Map<String, List<String>> params) {
         try {
-            String what = params.get("go");
+            String what = params.get("go").get(0);
             assert what != null;
             switch (what) {
                 case "live":
@@ -30,7 +31,7 @@ public class Proxy {
                     //TODO
                     return null;
                 case "SuperParse":
-                    return SuperParse.loadHtml(params.get("flag"), params.get("url"));
+                    return SuperParse.loadHtml(params.get("flag").get(0), params.get("url").get(0));
             }
 
         } catch (Throwable ignored) {
@@ -39,11 +40,11 @@ public class Proxy {
         return null;
     }
 
-    public static Object[] itv(Map<String, String> params) {
+    public static Object[] itv(Map<String, List<String>> params) {
         try {
             Object[] result = new Object[3];
-            String url = params.get("url");
-            String type = params.get("type");
+            String url = params.get("url").get(0);
+            String type = params.get("type").get(0);
             url = URLDecoder.decode(url, "UTF-8");
 
             OkHttpClient client = OkGoHelper.ItvClient;
@@ -87,10 +88,10 @@ public class Proxy {
         }
     }
 
-    public static Object[] removeBOMFromM3U8(Map<String, String> params) {
+    public static Object[] removeBOMFromM3U8(Map<String, List<String>> params) {
         try {
             Object[] result = new Object[3];
-            String url = params.get("url");
+            String url = params.get("url").get(0);
             url = URLDecoder.decode(url, "UTF-8");
 
             OkHttpClient client = OkGoHelper.ItvClient;

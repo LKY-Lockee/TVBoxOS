@@ -21,22 +21,10 @@ class ParseBean {
 	 */
 	var type: Int = 0
 	var isDefault: Boolean = false
+	var ext: String? = null
 
 	var url: String? = null
-		private set
-
-	var ext: String? = null
-		private set
-
-	fun getUrl(): String = DefaultConfig.checkReplaceProxy(url)
-
-	fun setUrl(url: String) {
-		this.url = url
-	}
-
-	fun setExt(ext: String) {
-		this.ext = ext
-	}
+		get() = DefaultConfig.checkReplaceProxy(field)
 
 	fun mixUrl(): String? {
 		val currentExt = ext ?: return null

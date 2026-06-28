@@ -275,7 +275,7 @@ class DnsOverHttps internal constructor(builder: Builder) : Dns {
 
 		private fun buildBootstrapClient(builder: Builder): Dns {
 			val hosts = builder.bootstrapDnsHosts ?: return builder.systemDns
-			return BootstrapDns(builder.url?.host ?: "", hosts)
+			return BootstrapDns(builder.url?.host.orEmpty(), hosts)
 		}
 	}
 }

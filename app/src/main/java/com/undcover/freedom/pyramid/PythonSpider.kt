@@ -191,7 +191,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 		return false
 	}
 
-	override fun proxyLocal(params: Map<String, String>?): Array<Any?> {
+	override fun proxyLocal(params: Map<String, List<String>>?): Array<Any?> {
 		Log.i("PyLoader", "echo-proxyLocal:param$params")
 		val list = app.callAttr("localProxy", pySpider, map2json(params).toString()).asList()
 		val base64 = list.size > 4 && list[4].toInt() == 1

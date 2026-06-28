@@ -37,7 +37,7 @@ class JarLoader {
 		val urls = jarUrl.split(";md5;").filter { it.isNotEmpty() }
 		val url = urls.firstOrNull() ?: return
 		val jarKey = MD5.string2MD5(url)
-		val jarMd5 = urls.getOrNull(1)?.trim() ?: ""
+		val jarMd5 = urls.getOrNull(1)?.trim().orEmpty()
 		loadJarInternal(url, jarMd5, jarKey)
 	}
 
@@ -50,7 +50,7 @@ class JarLoader {
 	fun getSpider(key: String, cls: String, ext: String?, jar: String): Spider {
 		if (spiders.containsKey(key)) {
 			Log.i("JarLoader", "echo-getSpider spider缓存: $key")
-			return spiders[key] ?: return SpiderNull()
+			return spiders[key] ?: SpiderNull()
 		}
 		val clsKey = cls.replace("csp_", "")
 		val jarUrl: String?
@@ -63,7 +63,7 @@ class JarLoader {
 		} else {
 			val urls = jar.split(";md5;").filter { it.isNotEmpty() }
 			jarUrl = urls.firstOrNull()
-			jarMd5 = urls.getOrNull(1)?.trim() ?: ""
+			jarMd5 = urls.getOrNull(1)?.trim().orEmpty()
 			jarKey = MD5.string2MD5(jarUrl ?: return SpiderNull())
 		}
 		recentJarKey = jarKey
@@ -125,7 +125,7 @@ class JarLoader {
 		return null
 	}
 
-	fun proxyInvoke(params: Map<String, String>?): Array<Any?>? {
+	fun proxyInvoke(params: Map<String, List<String>>?): Array<Any?>? {
 		try {
 			val proxyFun = proxyMethods[recentJarKey] ?: return null
 			return (proxyFun.invoke(null, params) as? List<*>)?.toTypedArray()

@@ -367,8 +367,8 @@ class ApiConfig private constructor() {
 			sb.name = if (obj.has("name")) obj.get("name").asString.trim { it <= ' ' } else siteKey
 			sb.type = obj.get("type").asInt
 			sb.api = obj.get("api").asString.trim { it <= ' ' }
-			sb.setSearchable(DefaultConfig.safeJsonInt(obj, "searchable", 1))
-			sb.setQuickSearch(DefaultConfig.safeJsonInt(obj, "quickSearch", 1))
+			sb.searchable = DefaultConfig.safeJsonInt(obj, "searchable", 1)
+			sb.quickSearch = DefaultConfig.safeJsonInt(obj, "quickSearch", 1)
 			if (siteKey.startsWith("py_")) {
 				sb.filterable = 1
 			} else {
@@ -402,8 +402,7 @@ class ApiConfig private constructor() {
 				val pb = ParseBean()
 				pb.name = obj.get("name").asString.trim { it <= ' ' }
 				pb.url = obj.get("url").asString.trim { it <= ' ' }
-				val ext = if (obj.has("ext")) obj.get("ext").getAsJsonObject().toString() else ""
-				pb.ext = ext
+				pb.ext = if (obj.has("ext")) obj.get("ext").getAsJsonObject().toString() else ""
 				pb.type = DefaultConfig.safeJsonInt(obj, "type", 0)
 				parseBeanList.add(pb)
 			}
@@ -691,7 +690,7 @@ class ApiConfig private constructor() {
 		var channelNum = 0
 		for (groupElement in livesArray) {
 			val liveChannelGroup = LiveChannelGroup()
-			liveChannelGroup.liveChannels = ArrayList()
+			val channels = ArrayList<LiveChannelItem>()
 			liveChannelGroup.groupIndex = groupIndex++
 			val groupName = (groupElement as JsonObject).get("group").asString.trim { it <= ' ' }
 			val splitGroupName = groupName.split("_", limit = 2)
@@ -717,9 +716,10 @@ class ApiConfig private constructor() {
 					sourceIndex++
 				}
 				liveChannelItem.channelSourceNames = sourceNames
-				liveChannelItem.setChannelUrls(sourceUrls)
-				liveChannelGroup.liveChannels.add(liveChannelItem)
+				liveChannelItem.channelUrls = sourceUrls
+				channels.add(liveChannelItem)
 			}
+			liveChannelGroup.liveChannels = channels
 			channelGroupList.add(liveChannelGroup)
 		}
 	}
@@ -832,27 +832,31 @@ class ApiConfig private constructor() {
 	}
 
 	fun getCSP(sourceBean: SourceBean): Spider? {
-		return if (sourceBean.api.endsWith(".js") || sourceBean.api.contains(".js?")) {
-			jsLoader.getSpider(sourceBean.key, sourceBean.api, sourceBean.ext, sourceBean.jar)
-		} else if (sourceBean.api.contains(".py")) {
-			pyLoader.getSpider(sourceBean.key, sourceBean.api, sourceBean.ext)
-		} else jarLoader.getSpider(sourceBean.key, sourceBean.api, sourceBean.ext, sourceBean.jar)
+		val api = sourceBean.api.orEmpty()
+		val key = sourceBean.key.orEmpty()
+		val ext = sourceBean.ext.orEmpty()
+		val jar = sourceBean.jar.orEmpty()
+		return if (api.endsWith(".js") || api.contains(".js?")) {
+			jsLoader.getSpider(key, api, ext, jar)
+		} else if (api.contains(".py")) {
+			pyLoader.getSpider(key, api, ext)
+		} else jarLoader.getSpider(key, api, ext, jar)
 	}
 
 	fun getPyCSP(url: String): Spider {
 		return pyLoader.getSpider(MD5.string2MD5(url), url, "")
 	}
 
-	fun proxyLocal(param: Map<String, String>): Array<Any?>? {
-		if ("js" == param["do"]) {
+	fun proxyLocal(param: Map<String, List<String>>): Array<Any?>? {
+		if ("js" == param["do"]?.firstOrNull()) {
 			return jsLoader.proxyInvoke(param)
 		}
 		val apiString: String
 		if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false)) {
-			apiString = currentLiveSpider ?: ""
+			apiString = currentLiveSpider.orEmpty()
 		} else {
 			val sourceBean: SourceBean = homeSourceBean
-			apiString = sourceBean.api
+			apiString = sourceBean.api.orEmpty()
 		}
 		return if (apiString.contains(".py")) pyLoader.proxyInvoke(param) else jarLoader.proxyInvoke(param)
 	}
@@ -882,7 +886,7 @@ class ApiConfig private constructor() {
 			mDefaultParse = value
 			if (value != null) {
 				Hawk.put(HawkConfig.DEFAULT_PARSE, value.name)
-				value.setDefault(true)
+				value.isDefault = true
 			}
 		}
 
@@ -919,7 +923,7 @@ class ApiConfig private constructor() {
 
 	fun clanToAddress(lanLink: String): String {
 		if (lanLink.startsWith("clan://localhost/")) {
-			return lanLink.replace("clan://localhost/", ControlManager.get().getAddress(true) + "file/")
+			return lanLink.replace("clan://localhost/", ControlManager.instance.getAddress(true) + "file/")
 		} else {
 			val link = lanLink.substring(7)
 			val end = link.indexOf('/')
@@ -984,6 +988,10 @@ class ApiConfig private constructor() {
 
 	companion object {
 		private var jarCache = "true"
+
+		val instance: ApiConfig by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+			ApiConfig()
+		}
 
 		fun findResult(json: String, configKey: String?): String {
 			var json = json

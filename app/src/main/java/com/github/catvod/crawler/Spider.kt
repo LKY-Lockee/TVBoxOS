@@ -96,7 +96,7 @@ open class Spider {
 	/**
 	 * 爬虫代理
 	 */
-	open fun proxyLocal(params: Map<String, String>?): Array<Any?> {
+	open fun proxyLocal(params: Map<String, List<String>>?): Array<Any?> {
 		return emptyArray()
 	}
 

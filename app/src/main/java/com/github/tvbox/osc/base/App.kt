@@ -6,7 +6,6 @@ import com.github.catvod.crawler.JsLoader
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.callback.EmptyCallback
 import com.github.tvbox.osc.callback.LoadingCallback
-import com.github.tvbox.osc.data.AppDataManager
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.EpgUtil
@@ -32,12 +31,6 @@ class App : Application() {
 
 	val currentActivity: Activity?
 		get() = AppManager.getInstance().currentActivity()
-
-	var dashData: String?
-		get() = App.dashData
-		set(value) {
-			App.dashData = value
-		}
 
 	override fun onCreate() {
 		super.onCreate()
@@ -78,8 +71,8 @@ class App : Application() {
 
 	companion object {
 		var burl: String? = null
+		var dashData: String? = null
 		private var p: P2PClass? = null
-		private var dashData: String? = null
 
 		lateinit var instance: App
 			private set

@@ -68,13 +68,11 @@ class SourceBean {
 	 * 是否可搜索
 	 */
 	var searchable: Int = 0
-		private set
 
 	/**
 	 * 是否可以快速搜索
 	 */
 	var quickSearch: Int = 0
-		private set
 
 	val isSearchable: Boolean
 		get() = searchable != 0

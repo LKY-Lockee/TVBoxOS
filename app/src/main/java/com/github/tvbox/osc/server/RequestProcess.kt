@@ -1,36 +1,20 @@
-package com.github.tvbox.osc.server;
+package com.github.tvbox.osc.server
 
-import java.util.Map;
-
-import fi.iki.elonen.NanoHTTPD;
+import fi.iki.elonen.NanoHTTPD
+import fi.iki.elonen.NanoHTTPD.IHTTPSession
 
 /**
  * @author pj567
- * @date :2021/1/5
- * @description:
+ * @date 2021/1/5
  */
-public interface RequestProcess {
-    int KEY_ACTION_PRESSED = 0;
-    int KEY_ACTION_DOWN = 1;
-    int KEY_ACTION_UP = 2;
+interface RequestProcess {
+	fun isRequest(session: IHTTPSession, fileName: String): Boolean
 
-    /**
-     * isRequest
-     *
-     * @param session
-     * @param fileName
-     * @return
-     */
-    boolean isRequest(NanoHTTPD.IHTTPSession session, String fileName);
+	fun doResponse(session: IHTTPSession, fileName: String, params: Map<String, List<String>>, files: Map<String, String>?): NanoHTTPD.Response
 
-    /**
-     * doResponse
-     *
-     * @param session
-     * @param fileName
-     * @param params
-     * @param files
-     * @return
-     */
-    NanoHTTPD.Response doResponse(NanoHTTPD.IHTTPSession session, String fileName, Map<String, String> params, Map<String, String> files);
+	companion object {
+		const val KEY_ACTION_PRESSED: Int = 0
+		const val KEY_ACTION_DOWN: Int = 1
+		const val KEY_ACTION_UP: Int = 2
+	}
 }

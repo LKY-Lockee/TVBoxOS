@@ -41,7 +41,7 @@ class PyLoader : IPyLoader {
 	override fun getSpider(key: String, cls: String, ext: String): Spider {
 		if (spiders.containsKey(key)) {
 			Log.i("PyLoader", "echo-getSpider spider缓存: $key")
-			return spiders[key] ?: return SpiderNull()
+			return spiders[key] ?: SpiderNull()
 		}
 		try {
 			if (ContextCompat.checkSelfPermission(App.instance, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -59,7 +59,7 @@ class PyLoader : IPyLoader {
 		return SpiderNull()
 	}
 
-	override fun proxyInvoke(params: Map<String, String>): Array<Any?>? {
+	override fun proxyInvoke(params: Map<String, List<String>>): Array<Any?>? {
 		val pyApi = recentPyApi ?: return null
 		LOG.i("echo-recentPyApi$pyApi")
 		try {

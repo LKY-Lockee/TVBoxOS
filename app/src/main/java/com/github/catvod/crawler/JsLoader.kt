@@ -33,7 +33,7 @@ class JsLoader {
 			val urls = jar.split(";md5;").filter { it.isNotEmpty() }
 			val jarUrl = urls.firstOrNull() ?: return SpiderNull()
 			val jarKey = MD5.string2MD5(jarUrl)
-			val jarMd5 = urls.getOrNull(1)?.trim() ?: ""
+			val jarMd5 = urls.getOrNull(1)?.trim().orEmpty()
 			classLoader = loadJarInternal(jarUrl, jarMd5, jarKey)
 		}
 		recentKey = key
@@ -49,7 +49,7 @@ class JsLoader {
 		return SpiderNull()
 	}
 
-	fun proxyInvoke(params: Map<String, String>?): Array<Any?>? {
+	fun proxyInvoke(params: Map<String, List<String>>?): Array<Any?>? {
 		try {
 			val proxyFun = spiders[recentKey] ?: return null
 			return proxyFun.proxyLocal(params)

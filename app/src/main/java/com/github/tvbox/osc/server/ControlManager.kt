@@ -1,96 +1,79 @@
-package com.github.tvbox.osc.server;
+package com.github.tvbox.osc.server
 
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.os.Bundle;
-import android.text.TextUtils;
-
-import com.github.tvbox.osc.event.RefreshEvent;
-import com.github.tvbox.osc.receiver.SearchReceiver;
-
-import org.greenrobot.eventbus.EventBus;
-
-import java.io.IOException;
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import com.github.tvbox.osc.event.RefreshEvent
+import com.github.tvbox.osc.receiver.SearchReceiver
+import org.greenrobot.eventbus.EventBus
+import java.io.IOException
 
 /**
  * @author pj567
- * @date :2021/1/4
- * @description:
+ * @date 2021/1/4
  */
-public class ControlManager {
-    public static Context mContext;
-    private static volatile ControlManager instance;
-    private RemoteServer mServer = null;
+class ControlManager private constructor() {
+	private lateinit var mContext: Context
+	private var mServer: RemoteServer? = null
 
-    private ControlManager() {
+	fun getAddress(local: Boolean): String? {
+		val server = mServer ?: return null
+		return if (local) server.loadAddress else server.serverAddress
+	}
 
-    }
+	fun startServer() {
+		if (mServer != null) {
+			return
+		}
+		do {
+			mServer = RemoteServer(RemoteServer.serverPort, mContext)
+			val server = mServer ?: return
+			server.dataReceiver = object : DataReceiver {
+				override fun onTextReceived(text: String?) {
+					if (text.isNullOrEmpty()) return
+					val intent = Intent()
+					val bundle = Bundle()
+					bundle.putString("title", text)
+					intent.action = SearchReceiver.ACTION
+					intent.setPackage(mContext.packageName)
+					intent.component = ComponentName(mContext, SearchReceiver::class.java)
+					intent.putExtras(bundle)
+					mContext.sendBroadcast(intent)
+				}
 
-    public static ControlManager get() {
-        if (instance == null) {
-            synchronized (ControlManager.class) {
-                if (instance == null) {
-                    instance = new ControlManager();
-                }
-            }
-        }
-        return instance;
-    }
+				override fun onApiReceived(url: String?) {
+					EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_API_URL_CHANGE, url))
+				}
 
-    public static void init(Context context) {
-        mContext = context;
-    }
+				override fun onPushReceived(url: String?) {
+					EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_PUSH_URL, url))
+				}
+			}
+			try {
+				server.start()
+				break
+			} catch (ex: IOException) {
+				RemoteServer.serverPort++
+				server.stop()
+			}
+		} while (RemoteServer.serverPort < 9999)
+	}
 
-    public String getAddress(boolean local) {
-        return local ? mServer.getLoadAddress() : mServer.getServerAddress();
-    }
+	fun stopServer() {
+		val server = mServer ?: return
+		if (server.isStarting) {
+			server.stop()
+		}
+	}
 
-    public void startServer() {
-        if (mServer != null) {
-            return;
-        }
-        do {
-            mServer = new RemoteServer(RemoteServer.serverPort, mContext);
-            mServer.setDataReceiver(new DataReceiver() {
-                @Override
-                public void onTextReceived(String text) {
-                    if (!TextUtils.isEmpty(text)) {
-                        Intent intent = new Intent();
-                        Bundle bundle = new Bundle();
-                        bundle.putString("title", text);
-                        intent.setAction(SearchReceiver.action);
-                        intent.setPackage(mContext.getPackageName());
-                        intent.setComponent(new ComponentName(mContext, SearchReceiver.class));
-                        intent.putExtras(bundle);
-                        mContext.sendBroadcast(intent);
-                    }
-                }
+	companion object {
+		val instance: ControlManager by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+			ControlManager()
+		}
 
-                @Override
-                public void onApiReceived(String url) {
-                    EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_API_URL_CHANGE, url));
-                }
-
-                @Override
-                public void onPushReceived(String url) {
-                    EventBus.getDefault().post(new RefreshEvent(RefreshEvent.TYPE_PUSH_URL, url));
-                }
-            });
-            try {
-                mServer.start();
-                // IjkMediaPlayer.setDotPort(Hawk.get(HawkConfig.DOH_URL, 0) > 0, RemoteServer.serverPort);
-                break;
-            } catch (IOException ex) {
-                RemoteServer.serverPort++;
-                mServer.stop();
-            }
-        } while (RemoteServer.serverPort < 9999);
-    }
-
-    public void stopServer() {
-        if (mServer != null && mServer.isStarting()) {
-            mServer.stop();
-        }
-    }
+		fun init(context: Context) {
+			instance.mContext = context
+		}
+	}
 }

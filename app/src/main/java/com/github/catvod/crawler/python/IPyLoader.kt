@@ -11,5 +11,5 @@ interface IPyLoader {
 
 	fun getSpider(key: String, cls: String, ext: String): Spider
 
-	fun proxyInvoke(params: Map<String, String>): Array<Any?>?
+	fun proxyInvoke(params: Map<String, List<String>>): Array<Any?>?
 }

@@ -77,11 +77,13 @@ object Thunder {
 		ed2kList = ArrayList()
 		val urlMap = mutableMapOf<Int, String>()
 		threadPool?.execute {
-			for (idx in urlBean.infoList.indices) {
-				val urlInfo = urlBean.infoList[idx] ?: continue
-				for (infoBean in urlInfo.beanList) {
+			val infoList = urlBean.infoList ?: return@execute
+			for (idx in infoList.indices) {
+				val urlInfo = infoList[idx]
+				val beanList = urlInfo.beanList ?: continue
+				for (infoBean in beanList) {
 					var isParse = false
-					var url = infoBean.url
+					var url = infoBean.url.orEmpty()
 					if (isMagnet(url) || isThunder(url) || isTorrent(url)) {
 						if (isThunder(url)) url = XLDownloadManager.getInstance().parserThunderUrl(url)
 						val link = if (isThunder(url)) XLDownloadManager.getInstance().parserThunderUrl(url) else url
@@ -154,7 +156,7 @@ object Thunder {
 							}
 						}
 					} else {
-						url = infoBean.url
+						url = infoBean.url.orEmpty()
 						if (isThunder(url)) url = XLDownloadManager.getInstance().parserThunderUrl(url)
 						if (isNetworkDownloadTask(url)) {
 							task_url = url
@@ -232,7 +234,7 @@ object Thunder {
 		if (url.startsWith("tvbox-oth:")) {
 			stop(false)
 			val idx = url.substring(10).toInt()
-			task_url = ed2kList?.get(idx) ?: ""
+			task_url = ed2kList?.get(idx).orEmpty()
 			name = XLTaskHelper.instance().getFileName(task_url)
 			localPath = (File(cacheRoot + File.separator + "temp", FileUtils.getFileNameWithoutExt(name))).toString() + "/"
 			currentTask = XLTaskHelper.instance().addThunderTask(task_url, localPath, null)
@@ -282,7 +284,7 @@ object Thunder {
 						break
 					}
 					val playUrl = this@Thunder.playUrl
-					if (!TextUtils.isEmpty(playUrl)) {
+					if (!playUrl.isNullOrEmpty()) {
 						callback.play(playUrl)
 						return@execute
 					}
@@ -323,7 +325,6 @@ object Thunder {
 	}
 
 	fun randomMac(): String {
-		@Suppress("SpellCheckingInspection")
 		return randomString("ABCDEF0123456", 12).uppercase(Locale.getDefault())
 	}
 
@@ -413,10 +414,10 @@ object Thunder {
 	}
 
 	interface ThunderCallback {
-		fun status(code: Int, info: String?)
+		fun status(code: Int, info: String)
 
-		fun list(urlMap: Map<Int, String>?)
+		fun list(urlMap: Map<Int, String>)
 
-		fun play(url: String?)
+		fun play(url: String)
 	}
 }

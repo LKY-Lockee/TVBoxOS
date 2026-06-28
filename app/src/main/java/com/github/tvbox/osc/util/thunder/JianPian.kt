@@ -30,7 +30,7 @@ object JianPian {
 				val segment = replace.toUri().lastPathSegment ?: return ""
 				return "http://${LocalIPAddress.getIP(App.instance)}:${P2PClass.port}/${URLEncoder.encode(segment, "GBK")}"
 			} catch (e: Exception) {
-				return e.localizedMessage ?: ""
+				return e.localizedMessage.orEmpty()
 			}
 		}
 		return ""

@@ -22,19 +22,19 @@ class EpgInfo(
 	val currentEpgDate: String
 
 	init {
-		val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+		val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
 			timeZone = TimeZone.getTimeZone("GMT+8:00")
 		}
 		currentEpgDate = dateFormat.format(epgDate)
 
-		val userSdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).apply {
+		val userSdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault()).apply {
 			timeZone = TimeZone.getDefault()
 		}
 		val dateStr = dateFormat.format(date)
 		startDateTime = userSdf.parse("$dateStr ${originStart ?: "00:00"}:00 GMT+8:00")
 		endDateTime = userSdf.parse("$dateStr ${originEnd ?: "00:00"}:00 GMT+8:00")
 
-		val zoneFormat = SimpleDateFormat("HH:mm", Locale.US)
+		val zoneFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 		start = if (startDateTime != null) zoneFormat.format(startDateTime) else "00:00"
 		end = if (endDateTime != null) zoneFormat.format(endDateTime) else "00:00"
 		dateStart = start.replace(":", "").toInt()

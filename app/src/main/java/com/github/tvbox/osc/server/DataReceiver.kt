@@ -1,19 +1,13 @@
-package com.github.tvbox.osc.server;
+package com.github.tvbox.osc.server
 
 /**
  * @author pj567
- * @date :2021/1/5
- * @description:
+ * @date 2021/1/5
  */
-public interface DataReceiver {
+interface DataReceiver {
+	fun onTextReceived(text: String?)
 
-    /**
-     * @param text
-     */
-    void onTextReceived(String text);
+	fun onApiReceived(url: String?)
 
-
-    void onApiReceived(String url);
-
-    void onPushReceived(String url);
+	fun onPushReceived(url: String?)
 }

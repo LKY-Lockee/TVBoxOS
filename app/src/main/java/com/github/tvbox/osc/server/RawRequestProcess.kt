@@ -1,43 +1,27 @@
-package com.github.tvbox.osc.server;
+package com.github.tvbox.osc.server
 
-import android.content.Context;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
-
-import fi.iki.elonen.NanoHTTPD;
+import android.content.Context
+import fi.iki.elonen.NanoHTTPD
+import fi.iki.elonen.NanoHTTPD.IHTTPSession
+import java.io.IOException
 
 /**
+ * 资源文件加载
+ * 
  * @author pj567
- * @date :2021/1/5
- * @description: 资源文件加载
+ * @date 2021/1/5
  */
-public class RawRequestProcess implements RequestProcess {
-    private final Context mContext;
-    private final String fileName;
-    private final int resourceId;
-    private final String mimeType;
+class RawRequestProcess(private val mContext: Context, private val fileName: String, private val resourceId: Int, private val mimeType: String?) : RequestProcess {
+	override fun isRequest(session: IHTTPSession, fileName: String): Boolean {
+		return session.method == NanoHTTPD.Method.GET && this.fileName.equals(fileName, ignoreCase = true)
+	}
 
-    public RawRequestProcess(Context context, String fileName, int resourceId, String mimeType) {
-        this.mContext = context;
-        this.fileName = fileName;
-        this.resourceId = resourceId;
-        this.mimeType = mimeType;
-    }
-
-    @Override
-    public boolean isRequest(NanoHTTPD.IHTTPSession session, String fileName) {
-        return session.getMethod() == NanoHTTPD.Method.GET && this.fileName.equalsIgnoreCase(fileName);
-    }
-
-    @Override
-    public NanoHTTPD.Response doResponse(NanoHTTPD.IHTTPSession session, String fileName, Map<String, String> params, Map<String, String> files) {
-        InputStream inputStream = mContext.getResources().openRawResource(this.resourceId);
-        try {
-            return RemoteServer.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, mimeType + "; charset=utf-8", inputStream, inputStream.available());
-        } catch (IOException IOExc) {
-            return RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, "SERVER INTERNAL ERROR: IOException: " + IOExc.getMessage());
-        }
-    }
+	override fun doResponse(session: IHTTPSession, fileName: String, params: Map<String, List<String>>, files: Map<String, String>?): NanoHTTPD.Response {
+		val inputStream = mContext.resources.openRawResource(this.resourceId)
+		return try {
+			NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "$mimeType; charset=utf-8", inputStream, inputStream.available().toLong())
+		} catch (exception: IOException) {
+			RemoteServer.createPlainTextResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, "SERVER INTERNAL ERROR: IOException: ${exception.message}")
+		}
+	}
 }
