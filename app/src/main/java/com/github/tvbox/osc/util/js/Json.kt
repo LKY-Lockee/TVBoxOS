@@ -1,68 +1,62 @@
-package com.github.tvbox.osc.util.js;
+package com.github.tvbox.osc.util.js
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import org.json.JSONObject
 
-import org.json.JSONObject;
+object Json {
+	fun valid(text: String): Boolean {
+		try {
+			JSONObject(text)
+			return true
+		} catch (e: Exception) {
+			return false
+		}
+	}
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+	fun invalid(text: String): Boolean {
+		return !valid(text)
+	}
 
-public class Json {
+	fun safeString(obj: JsonObject, key: String?): String {
+		return try {
+			obj.getAsJsonPrimitive(key).asString.trim { it <= ' ' }
+		} catch (e: Exception) {
+			""
+		}
+	}
 
-    public static boolean valid(String text) {
-        try {
-            new JSONObject(text);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
+	fun safeListString(obj: JsonObject, key: String?): List<String> {
+		val result: MutableList<String> = ArrayList()
+		if (!obj.has(key)) return result
+		if (obj.get(key).isJsonObject) result.add(safeString(obj, key))
+		else for (opt in obj.getAsJsonArray(key)) result.add(opt.asString)
+		return result
+	}
 
-    public static boolean invalid(String text) {
-        return !valid(text);
-    }
+	fun safeListElement(obj: JsonObject, key: String?): List<JsonElement> {
+		val result: MutableList<JsonElement> = ArrayList()
+		if (!obj.has(key)) return result
+		if (obj.get(key).isJsonObject) result.add(obj.get(key).getAsJsonObject())
+		for (opt in obj.getAsJsonArray(key)) result.add(opt.getAsJsonObject())
+		return result
+	}
 
-    public static String safeString(JsonObject obj, String key) {
-        try {
-            return obj.getAsJsonPrimitive(key).getAsString().trim();
-        } catch (Exception e) {
-            return "";
-        }
-    }
+	fun safeObject(element: JsonElement): JsonObject {
+		var element = element
+		try {
+			if (element.isJsonPrimitive) element = JsonParser.parseString(element.getAsJsonPrimitive().asString)
+			return element.getAsJsonObject()
+		} catch (e: Exception) {
+			return JsonObject()
+		}
+	}
 
-    public static List<String> safeListString(JsonObject obj, String key) {
-        List<String> result = new ArrayList<>();
-        if (!obj.has(key)) return result;
-        if (obj.get(key).isJsonObject()) result.add(safeString(obj, key));
-        else for (JsonElement opt : obj.getAsJsonArray(key)) result.add(opt.getAsString());
-        return result;
-    }
-
-    public static List<JsonElement> safeListElement(JsonObject obj, String key) {
-        List<JsonElement> result = new ArrayList<>();
-        if (!obj.has(key)) return result;
-        if (obj.get(key).isJsonObject()) result.add(obj.get(key).getAsJsonObject());
-        for (JsonElement opt : obj.getAsJsonArray(key)) result.add(opt.getAsJsonObject());
-        return result;
-    }
-
-    public static JsonObject safeObject(JsonElement element) {
-        try {
-            if (element.isJsonPrimitive()) element = JsonParser.parseString(element.getAsJsonPrimitive().getAsString());
-            return element.getAsJsonObject();
-        } catch (Exception e) {
-            return new JsonObject();
-        }
-    }
-
-    public static Map<String, String> toMap(JsonElement element) {
-        Map<String, String> map = new HashMap<>();
-        JsonObject object = safeObject(element);
-        for (String key : object.keySet()) map.put(key, safeString(object, key));
-        return map;
-    }
+	fun toMap(element: JsonElement): MutableMap<String, String> {
+		val map: MutableMap<String, String> = HashMap()
+		val `object` = safeObject(element)
+		for (key in `object`.keySet()) map[key] = safeString(`object`, key)
+		return map
+	}
 }

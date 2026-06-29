@@ -1,57 +1,49 @@
-package com.github.tvbox.osc.util.js;
+package com.github.tvbox.osc.util.js
 
-import com.google.common.util.concurrent.SettableFuture;
-import com.whl.quickjs.wrapper.JSCallFunction;
-import com.whl.quickjs.wrapper.JSFunction;
-import com.whl.quickjs.wrapper.JSObject;
+import com.google.common.util.concurrent.SettableFuture
+import com.whl.quickjs.wrapper.JSCallFunction
+import com.whl.quickjs.wrapper.JSObject
 
-public class Async {
+class Async private constructor() {
+	private val future: SettableFuture<Any?> = SettableFuture.create()
+	private val callback: JSCallFunction = JSCallFunction { args -> // args[0] holds the resolved value from the JS promise
+		future.set(if (args.size > 0) args[0] else null)
+		null
+	}
 
-    private final SettableFuture<Object> future;
-    private final JSCallFunction callback = new JSCallFunction() {
-        @Override
-        public Object call(Object... args) {
-            // args[0] holds the resolved value from the JS promise
-            future.set(args.length > 0 ? args[0] : null);
-            return null;
-        }
-    };
+	private fun call(`object`: JSObject, name: String?, args: Array<Any?>): SettableFuture<Any?> {
+		try {
+			val function = `object`.getJSFunction(name)
+			if (function == null) {
+				future.set(null)
+				return future
+			}
+			val result = function.call(*args)
+			if (result is JSObject) {
+				then(result)
+			} else {
+				future.set(result)
+			}
+		} catch (t: Throwable) {
+			future.setException(t)
+		}
+		return future
+	}
 
-    private Async() {
-        this.future = SettableFuture.create();
-    }
+	private fun then(result: Any?) {
+		val promise = result as JSObject
+		val thenFn = promise.getJSFunction("then")
+		if (thenFn != null) {
+			thenFn.call(callback)
+		} else {
+			// If there's no then, complete immediately
+			future.set(result)
+		}
+	}
 
-    public static SettableFuture<Object> run(JSObject object, String name, Object[] args) {
-        return new Async().call(object, name, args);
-    }
-
-    private SettableFuture<Object> call(JSObject object, String name, Object[] args) {
-        try {
-            JSFunction function = object.getJSFunction(name);
-            if (function == null) {
-                future.set(null);
-                return future;
-            }
-            Object result = function.call(args);
-            if (result instanceof JSObject) {
-                then(result);
-            } else {
-                future.set(result);
-            }
-        } catch (Throwable t) {
-            future.setException(t);
-        }
-        return future;
-    }
-
-    private void then(Object result) {
-        JSObject promise = (JSObject) result;
-        JSFunction thenFn = promise.getJSFunction("then");
-        if (thenFn != null) {
-            thenFn.call(callback);
-        } else {
-            // If there's no then, complete immediately
-            future.set(result);
-        }
-    }
+	companion object {
+		fun run(`object`: JSObject, name: String?, args: Array<Any?>): SettableFuture<Any?> {
+			return Async().call(`object`, name, args)
+		}
+	}
 }

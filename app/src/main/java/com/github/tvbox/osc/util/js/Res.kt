@@ -1,62 +1,53 @@
-package com.github.tvbox.osc.util.js;
+package com.github.tvbox.osc.util.js
 
-import android.text.TextUtils;
-import android.util.Base64;
+import android.text.TextUtils
+import android.util.Base64
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.annotations.SerializedName
+import java.io.ByteArrayInputStream
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
+class Res {
+	@SerializedName("code")
+	val code: Int? = null
+		get() = field ?: 200
 
-import java.io.ByteArrayInputStream;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+	@SerializedName("buffer")
+	val buffer: Int? = null
+		get() = field ?: 0
 
-public class Res {
+	@SerializedName("content")
+	val content: String? = null
+		get() = if (TextUtils.isEmpty(field)) "" else field
 
-    @SerializedName("code")
-    private Integer code;
-    @SerializedName("buffer")
-    private Integer buffer;
-    @SerializedName("content")
-    private String content;
-    @SerializedName("headers")
-    private JsonElement headers;
+	@SerializedName("headers")
+	private val headers: JsonElement? = null
 
-    public static Res objectFrom(String json) {
-        return new Gson().fromJson(json, Res.class);
-    }
+	val header: MutableMap<String, String>
+		get() {
+			val h = this.headers ?: return HashMap()
+			return Json.toMap(h)
+		}
 
-    public int getCode() {
-        return code == null ? 200 : code;
-    }
+	val contentType: String
+		get() {
+			val header = this.header
+			for (key in listOf("Content-Type", "content-type")) {
+				val value = header[key]
+				if (value != null) return value
+			}
+			return "application/octet-stream"
+		}
 
-    public int getBuffer() {
-        return buffer == null ? 0 : buffer;
-    }
+	val stream: ByteArrayInputStream
+		get() {
+			if (this.buffer == 2) return ByteArrayInputStream(Base64.decode(this.content, Base64.DEFAULT))
+			return ByteArrayInputStream((this.content.orEmpty()).toByteArray())
+		}
 
-    public String getContent() {
-        return TextUtils.isEmpty(content) ? "" : content;
-    }
-
-    private JsonElement getHeaders() {
-        return headers;
-    }
-
-    public Map<String, String> getHeader() {
-        return Json.toMap(getHeaders());
-    }
-
-    public String getContentType() {
-        Map<String, String> header = getHeader();
-        List<String> keys = Arrays.asList("Content-Type", "content-type");
-        for (String key : keys) if (header.containsKey(key)) return Objects.requireNonNull(header.get(key));
-        return "application/octet-stream";
-    }
-
-    public ByteArrayInputStream getStream() {
-        if (getBuffer() == 2) return new ByteArrayInputStream(Base64.decode(getContent(), Base64.DEFAULT));
-        return new ByteArrayInputStream(getContent().getBytes());
-    }
+	companion object {
+		fun objectFrom(json: String?): Res? {
+			return Gson().fromJson(json, Res::class.java)
+		}
+	}
 }

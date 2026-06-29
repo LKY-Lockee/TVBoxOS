@@ -1,41 +1,26 @@
-package com.github.tvbox.osc.util.js;
+package com.github.tvbox.osc.util.js
 
-import com.whl.quickjs.wrapper.JSCallFunction;
-import com.whl.quickjs.wrapper.JSFunction;
-import com.whl.quickjs.wrapper.JSObject;
+import com.whl.quickjs.wrapper.JSCallFunction
+import com.whl.quickjs.wrapper.JSObject
+import java.util.concurrent.Callable
 
-import java.util.concurrent.Callable;
+class FunCall private constructor(private val jsObject: JSObject, private val name: String?, private vararg val args: Any?) : Callable<Any?> {
+	private var result: Any? = null
+	private val jsCallFunction: JSCallFunction = JSCallFunction { args -> args[0].also { result = it } }
 
-public class FunCall implements Callable<Object> {
+	override fun call(): Any? {
+		val func = jsObject.getJSFunction(name) ?: return null
+		result = func.call(*args)
+		if (result !is JSObject) return result
+		val promise = result as JSObject
+		val then = promise.getJSFunction("then")
+		if (then != null) then.call(jsCallFunction)
+		return result
+	}
 
-    private final JSObject jsObject;
-    private final Object[] args;
-    private final String name;
-    private Object result;
-    private final JSCallFunction jsCallFunction = new JSCallFunction() {
-        @Override
-        public Object call(Object... args) {
-            return result = args[0];
-        }
-    };
-
-    private FunCall(JSObject jsObject, String name, Object... args) {
-        this.jsObject = jsObject;
-        this.name = name;
-        this.args = args;
-    }
-
-    public static FunCall call(JSObject jsObject, String name, Object... args) {
-        return new FunCall(jsObject, name, args);
-    }
-
-    @Override
-    public Object call() {
-        result = jsObject.getJSFunction(name).call(args);
-        if (!(result instanceof JSObject)) return result;
-        JSObject promise = (JSObject) result;
-        JSFunction then = promise.getJSFunction("then");
-        if (then != null) then.call(jsCallFunction);
-        return result;
-    }
+	companion object {
+		fun call(jsObject: JSObject, name: String?, vararg args: Any?): FunCall {
+			return FunCall(jsObject, name, *args)
+		}
+	}
 }

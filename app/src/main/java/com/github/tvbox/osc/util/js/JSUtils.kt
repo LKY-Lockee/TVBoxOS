@@ -1,134 +1,143 @@
-package com.github.tvbox.osc.util.js;
+package com.github.tvbox.osc.util.js
 
-import com.whl.quickjs.wrapper.JSArray;
-import com.whl.quickjs.wrapper.JSFunction;
-import com.whl.quickjs.wrapper.JSObject;
-import com.whl.quickjs.wrapper.QuickJSContext;
-import com.whl.quickjs.wrapper.QuickJSException;
+import com.whl.quickjs.wrapper.JSArray
+import com.whl.quickjs.wrapper.JSFunction
+import com.whl.quickjs.wrapper.JSObject
+import com.whl.quickjs.wrapper.QuickJSContext
+import com.whl.quickjs.wrapper.QuickJSException
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import java.lang.reflect.Array as ReflectArray
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+class JSUtils<T> {
+	fun toArray(ctx: QuickJSContext, items: List<T>?): JSArray {
+		val array = ctx.createNewJSArray()
+		if (items.isNullOrEmpty()) return array
+		for (i in items.indices) {
+			array.set(items[i], i)
+		}
+		return array
+	}
 
-import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+	fun toArray(ctx: QuickJSContext, bytes: ByteArray?): JSArray {
+		val array = ctx.createNewJSArray()
+		if (bytes == null) return array
+		for (i in bytes.indices) {
+			array.set(bytes[i].toInt(), i)
+		}
+		return array
+	}
 
-public class JSUtils<T> {
-    public static boolean isEmpty(Object obj) {
-        if (obj == null) return true;
-        else if (obj instanceof CharSequence) return ((CharSequence) obj).length() == 0;
-        else if (obj instanceof Collection) return ((Collection<?>) obj).isEmpty();
-        else if (obj instanceof Map) return ((Map<?, ?>) obj).isEmpty();
-        else if (obj.getClass().isArray()) return Array.getLength(obj) == 0;
+	fun toArray(ctx: QuickJSContext, arrays: Array<T?>?): JSArray {
+		val array = ctx.createNewJSArray()
+		if (arrays == null) return array
+		for (i in arrays.indices) {
+			array.set(arrays[i], i)
+		}
+		return array
+	}
 
-        return false;
-    }
+	fun toObj(ctx: QuickJSContext, map: Map<String, T>?): JSObject {
+		val obj = ctx.createNewJSObject()
+		if (map.isNullOrEmpty()) return obj
+		for ((key, value) in map) {
+			ctx.setProperty(obj, key, value)
+		}
+		return obj
+	}
 
-    public static boolean isNotEmpty(CharSequence str) {
-        return !isEmpty(str);
-    }
+	companion object {
+		fun isEmpty(obj: Any?): Boolean {
+			if (obj == null) return true
+			else if (obj is CharSequence) return obj.isEmpty()
+			else if (obj is Collection<*>) return obj.isEmpty()
+			else if (obj is Map<*, *>) return obj.isEmpty()
+			else if (obj.javaClass.isArray) return ReflectArray.getLength(obj) == 0
 
-    public static boolean isNotEmpty(Object obj) {
-        return !isEmpty(obj);
-    }
+			return false
+		}
 
-    public static void checkRefCountIsZero(JSObject obj) {
-        if (obj.isRefCountZero()) {
-            throw new QuickJSException("The call threw an exception, the reference count of the current object has already reached zero.");
-        }
-    }
+		fun isNotEmpty(str: CharSequence?): Boolean {
+			return !isEmpty(str)
+		}
 
-    public static JSONArray toJsonArray(JSArray arr) {
-        JSONArray jsonArray = new JSONArray();
-        for (int i = 0; i < arr.length(); i++) {
-            Object obj = arr.get(i);
-            if (obj == null || obj instanceof JSFunction) {
-                continue;
-            }
-            if (obj instanceof Number || obj instanceof String || obj instanceof Boolean) {
-                jsonArray.put(obj);
-            } else if (obj instanceof JSArray) {
-                jsonArray.put(toJsonArray((JSArray) obj));
-            } else if (obj instanceof JSObject) {
-                jsonArray.put(toJsonObject((JSObject) obj));
-            }
-        }
-        return jsonArray;
-    }
+		fun isNotEmpty(obj: Any?): Boolean {
+			return !isEmpty(obj)
+		}
 
-    public static String toJsonString(JSObject obj) {
-        return obj.getContext().stringify(obj);
-    }
+		fun checkRefCountIsZero(obj: JSObject) {
+			if (obj.isRefCountZero) {
+				throw QuickJSException("The call threw an exception, the reference count of the current object has already reached zero.")
+			}
+		}
 
-    public static JSONObject toJsonObject(JSObject obj) {
-        checkRefCountIsZero(obj);
+		fun toJsonArray(arr: JSArray): JSONArray {
+			val jsonArray = JSONArray()
+			for (i in 0..<arr.length()) {
+				val obj = arr.get(i)
+				if (obj == null || obj is JSFunction) {
+					continue
+				}
+				when (obj) {
+					is Number, is String, is Boolean -> {
+						jsonArray.put(obj)
+					}
 
-        JSONObject jsonObject = new JSONObject();
-        JSONArray json = toJsonArray(obj.getNames());
-        for (int i = 0; i < json.length(); i++) {
-            String key = json.optString(i);
-            Object o = obj.getProperty(key);
-            if (o == null || o instanceof JSFunction) {
-                continue;
-            }
-            if (o instanceof Number || o instanceof String || o instanceof Boolean) {
-                try {
-                    jsonObject.put(key, o);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } else if (o instanceof JSArray) {
-                try {
-                    jsonObject.put(key, toJsonArray((JSArray) o));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } else if (o instanceof JSObject) {
-                try {
-                    jsonObject.put(key, toJsonObject((JSObject) o));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return jsonObject;
-    }
+					is JSArray -> {
+						jsonArray.put(toJsonArray(obj))
+					}
 
-    public JSArray toArray(QuickJSContext ctx, List<T> items) {
-        JSArray array = ctx.createNewJSArray();
-        if (items == null || items.isEmpty()) return array;
-        for (int i = 0; i < items.size(); i++) {
-            array.set(items.get(i), i);
-        }
-        return array;
-    }
+					is JSObject -> {
+						jsonArray.put(toJsonObject(obj))
+					}
+				}
+			}
+			return jsonArray
+		}
 
-    public JSArray toArray(QuickJSContext ctx, byte[] bytes) {
-        JSArray array = ctx.createNewJSArray();
-        if (bytes == null) return array;
-        for (int i = 0; i < bytes.length; i++) {
-            array.set((int) bytes[i], i);
-        }
-        return array;
-    }
+		fun toJsonString(obj: JSObject): String? {
+			return obj.context.stringify(obj)
+		}
 
-    public JSArray toArray(QuickJSContext ctx, T[] arrays) {
-        JSArray array = ctx.createNewJSArray();
-        if (arrays == null) return array;
-        for (int i = 0; i < arrays.length; i++) {
-            array.set(arrays[i], i);
-        }
-        return array;
-    }
+		fun toJsonObject(obj: JSObject): JSONObject {
+			checkRefCountIsZero(obj)
 
-    public JSObject toObj(QuickJSContext ctx, Map<String, T> map) {
-        JSObject obj = ctx.createNewJSObject();
-        if (map == null || map.isEmpty()) return obj;
-        for (String s : map.keySet()) {
-            ctx.setProperty(obj, s, map.get(s));
-        }
-        return obj;
-    }
+			val jsonObject = JSONObject()
+			val json: JSONArray = toJsonArray(obj.names)
+			for (i in 0..<json.length()) {
+				val key = json.optString(i)
+				val o = obj.getProperty(key)
+				if (o == null || o is JSFunction) {
+					continue
+				}
+				when (o) {
+					is Number, is String, is Boolean -> {
+						try {
+							jsonObject.put(key, o)
+						} catch (e: JSONException) {
+							e.printStackTrace()
+						}
+					}
+
+					is JSArray -> {
+						try {
+							jsonObject.put(key, toJsonArray(o))
+						} catch (e: JSONException) {
+							e.printStackTrace()
+						}
+					}
+
+					is JSObject -> {
+						try {
+							jsonObject.put(key, toJsonObject(o))
+						} catch (e: JSONException) {
+							e.printStackTrace()
+						}
+					}
+				}
+			}
+			return jsonObject
+		}
+	}
 }

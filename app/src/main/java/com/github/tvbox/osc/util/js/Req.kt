@@ -1,88 +1,66 @@
-package com.github.tvbox.osc.util.js;
+package com.github.tvbox.osc.util.js
 
-import android.text.TextUtils;
+import android.text.TextUtils
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.annotations.SerializedName
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.annotations.SerializedName;
+class Req {
+	@SerializedName("buffer")
+	val buffer: Int? = null
+		get() = field ?: 0
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+	@SerializedName("redirect")
+	val redirect: Int? = null
+		get() = field ?: 1
 
-public class Req {
+	@SerializedName("timeout")
+	val timeout: Int? = null
+		get() = field ?: 10000
 
-    @SerializedName("buffer")
-    private Integer buffer;
-    @SerializedName("redirect")
-    private Integer redirect;
-    @SerializedName("timeout")
-    private Integer timeout;
-    @SerializedName("postType")
-    private String postType;
-    @SerializedName("method")
-    private String method;
-    @SerializedName("body")
-    private String body;
-    @SerializedName("data")
-    private JsonElement data;
-    @SerializedName("headers")
-    private JsonElement headers;
+	@SerializedName("postType")
+	val postType: String? = null
+		get() = if (TextUtils.isEmpty(field)) "json" else field
 
-    public static Req objectFrom(String json) {
-        return new Gson().fromJson(json, Req.class);
-    }
+	@SerializedName("method")
+	val method: String? = null
+		get() = if (TextUtils.isEmpty(field)) "get" else field
 
-    public int getBuffer() {
-        return buffer == null ? 0 : buffer;
-    }
+	@SerializedName("body")
+	val body: String? = null
 
-    public Integer getRedirect() {
-        return redirect == null ? 1 : redirect;
-    }
+	@SerializedName("data")
+	val data: JsonElement? = null
 
-    public Integer getTimeout() {
-        return timeout == null ? 10000 : timeout;
-    }
+	@SerializedName("headers")
+	private val headers: JsonElement? = null
 
-    public String getPostType() {
-        return TextUtils.isEmpty(postType) ? "json" : postType;
-    }
+	val isRedirect: Boolean
+		get() {
+			return this.redirect == 1
+		}
 
-    public String getMethod() {
-        return TextUtils.isEmpty(method) ? "get" : method;
-    }
+	val header: MutableMap<String, String>
+		get() = Json.toMap(this.headers ?: return HashMap())
 
-    public String getBody() {
-        return body;
-    }
+	val charset: String
+		get() {
+			val header = this.header
+			for (key in listOf("Content-Type", "content-type")) {
+				val value = header[key]
+				if (value != null) return getCharset(value)
+			}
+			return "UTF-8"
+		}
 
-    public JsonElement getData() {
-        return data;
-    }
+	private fun getCharset(value: String): String {
+		for (text in value.split(";".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) if (text.contains("charset=")) return text.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
+		return "UTF-8"
+	}
 
-    private JsonElement getHeaders() {
-        return headers;
-    }
-
-    public boolean isRedirect() {
-        return getRedirect() == 1;
-    }
-
-    public Map<String, String> getHeader() {
-        return Json.toMap(getHeaders());
-    }
-
-    public String getCharset() {
-        Map<String, String> header = getHeader();
-        List<String> keys = Arrays.asList("Content-Type", "content-type");
-        for (String key : keys) if (header.containsKey(key)) return getCharset(Objects.requireNonNull(header.get(key)));
-        return "UTF-8";
-    }
-
-    private String getCharset(String value) {
-        for (String text : value.split(";")) if (text.contains("charset=")) return text.split("=")[1];
-        return "UTF-8";
-    }
+	companion object {
+		fun objectFrom(json: String?): Req? {
+			return Gson().fromJson(json, Req::class.java)
+		}
+	}
 }
