@@ -1,153 +1,129 @@
-package com.github.tvbox.osc.player.thirdparty;
+package com.github.tvbox.osc.player.thirdparty
 
-import android.app.Activity;
-import android.text.TextUtils;
+import android.app.Activity
 
-import androidx.annotation.NonNull;
+import com.github.tvbox.osc.base.App.Companion.instance
+import com.github.tvbox.osc.server.RemoteServer.Companion.getLocalIPAddress
+import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.util.IpScanning
+import com.orhanobut.hawk.Hawk
+import okhttp3.Call
+import okhttp3.FormBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
+import java.net.URLEncoder
+import java.util.Objects
+import java.util.concurrent.TimeUnit
 
-import com.github.tvbox.osc.base.App;
-import com.github.tvbox.osc.bean.IpScanningVo;
-import com.github.tvbox.osc.server.RemoteServer;
-import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.IpScanning;
-import com.orhanobut.hawk.Hawk;
+object RemoteTVBox {
+	private var availableFailNum = 0
+	private var availableSuccessNum = 0
+	private var availableIpNum = 0
 
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
+	fun run(activity: Activity?, url: String?, title: String?, subtitle: String?, headers: HashMap<String?, String?>?): Boolean {
+		var resolvedUrl = url
+		val actionUrl: String = availableActionUrl
+		if (actionUrl.isEmpty()) {
+			return false
+		}
+		try {
+			if (!headers.isNullOrEmpty()) {
+				resolvedUrl = "$resolvedUrl|"
+				val urlBuilder = StringBuilder(resolvedUrl)
+				for ((idx, hk) in headers.keys.withIndex()) {
+					urlBuilder.append(hk).append("=").append(URLEncoder.encode(headers[hk], "UTF-8"))
+					if (idx < headers.size - 1) {
+						urlBuilder.append("&")
+					}
+				}
+				resolvedUrl = urlBuilder.toString()
+			}
+			val params = HashMap<String, String>()
+			params["do"] = "push"
+			params["url"] = resolvedUrl.orEmpty()
+			post(actionUrl, params, object : okhttp3.Callback {
+				override fun onFailure(call: Call, e: IOException) {
+					e.printStackTrace()
+				}
 
-import okhttp3.Call;
-import okhttp3.FormBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+				override fun onResponse(call: Call, response: Response) {
+				}
+			})
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
 
-public class RemoteTVBox {
+		return true
+	}
 
-    private static int availableFailNum;
-    private static int availableSuccessNum;
-    private static int availableIpNum;
+	fun searchAvailable(callback: Callback) {
+		availableFailNum = 0
+		availableSuccessNum = 0
+		val localIp = getLocalIPAddress(instance)
+		val searchList = IpScanning().search(localIp, false)
+		availableIpNum = searchList.size
+		val port = 9978
+		for (one in searchList) {
+			val ip = one.ip
+			if (ip == localIp) {
+				availableIpNum--
+				continue
+			}
+			val actionUrl = "http://$ip:$port/action"
+			val viewHost = "$ip:$port"
+			try {
+				post(actionUrl, null, object : okhttp3.Callback {
+					override fun onFailure(call: Call, e: IOException) {
+						availableFailNum++
+						callback.fail(availableFailNum == availableIpNum, (availableSuccessNum + availableFailNum) == availableIpNum)
+					}
 
-    public static boolean run(Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
-        String actionUrl = getAvailableActionUrl();
-        if (TextUtils.isEmpty(actionUrl)) {
-            return false;
-        }
-        try {
-            if (headers != null && !headers.isEmpty()) {
-                url = url + "|";
-                int idx = 0;
-                StringBuilder urlBuilder = new StringBuilder(url);
-                for (String hk : headers.keySet()) {
-                    urlBuilder.append(hk).append("=").append(URLEncoder.encode(headers.get(hk), "UTF-8"));
-                    if (idx < headers.size() - 1) {
-                        urlBuilder.append("&");
-                    }
-                    idx++;
-                }
-                url = urlBuilder.toString();
-            }
-            Map<String, String> params = new HashMap<>();
-            params.put("do", "push");
-            params.put("url", url);
-            post(actionUrl, params, new okhttp3.Callback() {
-                @Override
-                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    e.printStackTrace();
-                }
+					override fun onResponse(call: Call, response: Response) {
+						availableSuccessNum++
+						val result = Objects.requireNonNull(response.body).string()
+						if (result == "ok") {
+							callback.found(viewHost, (availableSuccessNum + availableFailNum) == availableIpNum)
+						}
+					}
+				})
+			} catch (ignored: Exception) {
+			}
+		}
+	}
 
-                @Override
-                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                    String pushResult = Objects.requireNonNull(response.body()).string();
-                }
-            });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+	var available: String?
+		get() = Hawk.get<String>(HawkConfig.REMOTE_TVBOX, null)
+		set(viewHost) {
+			Hawk.put<String?>(HawkConfig.REMOTE_TVBOX, viewHost)
+		}
 
-        return true;
-    }
+	val availableActionUrl: String
+		get() {
+			val availableHost = available ?: return ""
+			return "http://$availableHost/action"
+		}
 
-    public static void searchAvailable(Callback callback) {
-        availableFailNum = 0;
-        availableSuccessNum = 0;
-        String localIp = RemoteServer.getLocalIPAddress(App.getInstance());
-        List<IpScanningVo> searchList = new IpScanning().search(localIp, false);
-        availableIpNum = searchList.size();
-        int port = 9978;
-        for (IpScanningVo one : searchList) {
-            String ip = one.getIp();
-            if (ip.equals(localIp)) {
-                availableIpNum--;
-                continue;
-            }
-            String actionUrl = "http://" + ip + ":" + port + "/action";
-            String viewHost = ip + ":" + port;
-            try {
-                post(actionUrl, null, new okhttp3.Callback() {
-                    @Override
-                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                        availableFailNum++;
-                        callback.fail(availableFailNum == availableIpNum, (availableSuccessNum + availableFailNum) == availableIpNum);
-                    }
+	fun post(url: String, params: Map<String, String>?, callback: okhttp3.Callback) {
+		val builder = OkHttpClient.Builder()
+		builder.readTimeout(1000, TimeUnit.MILLISECONDS)
+		builder.writeTimeout(1000, TimeUnit.MILLISECONDS)
+		builder.connectTimeout(1000, TimeUnit.MILLISECONDS)
+		val client = builder.build()
+		val formBodyBuilder = FormBody.Builder()
+		if (!params.isNullOrEmpty()) {
+			for (entry in params.entries) {
+				formBodyBuilder.add(entry.key, entry.value)
+			}
+		}
+		val formBody = formBodyBuilder.build()
+		client.newCall(Request.Builder().url(url).post(formBody).build()).enqueue(callback)
+	}
 
-                    @Override
-                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                        availableSuccessNum++;
-                        String result = Objects.requireNonNull(response.body()).string();
-                        if (result.equals("ok")) {
-                            callback.found(viewHost, (availableSuccessNum + availableFailNum) == availableIpNum);
-                        }
-                    }
-                });
-            } catch (Exception ignored) {
+	abstract class Callback {
+		abstract fun found(viewHost: String?, end: Boolean)
 
-            }
-        }
-
-    }
-
-    public static String getAvailable() {
-        return Hawk.get(HawkConfig.REMOTE_TVBOX, null);
-    }
-
-    public static void setAvailable(String viewHost) {
-        Hawk.put(HawkConfig.REMOTE_TVBOX, viewHost);
-    }
-
-    public static String getAvailableActionUrl() {
-        if (getAvailable() == null) {
-            return "";
-        }
-        return "http://" + getAvailable() + "/action";
-    }
-
-    public static void post(String url, Map<String, String> params, okhttp3.Callback callback) {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        builder.readTimeout(1000, TimeUnit.MILLISECONDS);
-        builder.writeTimeout(1000, TimeUnit.MILLISECONDS);
-        builder.connectTimeout(1000, TimeUnit.MILLISECONDS);
-        OkHttpClient client = builder.build();
-        FormBody.Builder formBodyBuilder = new FormBody.Builder();
-        if (params != null && !params.isEmpty()) {
-            for (Map.Entry<String, String> entry : params.entrySet()) {
-                formBodyBuilder.add(entry.getKey(), entry.getValue());
-            }
-        }
-        FormBody formBody = formBodyBuilder.build();
-        client.newCall(new Request.Builder().url(url).post(formBody).build()).enqueue(callback);
-    }
-
-    public abstract class Callback {
-        public abstract void found(String viewHost, boolean end);
-
-        public abstract void fail(boolean all, boolean end);
-    }
+		abstract fun fail(all: Boolean, end: Boolean)
+	}
 }
-
-

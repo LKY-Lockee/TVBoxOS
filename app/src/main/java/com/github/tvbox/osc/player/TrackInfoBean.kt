@@ -1,9 +1,9 @@
-package com.github.tvbox.osc.player;
+package com.github.tvbox.osc.player
 
-public class TrackInfoBean {
-    public String name;
-    public String language;
-    public int groupIndex;
-    public int index;
-    public boolean selected;
+class TrackInfoBean {
+	var name: String = ""
+	var language: String = ""
+	var groupIndex: Int = 0
+	var index: Int = 0
+	var selected: Boolean = false
 }

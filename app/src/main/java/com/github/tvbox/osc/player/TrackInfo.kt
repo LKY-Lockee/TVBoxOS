@@ -1,47 +1,35 @@
-package com.github.tvbox.osc.player;
+package com.github.tvbox.osc.player
 
-import java.util.ArrayList;
-import java.util.List;
+class TrackInfo {
+	private val _audio: MutableList<TrackInfoBean> = ArrayList()
+	private val _subtitle: MutableList<TrackInfoBean> = ArrayList()
 
-public class TrackInfo {
-    private final List<TrackInfoBean> audio;
-    private final List<TrackInfoBean> subtitle;
+	val audio: List<TrackInfoBean>
+		get() = _audio
 
-    public TrackInfo() {
-        audio = new ArrayList<>();
-        subtitle = new ArrayList<>();
-    }
+	val subtitle: List<TrackInfoBean>
+		get() = _subtitle
 
-    public List<TrackInfoBean> getAudio() {
-        return audio;
-    }
+	fun getAudioSelected(track: Boolean): Int {
+		return getSelected(_audio, track)
+	}
 
-    public int getAudioSelected(boolean track) {
-        return getSelected(audio, track);
-    }
+	fun getSubtitleSelected(track: Boolean): Int {
+		return getSelected(_subtitle, track)
+	}
 
-    public int getSubtitleSelected(boolean track) {
-        return getSelected(subtitle, track);
-    }
+	private fun getSelected(list: List<TrackInfoBean>, track: Boolean): Int {
+		for ((i, trackInfoBean) in list.withIndex()) {
+			if (trackInfoBean.selected) return if (track) trackInfoBean.index else i
+		}
+		return 99999
+	}
 
-    public int getSelected(List<TrackInfoBean> list, boolean track) {
-        int i = 0;
-        for (TrackInfoBean trackInfoBean : list) {
-            if (trackInfoBean.selected) return track ? trackInfoBean.index : i;
-            i++;
-        }
-        return 99999;
-    }
+	fun addAudio(audio: TrackInfoBean) {
+		_audio.add(audio)
+	}
 
-    public void addAudio(TrackInfoBean audio) {
-        this.audio.add(audio);
-    }
-
-    public List<TrackInfoBean> getSubtitle() {
-        return subtitle;
-    }
-
-    public void addSubtitle(TrackInfoBean subtitle) {
-        this.subtitle.add(subtitle);
-    }
+	fun addSubtitle(subtitle: TrackInfoBean) {
+		_subtitle.add(subtitle)
+	}
 }

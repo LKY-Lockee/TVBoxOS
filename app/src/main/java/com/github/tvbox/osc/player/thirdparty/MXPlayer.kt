@@ -1,111 +1,93 @@
-package com.github.tvbox.osc.player.thirdparty;
+package com.github.tvbox.osc.player.thirdparty
 
-import android.app.Activity;
-import android.content.Intent;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.Parcelable;
-import android.util.Log;
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Parcelable
+import android.util.Log
+import com.github.tvbox.osc.base.App.Companion.instance
+import java.net.URLEncoder
+import androidx.core.net.toUri
 
-import com.github.tvbox.osc.base.App;
+object MXPlayer {
+	const val TAG: String = "ThirdParty.MXPlayer"
 
-import java.net.URLEncoder;
-import java.util.HashMap;
+	private const val PACKAGE_NAME_PRO = "com.mxtech.videoplayer.pro"
+	private const val PACKAGE_NAME_AD = "com.mxtech.videoplayer.ad"
+	private const val PLAYBACK_ACTIVITY_PRO = "com.mxtech.videoplayer.ActivityScreen"
+	private const val PLAYBACK_ACTIVITY_AD = "com.mxtech.videoplayer.ad.ActivityScreen"
+	private val PACKAGES = arrayOf(
+		MXPackageInfo(PACKAGE_NAME_PRO, PLAYBACK_ACTIVITY_PRO),
+		MXPackageInfo(PACKAGE_NAME_AD, PLAYBACK_ACTIVITY_AD),
+	)
 
-public class MXPlayer {
-    public static final String TAG = "ThirdParty.MXPlayer";
+	val packageInfo: MXPackageInfo?
+		/**
+		 * @return null if any MX Player packages not exist.
+		 */
+		get() {
+			for (pkg in PACKAGES) {
+				try {
+					val info = instance.packageManager.getApplicationInfo(pkg.packageName, 0)
+					if (info.enabled) return pkg
+					else Log.v(TAG, "MX Player package `" + pkg.packageName + "` is disabled.")
+				} catch (ex: PackageManager.NameNotFoundException) {
+					Log.v(TAG, "MX Player package `" + pkg.packageName + "` does not exist.")
+				}
+			}
+			return null
+		}
 
-    private static final String PACKAGE_NAME_PRO = "com.mxtech.videoplayer.pro";
-    private static final String PACKAGE_NAME_AD = "com.mxtech.videoplayer.ad";
-    private static final String PLAYBACK_ACTIVITY_PRO = "com.mxtech.videoplayer.ActivityScreen";
-    private static final String PLAYBACK_ACTIVITY_AD = "com.mxtech.videoplayer.ad.ActivityScreen";
-    private static final MXPackageInfo[] PACKAGES = {
-            new MXPackageInfo(PACKAGE_NAME_PRO, PLAYBACK_ACTIVITY_PRO),
-            new MXPackageInfo(PACKAGE_NAME_AD, PLAYBACK_ACTIVITY_AD),
-    };
+	fun run(activity: Activity, url: String?, title: String?, subtitle: String?, headers: HashMap<String, String>?): Boolean {
+		var resolvedUrl = url ?: return false
+		val packageInfo: MXPackageInfo = packageInfo ?: return false
 
-    /**
-     * @return null if any MX Player packages not exist.
-     */
-    public static MXPackageInfo getPackageInfo() {
-        for (MXPackageInfo pkg : PACKAGES) {
-            try {
-                ApplicationInfo info = App.getInstance().getPackageManager().getApplicationInfo(pkg.packageName, 0);
-                if (info.enabled)
-                    return pkg;
-                else
-                    Log.v(TAG, "MX Player package `" + pkg.packageName + "` is disabled.");
-            } catch (PackageManager.NameNotFoundException ex) {
-                Log.v(TAG, "MX Player package `" + pkg.packageName + "` does not exist.");
-            }
-        }
-        return null;
-    }
+		try {
+			val intent = Intent(Intent.ACTION_VIEW)
+			intent.setPackage(packageInfo.packageName)
+			intent.setClassName(packageInfo.packageName, packageInfo.activityName)
+			if (!headers.isNullOrEmpty()) {
+				resolvedUrl = "$resolvedUrl|"
+				val urlBuilder = StringBuilder(resolvedUrl)
+				for ((idx, hk) in headers.keys.withIndex()) {
+					urlBuilder.append(hk).append("=").append(URLEncoder.encode(headers[hk], "UTF-8"))
+					if (idx < headers.size - 1) {
+						urlBuilder.append("&")
+					}
+				}
+				resolvedUrl = urlBuilder.toString()
+			}
+			intent.data = Uri.parse(resolvedUrl)
+			intent.putExtra("title", title)
 
-    public static boolean run(Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
-        MXPackageInfo packageInfo = getPackageInfo();
-        if (packageInfo == null)
-            return false;
+			if (!subtitle.isNullOrEmpty()) {
+				val parcels = arrayOfNulls<Parcelable>(1)
+				parcels[0] = subtitle.toUri()
+				intent.putExtra("subs", parcels)
+				intent.putExtra("subs.enable", parcels)
+			}
+			activity.startActivity(intent)
+			return true
+		} catch (ex: Exception) {
+			Log.e(TAG, "Can't run MX Player(Pro)", ex)
+			return false
+		}
+	}
 
-        try {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setPackage(packageInfo.packageName);
-            intent.setClassName(packageInfo.packageName, packageInfo.activityName);
-            if (headers != null && !headers.isEmpty()) {
-                url = url + "|";
-                int idx = 0;
-                StringBuilder urlBuilder = new StringBuilder(url);
-                for (String hk : headers.keySet()) {
-                    urlBuilder.append(hk).append("=").append(URLEncoder.encode(headers.get(hk), "UTF-8"));
-                    if (idx < headers.size() - 1) {
-                        urlBuilder.append("&");
-                    }
-                    idx++;
-                }
-                url = urlBuilder.toString();
-            }
-            intent.setData(Uri.parse(url));
-            intent.putExtra("title", title);
+	class MXPackageInfo internal constructor(val packageName: String, val activityName: String)
 
-            if (subtitle != null && !subtitle.isEmpty()) {
-                Parcelable[] parcels = new Parcelable[1];
-                parcels[0] = Uri.parse(subtitle);
-                intent.putExtra("subs", parcels);
-                intent.putExtra("subs.enable", parcels);
-            }
-            activity.startActivity(intent);
-            return true;
-        } catch (Exception ex) {
-            Log.e(TAG, "Can't run MX Player(Pro)", ex);
-            return false;
-        }
-    }
+	private class Subtitle(uri: Uri) {
+		val uri: Uri
+		var name: String? = null
+		var filename: String? = null
 
-    public static class MXPackageInfo {
-        final String packageName;
-        final String activityName;
+		init {
+			checkNotNull(uri.scheme) { "Scheme is missed for subtitle URI $uri" }
 
-        MXPackageInfo(String packageName, String activityName) {
-            this.packageName = packageName;
-            this.activityName = activityName;
-        }
-    }
+			this.uri = uri
+		}
 
-    private static class Subtitle {
-        final Uri uri;
-        String name;
-        String filename;
-
-        Subtitle(Uri uri) {
-            if (uri.getScheme() == null)
-                throw new IllegalStateException("Scheme is missed for subtitle URI " + uri);
-
-            this.uri = uri;
-        }
-
-        Subtitle(String uriStr) {
-            this(Uri.parse(uriStr));
-        }
-    }
+		constructor(uriStr: String?) : this(Uri.parse(uriStr))
+	}
 }

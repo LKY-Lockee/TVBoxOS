@@ -1,80 +1,68 @@
-package com.github.tvbox.osc.player.controller;
+package com.github.tvbox.osc.player.controller
 
-import android.content.Context;
-import android.view.MotionEvent;
-import android.widget.ProgressBar;
-
-import com.github.tvbox.osc.R;
-
-import org.jetbrains.annotations.NotNull;
+import android.content.Context
+import android.view.MotionEvent
+import android.widget.ProgressBar
+import com.github.tvbox.osc.R
+import kotlin.math.abs
 
 /**
  * 直播控制器
  */
+open class LiveController(context: Context) : BaseController(context) {
+	protected var mLoading: ProgressBar? = null
+	private var listener: LiveControlListener? = null
 
-public class LiveController extends BaseController {
-    protected ProgressBar mLoading;
-    private LiveController.LiveControlListener listener = null;
+	override fun getLayoutId(): Int {
+		return R.layout.player_live_control_view
+	}
 
-    public LiveController(@NotNull Context context) {
-        super(context);
-    }
+	override fun initView() {
+		super.initView()
+		mLoading = findViewById(R.id.loading)
+	}
 
-    @Override
-    protected int getLayoutId() {
-        return R.layout.player_live_control_view;
-    }
+	fun setListener(listener: LiveControlListener?) {
+		this.listener = listener
+	}
 
-    @Override
-    protected void initView() {
-        super.initView();
-        mLoading = findViewById(R.id.loading);
-    }
+	override fun onSingleTapConfirmed(p0: MotionEvent): Boolean {
+		if (listener?.singleTap() == true) return true
+		return super.onSingleTapConfirmed(p0)
+	}
 
-    public void setListener(LiveController.LiveControlListener listener) {
-        this.listener = listener;
-    }
+	override fun onLongPress(p0: MotionEvent) {
+		listener?.longPress()
+		super.onLongPress(p0)
+	}
 
-    @Override
-    public boolean onSingleTapConfirmed(MotionEvent e) {
-        if (listener.singleTap())
-            return true;
-        return super.onSingleTapConfirmed(e);
-    }
+	override fun onPlayStateChanged(playState: Int) {
+		super.onPlayStateChanged(playState)
+		listener?.playStateChanged(playState)
+	}
 
-    @Override
-    public void onLongPress(MotionEvent e) {
-        listener.longPress();
-        super.onLongPress(e);
-    }
+	override fun onFling(p0: MotionEvent?, p1: MotionEvent, p2: Float, p3: Float): Boolean {
+		//最小识别速度
+		val minFlingVelocity = 10
+		//最小识别距离
+		val minFlingDistance = 100
+		val startX = (p0?.x ?: 0).toInt()
+		val l = listener ?: return false
+		if (startX - p1.x > minFlingDistance && abs(p2) > minFlingVelocity) {
+			l.changeSource(-1) //左滑
+		} else if (p1.x - startX > minFlingDistance && abs(p2) > minFlingVelocity) {
+			l.changeSource(1) //右滑
+		}
+		return false
+	}
 
-    @Override
-    protected void onPlayStateChanged(int playState) {
-        super.onPlayStateChanged(playState);
-        listener.playStateChanged(playState);
-    }
+	interface LiveControlListener {
+		fun singleTap(): Boolean
 
-    @Override
-    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        //最小识别速度
-        int minFlingVelocity = 10;
-        //最小识别距离
-        int minFlingDistance = 100;
-        if (e1.getX() - e2.getX() > minFlingDistance && Math.abs(velocityX) > minFlingVelocity) {
-            listener.changeSource(-1);          //左滑
-        } else if (e2.getX() - e1.getX() > minFlingDistance && Math.abs(velocityX) > minFlingVelocity) {
-            listener.changeSource(1);           //右滑
-        }
-        return false;
-    }
+		fun longPress()
 
-    public interface LiveControlListener {
-        boolean singleTap();
+		fun playStateChanged(playState: Int)
 
-        void longPress();
-
-        void playStateChanged(int playState);
-
-        void changeSource(int direction);
-    }
+		fun changeSource(direction: Int)
+	}
 }

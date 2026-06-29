@@ -1,171 +1,156 @@
-package com.github.tvbox.osc.player;
+package com.github.tvbox.osc.player
 
-import android.content.Context;
-import android.util.Pair;
-
-import androidx.media3.common.C;
-import androidx.media3.common.Format;
-import androidx.media3.common.Tracks;
-import androidx.media3.common.util.UnstableApi;
-
-import com.github.tvbox.osc.util.AudioTrackMemory;
-import com.github.tvbox.osc.util.LOG;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import xyz.doikki.videoplayer.exo.ExoMediaPlayer;
+import android.content.Context
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
+import com.github.tvbox.osc.util.AudioTrackMemory
+import com.github.tvbox.osc.util.LOG
+import xyz.doikki.videoplayer.exo.ExoMediaPlayer
+import java.util.Locale
 
 @UnstableApi
-public class ExoPlayer extends ExoMediaPlayer {
+class ExoPlayer(context: Context) : ExoMediaPlayer(context) {
+	init {
+		memory = AudioTrackMemory.getInstance(context)
+	}
 
-    private static final Map<String, String> LANG_MAP = new HashMap<>();
-    private static AudioTrackMemory memory;
+	val trackInfo: TrackInfo
+		// 3. 获取所有轨道信息
+		get() {
+			val data = TrackInfo()
+			val player = mInternalPlayer ?: return data
+			val currentTracks = player.currentTracks
 
-    static {
-        LANG_MAP.put("zh", "中文");
-        LANG_MAP.put("zh-cn", "中文");
-        LANG_MAP.put("en", "英语");
-        LANG_MAP.put("en-us", "英语");
-    }
+			var audioGroupIndex = 0
+			var subtitleGroupIndex = 0
 
-    public ExoPlayer(Context context) {
-        super(context);
-        memory = AudioTrackMemory.getInstance(context);
-    }
+			for (trackGroup in currentTracks.groups) {
+				val trackType = trackGroup.type
+				if (trackType != C.TRACK_TYPE_AUDIO && trackType != C.TRACK_TYPE_TEXT) continue
 
-    // 3. 获取所有轨道信息
-    public TrackInfo getTrackInfo() {
-        TrackInfo data = new TrackInfo();
-        if (mInternalPlayer == null) return data;
-        Tracks currentTracks = mInternalPlayer.getCurrentTracks();
+				for (i in 0..<trackGroup.length) {
+					if (!trackGroup.isTrackSupported(i)) continue
 
-        int audioGroupIndex = 0;
-        int subtitleGroupIndex = 0;
+					val fmt = trackGroup.getTrackFormat(i)
+					val bean = TrackInfoBean()
+					bean.language = getLanguage(fmt)
+					bean.name = getName(fmt)
+					bean.index = i
+					bean.selected = trackGroup.isTrackSelected(i)
 
-        for (Tracks.Group trackGroup : currentTracks.getGroups()) {
-            int trackType = trackGroup.getType();
-            if (trackType != C.TRACK_TYPE_AUDIO && trackType != C.TRACK_TYPE_TEXT) continue;
+					if (trackType == C.TRACK_TYPE_AUDIO) {
+						bean.groupIndex = audioGroupIndex
+						data.addAudio(bean)
+					} else {
+						bean.groupIndex = subtitleGroupIndex
+						data.addSubtitle(bean)
+					}
+				}
 
-            for (int i = 0; i < trackGroup.length; i++) {
-                if (!trackGroup.isTrackSupported(i)) continue;
+				if (trackType == C.TRACK_TYPE_AUDIO) {
+					audioGroupIndex++
+				} else {
+					subtitleGroupIndex++
+				}
+			}
+			return data
+		}
 
-                Format fmt = trackGroup.getTrackFormat(i);
-                TrackInfoBean bean = new TrackInfoBean();
-                bean.language = getLanguage(fmt);
-                bean.name = getName(fmt);
-                bean.index = i;
-                bean.selected = trackGroup.isTrackSelected(i);
+	/**
+	 * 设置当前播放的音轨
+	 * 
+	 * @param groupIndex 音轨组的索引
+	 * @param trackIndex 音轨在组内的索引
+	 */
+	fun setTrack(groupIndex: Int, trackIndex: Int, playKey: String) {
+		try {
+			val player = mInternalPlayer ?: run {
+				LOG.i("echo-setTrack: Player is null")
+				return
+			}
 
-                if (trackType == C.TRACK_TYPE_AUDIO) {
-                    bean.groupIndex = audioGroupIndex;
-                    data.addAudio(bean);
-                } else {
-                    bean.groupIndex = subtitleGroupIndex;
-                    data.addSubtitle(bean);
-                }
-            }
+			val currentTracks = player.currentTracks
+			var audioGroupCount = 0
+			var targetGroup: Tracks.Group? = null
 
-            if (trackType == C.TRACK_TYPE_AUDIO) {
-                audioGroupIndex++;
-            } else {
-                subtitleGroupIndex++;
-            }
-        }
-        return data;
-    }
+			// Find the target audio track group
+			for (trackGroup in currentTracks.groups) {
+				if (trackGroup.type == C.TRACK_TYPE_AUDIO) {
+					if (audioGroupCount == groupIndex) {
+						targetGroup = trackGroup
+						break
+					}
+					audioGroupCount++
+				}
+			}
 
-    /**
-     * 设置当前播放的音轨
-     *
-     * @param groupIndex 音轨组的索引
-     * @param trackIndex 音轨在组内的索引
-     */
-    public void setTrack(int groupIndex, int trackIndex, String playKey) {
-        try {
-            if (mInternalPlayer == null) {
-                LOG.i("echo-setTrack: Player is null");
-                return;
-            }
+			if (targetGroup == null || trackIndex >= targetGroup.length) {
+				LOG.i("echo-setTrack: Invalid track index - group:$groupIndex, track:$trackIndex")
+				return
+			}
 
-            Tracks currentTracks = mInternalPlayer.getCurrentTracks();
-            int audioGroupCount = 0;
-            Tracks.Group targetGroup = null;
+			// In Media3, we need to use preferred audio language or manual track selection
+			// For now, using the TrackSelectionParameters to prefer specific tracks
+			val targetFormat = targetGroup.getTrackFormat(trackIndex)
 
-            // Find the target audio track group
-            for (Tracks.Group trackGroup : currentTracks.getGroups()) {
-                if (trackGroup.getType() == C.TRACK_TYPE_AUDIO) {
-                    if (audioGroupCount == groupIndex) {
-                        targetGroup = trackGroup;
-                        break;
-                    }
-                    audioGroupCount++;
-                }
-            }
+			// Set parameters to prefer this specific audio track
+			// mTrackSelector is private in parent; use Player's public API instead
+			player.trackSelectionParameters = player.trackSelectionParameters
+				.buildUpon()
+				.setPreferredAudioLanguage(targetFormat.language.orEmpty())
+				.build()
 
-            if (targetGroup == null || trackIndex >= targetGroup.length) {
-                LOG.i("echo-setTrack: Invalid track index - group:" + groupIndex + ", track:" + trackIndex);
-                return;
-            }
+			// 缓存到 map：下次同一路径播放时使用
+			if (playKey.isNotEmpty()) {
+				memory.save(playKey, groupIndex, trackIndex)
+			}
+		} catch (e: Exception) {
+			LOG.i("echo-setTrack error: " + e.message)
+		}
+	}
 
-            // In Media3, we need to use preferred audio language or manual track selection
-            // For now, using the TrackSelectionParameters to prefer specific tracks
-            Format targetFormat = targetGroup.getTrackFormat(trackIndex);
+	//加载上一次选中的音轨
+	fun loadDefaultTrack(playKey: String) {
+		val pair = memory.exoLoad(playKey) ?: return
 
-            // Set parameters to prefer this specific audio track
-            // mTrackSelector is private in parent; use Player's public API instead
-            mInternalPlayer.setTrackSelectionParameters(
-                    mInternalPlayer.getTrackSelectionParameters()
-                            .buildUpon()
-                            .setPreferredAudioLanguage(targetFormat.language != null ? targetFormat.language : "")
-                            .build()
-            );
+		val groupIndex: Int = pair.first ?: return
+		val trackIndex: Int = pair.second ?: return
 
-            // 缓存到 map：下次同一路径播放时使用
-            if (!playKey.isEmpty()) {
-                memory.save(playKey, groupIndex, trackIndex);
-            }
-        } catch (Exception e) {
-            LOG.i("echo-setTrack error: " + e.getMessage());
-        }
-    }
+		setTrack(groupIndex, trackIndex, "")
+	}
 
-    //加载上一次选中的音轨
-    public void loadDefaultTrack(String playKey) {
-        Pair<Integer, Integer> pair = memory.exoLoad(playKey);
-        if (pair == null) return;
+	private fun getLanguage(fmt: Format): String {
+		val lang = fmt.language
+		if (lang.isNullOrEmpty() || "und".equals(lang, ignoreCase = true)) {
+			return "未知"
+		}
+		return LANG_MAP[lang.lowercase(Locale.getDefault())] ?: lang
+	}
 
-        int groupIndex = pair.first;
-        int trackIndex = pair.second;
+	private fun getName(fmt: Format): String {
+		val channelLabel = when {
+			fmt.channelCount <= 0 -> ""
+			fmt.channelCount == 1 -> "单声道"
+			fmt.channelCount == 2 -> "立体声"
+			else -> "${fmt.channelCount} 声道"
+		}
+		var codec = ""
+		val mimeType = fmt.sampleMimeType
+		if (mimeType != null) {
+			codec = mimeType.substring(mimeType.indexOf('/') + 1).uppercase(Locale.getDefault())
+		}
+		return "$channelLabel, $codec"
+	}
 
-        setTrack(groupIndex, trackIndex, "");
-    }
-
-    private String getLanguage(Format fmt) {
-        String lang = fmt.language;
-        if (lang == null || lang.isEmpty() || "und".equalsIgnoreCase(lang)) {
-            return "未知";
-        }
-        String name = LANG_MAP.get(lang.toLowerCase());
-        return name != null ? name : lang;
-    }
-
-    private String getName(Format fmt) {
-        String channelLabel;
-        if (fmt.channelCount <= 0) {
-            channelLabel = "";
-        } else if (fmt.channelCount == 1) {
-            channelLabel = "单声道";
-        } else if (fmt.channelCount == 2) {
-            channelLabel = "立体声";
-        } else {
-            channelLabel = fmt.channelCount + " 声道";
-        }
-        String codec = "";
-        if (fmt.sampleMimeType != null) {
-            String mime = fmt.sampleMimeType.substring(fmt.sampleMimeType.indexOf('/') + 1);
-            codec = mime.toUpperCase();
-        }
-        return String.join(", ", channelLabel, codec);
-    }
+	companion object {
+		private val LANG_MAP: Map<String, String> = mapOf(
+			"zh" to "中文",
+			"zh-cn" to "中文",
+			"en" to "英语",
+			"en-us" to "英语"
+		)
+		private lateinit var memory: AudioTrackMemory
+	}
 }

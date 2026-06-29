@@ -1,103 +1,75 @@
-package com.github.tvbox.osc.player.render;
+package com.github.tvbox.osc.player.render
 
-import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.PixelFormat;
-import android.util.AttributeSet;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.view.View;
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.PixelFormat
+import android.util.AttributeSet
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.View
+import xyz.doikki.videoplayer.player.AbstractPlayer
+import xyz.doikki.videoplayer.render.IRenderView
+import xyz.doikki.videoplayer.render.MeasureHelper
 
-import androidx.annotation.NonNull;
+class SurfaceRenderView : SurfaceView, IRenderView, SurfaceHolder.Callback {
+	private val mMeasureHelper: MeasureHelper = MeasureHelper()
+	private var mMediaPlayer: AbstractPlayer? = null
 
-import xyz.doikki.videoplayer.player.AbstractPlayer;
-import xyz.doikki.videoplayer.render.IRenderView;
-import xyz.doikki.videoplayer.render.MeasureHelper;
+	init {
+		holder.addCallback(this)
+		holder.setFormat(PixelFormat.RGBA_8888)
+	}
 
-public class SurfaceRenderView extends SurfaceView implements IRenderView, SurfaceHolder.Callback {
-    private final MeasureHelper mMeasureHelper;
+	constructor(context: Context) : super(context)
 
-    private AbstractPlayer mMediaPlayer;
+	constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 
-    {
-        mMeasureHelper = new MeasureHelper();
-        SurfaceHolder surfaceHolder = getHolder();
-        surfaceHolder.addCallback(this);
-        surfaceHolder.setFormat(PixelFormat.RGBA_8888);
-    }
+	constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
-    public SurfaceRenderView(Context context) {
-        super(context);
-    }
+	override fun attachToPlayer(player: AbstractPlayer) {
+		this.mMediaPlayer = player
+	}
 
-    public SurfaceRenderView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-    }
+	override fun setVideoSize(videoWidth: Int, videoHeight: Int) {
+		if (videoWidth > 0 && videoHeight > 0) {
+			mMeasureHelper.setVideoSize(videoWidth, videoHeight)
+			requestLayout()
+		}
+	}
 
-    public SurfaceRenderView(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-    }
+	override fun setVideoRotation(degree: Int) {
+		mMeasureHelper.setVideoRotation(degree)
+		rotation = degree.toFloat()
+	}
 
-    @Override
-    public void attachToPlayer(@NonNull AbstractPlayer player) {
-        this.mMediaPlayer = player;
-    }
+	override fun setScaleType(scaleType: Int) {
+		mMeasureHelper.setScreenScale(scaleType)
+		requestLayout()
+	}
 
-    @Override
-    public void setVideoSize(int videoWidth, int videoHeight) {
-        if (videoWidth > 0 && videoHeight > 0) {
-            mMeasureHelper.setVideoSize(videoWidth, videoHeight);
-            requestLayout();
-        }
-    }
+	override fun getView(): View {
+		return this
+	}
 
-    @Override
-    public void setVideoRotation(int degree) {
-        mMeasureHelper.setVideoRotation(degree);
-        setRotation(degree);
-    }
+	override fun doScreenShot(): Bitmap? {
+		return null
+	}
 
-    @Override
-    public void setScaleType(int scaleType) {
-        mMeasureHelper.setScreenScale(scaleType);
-        requestLayout();
-    }
+	override fun release() {
+	}
 
-    @Override
-    public View getView() {
-        return this;
-    }
+	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+		val measuredSize = mMeasureHelper.doMeasure(widthMeasureSpec, heightMeasureSpec)
+		setMeasuredDimension(measuredSize[0], measuredSize[1])
+	}
 
-    @Override
-    public Bitmap doScreenShot() {
-        return null;
-    }
+	override fun surfaceCreated(p0: SurfaceHolder) {
+	}
 
-    @Override
-    public void release() {
+	override fun surfaceChanged(p0: SurfaceHolder, p1: Int, p2: Int, p3: Int) {
+		mMediaPlayer?.setDisplay(p0)
+	}
 
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int[] measuredSize = mMeasureHelper.doMeasure(widthMeasureSpec, heightMeasureSpec);
-        setMeasuredDimension(measuredSize[0], measuredSize[1]);
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.setDisplay(holder);
-        }
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-
-    }
+	override fun surfaceDestroyed(p0: SurfaceHolder) {
+	}
 }

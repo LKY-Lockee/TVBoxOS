@@ -1,18 +1,17 @@
-package com.github.tvbox.osc.player.render;
+package com.github.tvbox.osc.player.render
 
-import android.content.Context;
+import android.content.Context
+import xyz.doikki.videoplayer.render.IRenderView
+import xyz.doikki.videoplayer.render.RenderViewFactory
 
-import xyz.doikki.videoplayer.render.IRenderView;
-import xyz.doikki.videoplayer.render.RenderViewFactory;
+class SurfaceRenderViewFactory : RenderViewFactory() {
+	override fun createRenderView(context: Context): IRenderView {
+		return SurfaceRenderView(context)
+	}
 
-public class SurfaceRenderViewFactory extends RenderViewFactory {
-
-    public static SurfaceRenderViewFactory create() {
-        return new SurfaceRenderViewFactory();
-    }
-
-    @Override
-    public IRenderView createRenderView(Context context) {
-        return new SurfaceRenderView(context);
-    }
+	companion object {
+		fun create(): SurfaceRenderViewFactory {
+			return SurfaceRenderViewFactory()
+		}
+	}
 }

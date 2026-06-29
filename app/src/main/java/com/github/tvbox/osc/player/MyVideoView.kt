@@ -1,29 +1,17 @@
-package com.github.tvbox.osc.player;
+package com.github.tvbox.osc.player
 
-import android.content.Context;
-import android.util.AttributeSet;
+import android.content.Context
+import android.util.AttributeSet
+import xyz.doikki.videoplayer.player.AbstractPlayer
+import xyz.doikki.videoplayer.player.VideoView
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+class MyVideoView : VideoView {
+	val mediaPlayer: AbstractPlayer?
+		get() = mMediaPlayer
 
-import xyz.doikki.videoplayer.player.AbstractPlayer;
-import xyz.doikki.videoplayer.player.VideoView;
+	constructor(context: Context) : super(context, null)
 
-public class MyVideoView extends VideoView {
-    public MyVideoView(@NonNull Context context) {
-        super(context, null);
-    }
+	constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0)
 
-    public MyVideoView(@NonNull Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs, 0);
-    }
-
-    public MyVideoView(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-    }
-
-    public AbstractPlayer getMediaPlayer() {
-        return mMediaPlayer;
-    }
-
+	constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 }

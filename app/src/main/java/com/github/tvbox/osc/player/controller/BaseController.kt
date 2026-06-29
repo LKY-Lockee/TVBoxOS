@@ -1,423 +1,382 @@
-package com.github.tvbox.osc.player.controller;
+package com.github.tvbox.osc.player.controller
 
-import android.app.Activity;
-import android.content.Context;
-import android.media.AudioManager;
-import android.os.Handler;
-import android.os.Message;
-import android.util.AttributeSet;
-import android.view.GestureDetector;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
-import android.widget.TextView;
+import android.content.Context
+import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
+import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.View
+import android.view.View.OnTouchListener
+import android.view.ViewGroup
+import android.widget.TextView
+import com.google.android.material.loadingindicator.LoadingIndicator
+import xyz.doikki.videoplayer.controller.BaseVideoController
+import xyz.doikki.videoplayer.controller.IGestureComponent
+import xyz.doikki.videoplayer.player.VideoView
+import xyz.doikki.videoplayer.util.PlayerUtils
+import kotlin.math.abs
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+abstract class BaseController : BaseVideoController, GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, OnTouchListener {
+	protected var mHandler: Handler? = null
+	protected var mHandlerCallback: HandlerCallback? = null
+	private var mGestureDetector: GestureDetector? = null
+	private var mAudioManager: AudioManager? = null
+	private var mIsGestureEnabled = true
+	private var mStreamVolume = 0
+	private var mBrightness = 0f
+	private var mSeekPosition = 0
+	private var mFirstTouch = false
+	private var mChangePosition = false
+	private var mChangeBrightness = false
+	private var mChangeVolume = false
+	private var mCanChangePosition = true
+	private var mEnableInNormal = false
+	private var mCanSlide = false
+	private var mCurPlayState = 0
+	private var mIsDoubleTapTogglePlayEnabled = true
+	private var mSlideInfo: TextView? = null
+	private var mLoading: LoadingIndicator? = null
+	private var mPauseRoot: ViewGroup? = null
+	private var mPauseTime: TextView? = null
 
-import com.google.android.material.loadingindicator.LoadingIndicator;
+	constructor(context: Context) : super(context) {
+		mHandler = Handler(Looper.getMainLooper()) { msg: Message ->
+			when (msg.what) {
+				100 -> {
+					// 亮度+音量调整
+					mSlideInfo?.apply {
+						visibility = VISIBLE
+						text = msg.obj.toString()
+					}
+				}
 
-import java.util.Map;
+				101 -> {
+					// 亮度+音量调整 关闭
+					mSlideInfo?.visibility = GONE
+				}
 
-import xyz.doikki.videoplayer.controller.BaseVideoController;
-import xyz.doikki.videoplayer.controller.IControlComponent;
-import xyz.doikki.videoplayer.controller.IGestureComponent;
-import xyz.doikki.videoplayer.player.VideoView;
-import xyz.doikki.videoplayer.util.PlayerUtils;
+				else -> {
+					mHandlerCallback?.callback(msg)
+				}
+			}
+			false
+		}
+	}
 
-public abstract class BaseController extends BaseVideoController implements GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener, View.OnTouchListener {
-    protected Handler mHandler;
-    protected HandlerCallback mHandlerCallback;
-    private GestureDetector mGestureDetector;
-    private AudioManager mAudioManager;
-    private boolean mIsGestureEnabled = true;
-    private int mStreamVolume;
-    private float mBrightness;
-    private int mSeekPosition;
-    private boolean mFirstTouch;
-    private boolean mChangePosition;
-    private boolean mChangeBrightness;
-    private boolean mChangeVolume;
-    private boolean mCanChangePosition = true;
-    private boolean mEnableInNormal;
-    private boolean mCanSlide;
-    private int mCurPlayState;
-    private boolean mIsDoubleTapTogglePlayEnabled = true;
-    private TextView mSlideInfo;
-    private LoadingIndicator mLoading;
-    private ViewGroup mPauseRoot;
-    private TextView mPauseTime;
+	constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 
-    public BaseController(@NonNull Context context) {
-        super(context);
-        mHandler = new Handler(msg -> {
-            int what = msg.what;
-            switch (what) {
-                case 100: { // 亮度+音量调整
-                    mSlideInfo.setVisibility(VISIBLE);
-                    mSlideInfo.setText(msg.obj.toString());
-                    break;
-                }
+	constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
-                case 101: { // 亮度+音量调整 关闭
-                    mSlideInfo.setVisibility(GONE);
-                    break;
-                }
-                default: {
-                    if (mHandlerCallback != null)
-                        mHandlerCallback.callback(msg);
-                    break;
-                }
-            }
-            return false;
-        });
-    }
+	override fun initView() {
+		super.initView()
+		mAudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+		mGestureDetector = GestureDetector(context, this)
+		setOnTouchListener(this)
+		mSlideInfo = findViewWithTag("vod_control_slide_info")
+		mLoading = findViewWithTag("vod_control_loading")
+		mPauseRoot = findViewWithTag("vod_control_pause")
+		mPauseTime = findViewWithTag("vod_control_pause_t")
+	}
 
-    public BaseController(@NonNull Context context, @Nullable AttributeSet attrs) {
-        super(context, attrs);
-    }
+	override fun setProgress(duration: Int, position: Int) {
+		super.setProgress(duration, position)
+		mPauseTime?.text = "${PlayerUtils.stringForTime(position)} / ${PlayerUtils.stringForTime(duration)}"
+	}
 
-    public BaseController(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-    }
+	override fun onPlayStateChanged(playState: Int) {
+		super.onPlayStateChanged(playState)
+		when (playState) {
+			VideoView.STATE_IDLE, VideoView.STATE_PREPARED, VideoView.STATE_ERROR, VideoView.STATE_BUFFERED -> mLoading?.visibility = GONE
+			VideoView.STATE_PLAYING -> {
+				mPauseRoot?.visibility = GONE
+				mLoading?.visibility = GONE
+			}
 
-    @Override
-    protected void initView() {
-        super.initView();
-        mAudioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-        mGestureDetector = new GestureDetector(getContext(), this);
-        setOnTouchListener(this);
-        mSlideInfo = findViewWithTag("vod_control_slide_info");
-        mLoading = findViewWithTag("vod_control_loading");
-        mPauseRoot = findViewWithTag("vod_control_pause");
-        mPauseTime = findViewWithTag("vod_control_pause_t");
-    }
+			VideoView.STATE_PAUSED -> {
+				mPauseRoot?.visibility = VISIBLE
+				mLoading?.visibility = GONE
+			}
 
-    @Override
-    protected void setProgress(int duration, int position) {
-        super.setProgress(duration, position);
-        mPauseTime.setText(PlayerUtils.stringForTime(position) + " / " + PlayerUtils.stringForTime(duration));
-    }
+			VideoView.STATE_PREPARING, VideoView.STATE_BUFFERING -> mLoading?.visibility = VISIBLE
+			VideoView.STATE_PLAYBACK_COMPLETED -> {
+				mLoading?.visibility = GONE
+				mPauseRoot?.visibility = GONE
+			}
+		}
+	}
 
-    @Override
-    protected void onPlayStateChanged(int playState) {
-        super.onPlayStateChanged(playState);
-        switch (playState) {
-            case VideoView.STATE_IDLE:
-            case VideoView.STATE_PREPARED:
-            case VideoView.STATE_ERROR:
-            case VideoView.STATE_BUFFERED:
-                mLoading.setVisibility(GONE);
-                break;
-            case VideoView.STATE_PLAYING:
-                mPauseRoot.setVisibility(GONE);
-                mLoading.setVisibility(GONE);
-                break;
-            case VideoView.STATE_PAUSED:
-                mPauseRoot.setVisibility(VISIBLE);
-                mLoading.setVisibility(GONE);
-                break;
-            case VideoView.STATE_PREPARING:
-            case VideoView.STATE_BUFFERING:
-                mLoading.setVisibility(VISIBLE);
-                break;
-            case VideoView.STATE_PLAYBACK_COMPLETED:
-                mLoading.setVisibility(GONE);
-                mPauseRoot.setVisibility(GONE);
-                break;
-        }
-    }
+	/**
+	 * 设置是否可以滑动调节进度，默认可以
+	 */
+	fun setCanChangePosition(canChangePosition: Boolean) {
+		mCanChangePosition = canChangePosition
+	}
 
-    /**
-     * 设置是否可以滑动调节进度，默认可以
-     */
-    public void setCanChangePosition(boolean canChangePosition) {
-        mCanChangePosition = canChangePosition;
-    }
+	/**
+	 * 是否在竖屏模式下开始手势控制，默认关闭
+	 */
+	fun setEnableInNormal(enableInNormal: Boolean) {
+		mEnableInNormal = enableInNormal
+	}
 
-    /**
-     * 是否在竖屏模式下开始手势控制，默认关闭
-     */
-    public void setEnableInNormal(boolean enableInNormal) {
-        mEnableInNormal = enableInNormal;
-    }
+	/**
+	 * 是否开启手势控制，默认开启，关闭之后，手势调节进度，音量，亮度功能将关闭
+	 */
+	fun setGestureEnabled(gestureEnabled: Boolean) {
+		mIsGestureEnabled = gestureEnabled
+	}
 
-    /**
-     * 是否开启手势控制，默认开启，关闭之后，手势调节进度，音量，亮度功能将关闭
-     */
-    public void setGestureEnabled(boolean gestureEnabled) {
-        mIsGestureEnabled = gestureEnabled;
-    }
+	/**
+	 * 是否开启双击播放/暂停，默认开启
+	 */
+	fun setDoubleTapTogglePlayEnabled(enabled: Boolean) {
+		mIsDoubleTapTogglePlayEnabled = enabled
+	}
 
-    /**
-     * 是否开启双击播放/暂停，默认开启
-     */
-    public void setDoubleTapTogglePlayEnabled(boolean enabled) {
-        mIsDoubleTapTogglePlayEnabled = enabled;
-    }
+	override fun setPlayerState(playerState: Int) {
+		super.setPlayerState(playerState)
+		if (playerState == VideoView.PLAYER_NORMAL) {
+			mCanSlide = mEnableInNormal
+		} else if (playerState == VideoView.PLAYER_FULL_SCREEN) {
+			mCanSlide = true
+		}
+	}
 
-    @Override
-    public void setPlayerState(int playerState) {
-        super.setPlayerState(playerState);
-        if (playerState == VideoView.PLAYER_NORMAL) {
-            mCanSlide = mEnableInNormal;
-        } else if (playerState == VideoView.PLAYER_FULL_SCREEN) {
-            mCanSlide = true;
-        }
-    }
+	override fun setPlayState(playState: Int) {
+		super.setPlayState(playState)
+		mCurPlayState = playState
+	}
 
-    @Override
-    public void setPlayState(int playState) {
-        super.setPlayState(playState);
-        mCurPlayState = playState;
-    }
+	protected val isInPlaybackState: Boolean
+		get() = mControlWrapper != null && mCurPlayState != VideoView.STATE_ERROR && mCurPlayState != VideoView.STATE_IDLE && mCurPlayState != VideoView.STATE_PREPARING && mCurPlayState != VideoView.STATE_PREPARED && mCurPlayState != VideoView.STATE_START_ABORT && mCurPlayState != VideoView.STATE_PLAYBACK_COMPLETED
 
-    protected boolean isInPlaybackState() {
-        return mControlWrapper != null
-                && mCurPlayState != VideoView.STATE_ERROR
-                && mCurPlayState != VideoView.STATE_IDLE
-                && mCurPlayState != VideoView.STATE_PREPARING
-                && mCurPlayState != VideoView.STATE_PREPARED
-                && mCurPlayState != VideoView.STATE_START_ABORT
-                && mCurPlayState != VideoView.STATE_PLAYBACK_COMPLETED;
-    }
+	override fun onTouch(p0: View?, p1: MotionEvent?): Boolean {
+		return mGestureDetector?.onTouchEvent(p1 ?: return false) ?: false
+	}
 
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-        return mGestureDetector.onTouchEvent(event);
-    }
+	/**
+	 * 手指按下的瞬间
+	 */
+	override fun onDown(p0: MotionEvent): Boolean {
+		if (!this.isInPlaybackState //不处于播放状态
+			|| !mIsGestureEnabled //关闭了手势
+			|| PlayerUtils.isEdge(context, p0)
+		)  //处于屏幕边沿
+			return true
+		mStreamVolume = mAudioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
+		val activity = PlayerUtils.scanForActivity(context)
+		mBrightness = activity?.window?.attributes?.screenBrightness ?: 0f
+		mFirstTouch = true
+		mChangePosition = false
+		mChangeBrightness = false
+		mChangeVolume = false
+		return true
+	}
 
-    /**
-     * 手指按下的瞬间
-     */
-    @Override
-    public boolean onDown(MotionEvent e) {
-        if (!isInPlaybackState() //不处于播放状态
-                || !mIsGestureEnabled //关闭了手势
-                || PlayerUtils.isEdge(getContext(), e)) //处于屏幕边沿
-            return true;
-        mStreamVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-        Activity activity = PlayerUtils.scanForActivity(getContext());
-        if (activity == null) {
-            mBrightness = 0;
-        } else {
-            mBrightness = activity.getWindow().getAttributes().screenBrightness;
-        }
-        mFirstTouch = true;
-        mChangePosition = false;
-        mChangeBrightness = false;
-        mChangeVolume = false;
-        return true;
-    }
+	/**
+	 * 单击
+	 */
+	override fun onSingleTapConfirmed(p0: MotionEvent): Boolean {
+		if (this.isInPlaybackState) {
+			mControlWrapper.toggleShowState()
+		}
+		return true
+	}
 
-    /**
-     * 单击
-     */
-    @Override
-    public boolean onSingleTapConfirmed(MotionEvent e) {
-        if (isInPlaybackState()) {
-            mControlWrapper.toggleShowState();
-        }
-        return true;
-    }
+	/**
+	 * 双击
+	 */
+	override fun onDoubleTap(p0: MotionEvent): Boolean {
+		if (mIsDoubleTapTogglePlayEnabled && !isLocked && this.isInPlaybackState) togglePlay()
+		return true
+	}
 
-    /**
-     * 双击
-     */
-    @Override
-    public boolean onDoubleTap(MotionEvent e) {
-        if (mIsDoubleTapTogglePlayEnabled && !isLocked() && isInPlaybackState()) togglePlay();
-        return true;
-    }
+	/**
+	 * 在屏幕上滑动
+	 */
+	override fun onScroll(p0: MotionEvent?, p1: MotionEvent, p2: Float, p3: Float): Boolean {
+		if (!this.isInPlaybackState //不处于播放状态
+			|| !mIsGestureEnabled //关闭了手势
+			|| !mCanSlide //关闭了滑动手势
+			|| isLocked //锁住了屏幕
+			|| PlayerUtils.isEdge(context, p0)
+		)  //处于屏幕边沿
+			return true
+		val deltaX = (p0?.x ?: 0).toInt() - p1.x
+		val deltaY = (p0?.y ?: 0).toInt() - p1.y
+		if (mFirstTouch) {
+			mChangePosition = abs(p2) >= abs(p3)
+			if (!mChangePosition) {
+				//半屏宽度
+				val halfScreen = PlayerUtils.getScreenWidth(context, true) / 2
+				if (p1.x > halfScreen) {
+					mChangeVolume = true
+				} else {
+					mChangeBrightness = true
+				}
+			}
 
-    /**
-     * 在屏幕上滑动
-     */
-    @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        if (!isInPlaybackState() //不处于播放状态
-                || !mIsGestureEnabled //关闭了手势
-                || !mCanSlide //关闭了滑动手势
-                || isLocked() //锁住了屏幕
-                || PlayerUtils.isEdge(getContext(), e1)) //处于屏幕边沿
-            return true;
-        float deltaX = e1.getX() - e2.getX();
-        float deltaY = e1.getY() - e2.getY();
-        if (mFirstTouch) {
-            mChangePosition = Math.abs(distanceX) >= Math.abs(distanceY);
-            if (!mChangePosition) {
-                //半屏宽度
-                int halfScreen = PlayerUtils.getScreenWidth(getContext(), true) / 2;
-                if (e2.getX() > halfScreen) {
-                    mChangeVolume = true;
-                } else {
-                    mChangeBrightness = true;
-                }
-            }
+			if (mChangePosition) {
+				//根据用户设置是否可以滑动调节进度来决定最终是否可以滑动调节进度
+				mChangePosition = mCanChangePosition
+			}
 
-            if (mChangePosition) {
-                //根据用户设置是否可以滑动调节进度来决定最终是否可以滑动调节进度
-                mChangePosition = mCanChangePosition;
-            }
+			if (mChangePosition || mChangeBrightness || mChangeVolume) {
+				for (next in mControlComponents.entries) {
+					val component = next.key
+					if (component is IGestureComponent) {
+						component.onStartSlide()
+					}
+				}
+			}
+			mFirstTouch = false
+		}
+		if (mChangePosition) {
+			slideToChangePosition(deltaX)
+		} else if (mChangeBrightness) {
+			slideToChangeBrightness(deltaY)
+		} else if (mChangeVolume) {
+			slideToChangeVolume(deltaY)
+		}
+		return true
+	}
 
-            if (mChangePosition || mChangeBrightness || mChangeVolume) {
-                for (Map.Entry<IControlComponent, Boolean> next : mControlComponents.entrySet()) {
-                    IControlComponent component = next.getKey();
-                    if (component instanceof IGestureComponent) {
-                        ((IGestureComponent) component).onStartSlide();
-                    }
-                }
-            }
-            mFirstTouch = false;
-        }
-        if (mChangePosition) {
-            slideToChangePosition(deltaX);
-        } else if (mChangeBrightness) {
-            slideToChangeBrightness(deltaY);
-        } else if (mChangeVolume) {
-            slideToChangeVolume(deltaY);
-        }
-        return true;
-    }
+	protected fun slideToChangePosition(deltaX: Float) {
+		val adjustedDelta = -deltaX
+		val width = measuredWidth
+		val duration = mControlWrapper.duration.toInt()
+		val currentPosition = mControlWrapper.currentPosition.toInt()
+		var position = (adjustedDelta / width * 120000 + currentPosition).toInt()
+		if (position > duration) position = duration
+		if (position < 0) position = 0
+		for (next in mControlComponents.entries) {
+			val component = next.key
+			if (component is IGestureComponent) {
+				component.onPositionChange(position, currentPosition, duration)
+			}
+		}
+		updateSeekUI(currentPosition, position, duration)
+		mSeekPosition = position
+	}
 
-    protected void slideToChangePosition(float deltaX) {
-        deltaX = -deltaX;
-        int width = getMeasuredWidth();
-        int duration = (int) mControlWrapper.getDuration();
-        int currentPosition = (int) mControlWrapper.getCurrentPosition();
-        int position = (int) (deltaX / width * 120000 + currentPosition);
-        if (position > duration) position = duration;
-        if (position < 0) position = 0;
-        for (Map.Entry<IControlComponent, Boolean> next : mControlComponents.entrySet()) {
-            IControlComponent component = next.getKey();
-            if (component instanceof IGestureComponent) {
-                ((IGestureComponent) component).onPositionChange(position, currentPosition, duration);
-            }
-        }
-        updateSeekUI(currentPosition, position, duration);
-        mSeekPosition = position;
-    }
+	protected open fun updateSeekUI(curr: Int, seekTo: Int, duration: Int) {
+	}
 
-    protected void updateSeekUI(int curr, int seekTo, int duration) {
+	protected fun slideToChangeBrightness(deltaY: Float) {
+		val activity = PlayerUtils.scanForActivity(context) ?: return
+		val window = activity.window
+		val attributes = window.attributes
+		val height = measuredHeight
+		if (mBrightness == -1.0f) mBrightness = 0.5f
+		var brightness = deltaY * 2 / height + mBrightness
+		if (brightness < 0) {
+			brightness = 0f
+		}
+		if (brightness > 1.0f) brightness = 1.0f
+		val percent = (brightness * 100).toInt()
+		attributes.screenBrightness = brightness
+		window.attributes = attributes
+		for (next in mControlComponents.entries) {
+			val component = next.key
+			if (component is IGestureComponent) {
+				component.onBrightnessChange(percent)
+			}
+		}
+		val msg = Message.obtain()
+		msg.what = 100
+		msg.obj = "亮度$percent%"
+		val handler = mHandler ?: return
+		handler.sendMessage(msg)
+		handler.removeMessages(101)
+		handler.sendEmptyMessageDelayed(101, 1000)
+	}
 
-    }
+	protected fun slideToChangeVolume(deltaY: Float) {
+		val audioManager = mAudioManager ?: return
+		val streamMaxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+		val height = measuredHeight
+		val deltaV = deltaY * 2 / height * streamMaxVolume
+		var index = mStreamVolume + deltaV
+		if (index > streamMaxVolume) index = streamMaxVolume.toFloat()
+		if (index < 0) index = 0f
+		val percent = (index / streamMaxVolume * 100).toInt()
+		audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, index.toInt(), 0)
+		for (next in mControlComponents.entries) {
+			val component = next.key
+			if (component is IGestureComponent) {
+				component.onVolumeChange(percent)
+			}
+		}
+		val msg = Message.obtain()
+		msg.what = 100
+		msg.obj = "音量$percent%"
+		val handler = mHandler ?: return
+		handler.sendMessage(msg)
+		handler.removeMessages(101)
+		handler.sendEmptyMessageDelayed(101, 1000)
+	}
 
-    protected void slideToChangeBrightness(float deltaY) {
-        Activity activity = PlayerUtils.scanForActivity(getContext());
-        if (activity == null) return;
-        Window window = activity.getWindow();
-        WindowManager.LayoutParams attributes = window.getAttributes();
-        int height = getMeasuredHeight();
-        if (mBrightness == -1.0f) mBrightness = 0.5f;
-        float brightness = deltaY * 2 / height + mBrightness;
-        if (brightness < 0) {
-            brightness = 0f;
-        }
-        if (brightness > 1.0f) brightness = 1.0f;
-        int percent = (int) (brightness * 100);
-        attributes.screenBrightness = brightness;
-        window.setAttributes(attributes);
-        for (Map.Entry<IControlComponent, Boolean> next : mControlComponents.entrySet()) {
-            IControlComponent component = next.getKey();
-            if (component instanceof IGestureComponent) {
-                ((IGestureComponent) component).onBrightnessChange(percent);
-            }
-        }
-        Message msg = Message.obtain();
-        msg.what = 100;
-        msg.obj = "亮度" + percent + "%";
-        mHandler.sendMessage(msg);
-        mHandler.removeMessages(101);
-        mHandler.sendEmptyMessageDelayed(101, 1000);
-    }
+	override fun onTouchEvent(event: MotionEvent?): Boolean {
+		//滑动结束时事件处理
+		if (event != null) {
+			val detector = mGestureDetector ?: return super.onTouchEvent(event)
+			if (!detector.onTouchEvent(event)) {
+				val action = event.action
+				when (action) {
+					MotionEvent.ACTION_UP -> {
+						stopSlide()
+						if (mSeekPosition > 0) {
+							mControlWrapper.seekTo(mSeekPosition.toLong())
+							mSeekPosition = 0
+						}
+					}
 
-    protected void slideToChangeVolume(float deltaY) {
-        int streamMaxVolume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-        int height = getMeasuredHeight();
-        float deltaV = deltaY * 2 / height * streamMaxVolume;
-        float index = mStreamVolume + deltaV;
-        if (index > streamMaxVolume) index = streamMaxVolume;
-        if (index < 0) index = 0;
-        int percent = (int) (index / streamMaxVolume * 100);
-        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) index, 0);
-        for (Map.Entry<IControlComponent, Boolean> next : mControlComponents.entrySet()) {
-            IControlComponent component = next.getKey();
-            if (component instanceof IGestureComponent) {
-                ((IGestureComponent) component).onVolumeChange(percent);
-            }
-        }
-        Message msg = Message.obtain();
-        msg.what = 100;
-        msg.obj = "音量" + percent + "%";
-        mHandler.sendMessage(msg);
-        mHandler.removeMessages(101);
-        mHandler.sendEmptyMessageDelayed(101, 1000);
-    }
+					MotionEvent.ACTION_CANCEL -> {
+						stopSlide()
+						mSeekPosition = 0
+					}
+				}
+			}
+		}
+		return super.onTouchEvent(event)
+	}
 
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        //滑动结束时事件处理
-        if (!mGestureDetector.onTouchEvent(event)) {
-            int action = event.getAction();
-            switch (action) {
-                case MotionEvent.ACTION_UP:
-                    stopSlide();
-                    if (mSeekPosition > 0) {
-                        mControlWrapper.seekTo(mSeekPosition);
-                        mSeekPosition = 0;
-                    }
-                    break;
-                case MotionEvent.ACTION_CANCEL:
-                    stopSlide();
-                    mSeekPosition = 0;
-                    break;
-            }
-        }
-        return super.onTouchEvent(event);
-    }
+	private fun stopSlide() {
+		for (next in mControlComponents.entries) {
+			val component = next.key
+			if (component is IGestureComponent) {
+				component.onStopSlide()
+			}
+		}
+	}
 
-    private void stopSlide() {
-        for (Map.Entry<IControlComponent, Boolean> next : mControlComponents.entrySet()) {
-            IControlComponent component = next.getKey();
-            if (component instanceof IGestureComponent) {
-                ((IGestureComponent) component).onStopSlide();
-            }
-        }
-    }
+	override fun onFling(p0: MotionEvent?, p1: MotionEvent, p2: Float, p3: Float): Boolean {
+		return false
+	}
 
-    @Override
-    public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        return false;
-    }
+	override fun onLongPress(p0: MotionEvent) {
+	}
 
-    @Override
-    public void onLongPress(MotionEvent e) {
+	override fun onShowPress(p0: MotionEvent) {
+	}
 
-    }
+	override fun onDoubleTapEvent(p0: MotionEvent): Boolean {
+		return false
+	}
 
-    @Override
-    public void onShowPress(MotionEvent e) {
+	override fun onSingleTapUp(p0: MotionEvent): Boolean {
+		return false
+	}
 
-    }
+	open fun onKeyEvent(event: KeyEvent?): Boolean {
+		return false
+	}
 
-    @Override
-    public boolean onDoubleTapEvent(MotionEvent e) {
-        return false;
-    }
-
-    @Override
-    public boolean onSingleTapUp(MotionEvent e) {
-        return false;
-    }
-
-    public boolean onKeyEvent(KeyEvent event) {
-        return false;
-    }
-
-    protected interface HandlerCallback {
-        void callback(Message msg);
-    }
+	protected fun interface HandlerCallback {
+		fun callback(msg: Message?)
+	}
 }
