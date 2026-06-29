@@ -1,240 +1,209 @@
-package com.github.tvbox.osc.util.urlhttp;
+package com.github.tvbox.osc.util.urlhttp
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.Handler;
-import android.os.Looper;
-import android.widget.ImageView;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Handler
+import android.os.Looper
+import android.widget.ImageView
+import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
+import kotlin.math.floor
+import kotlin.math.max
 
 /**
  * Created by fighting on 2017/4/7.
  */
+abstract class CallBackUtil<T> {
+	fun onProgress(progress: Float, total: Long) {
+	}
 
-public abstract class CallBackUtil<T> {
-    static final Handler mMainHandler = new Handler(Looper.getMainLooper());
+	fun onError(response: RealResponse) {
+		val errorMessage: String = when {
+			response.inputStream != null -> getRetString(response.inputStream) ?: ""
+			response.errorStream != null -> getRetString(response.errorStream) ?: ""
+			response.exception != null -> response.exception?.message ?: ""
+			else -> ""
+		}
+		mMainHandler.post { onFailure(response.code, errorMessage) }
+	}
 
-    public static byte[] input2byte(InputStream inStream)
-            throws IOException {
-        ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
-        byte[] buff = new byte[100];
-        int rc;
-        while ((rc = inStream.read(buff, 0, 100)) > 0) {
-            swapStream.write(buff, 0, rc);
-        }
-        return swapStream.toByteArray();
-    }
+	fun onSuccess(response: RealResponse?) {
+		val obj = onParseResponse(response)
+		mMainHandler.post { onResponse(obj) }
+	}
 
-    private static String getRetString(InputStream is) {
-        String buf;
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            is.close();
-            buf = sb.toString();
-            return buf;
+	/**
+	 * 解析response，执行在子线程
+	 */
+	abstract fun onParseResponse(response: RealResponse?): T?
 
-        } catch (Exception e) {
-            return null;
-        }
-    }
+	/**
+	 * 访问网络失败后被调用，执行在UI线程
+	 */
+	abstract fun onFailure(code: Int, errorMessage: String?)
 
-    public void onProgress(float progress, long total) {
-    }
+	/**
+	 * 访问网络成功后被调用，执行在UI线程
+	 */
+	abstract fun onResponse(response: T?)
 
-    void onError(final RealResponse response) {
+	abstract class CallBackDefault : CallBackUtil<RealResponse>() {
+		override fun onParseResponse(response: RealResponse?): RealResponse? {
+			return response
+		}
+	}
 
-        final String errorMessage;
-        if (response.inputStream != null) {
-            errorMessage = getRetString(response.inputStream);
-        } else if (response.errorStream != null) {
-            errorMessage = getRetString(response.errorStream);
-        } else if (response.exception != null) {
-            errorMessage = response.exception.getMessage();
-        } else {
-            errorMessage = "";
-        }
-        mMainHandler.post(() -> onFailure(response.code, errorMessage));
-    }
+	abstract class CallBackString : CallBackUtil<String>() {
+		override fun onParseResponse(response: RealResponse?): String? {
+			try {
+				val inputStream = response?.inputStream ?: return null
+				return getRetString(inputStream)
+			} catch (e: Exception) {
+				throw RuntimeException("failure")
+			}
+		}
+	}
 
-    void onSeccess(RealResponse response) {
-        final T obj = onParseResponse(response);
-        mMainHandler.post(() -> onResponse(obj));
-    }
+	abstract class CallBackBitmap : CallBackUtil<Bitmap?> {
+		private var mTargetWidth = 0
+		private var mTargetHeight = 0
 
-    /**
-     * 解析response，执行在子线程
-     */
-    public abstract T onParseResponse(RealResponse response);
+		constructor()
 
-    /**
-     * 访问网络失败后被调用，执行在UI线程
-     */
-    public abstract void onFailure(int code, String errorMessage);
+		constructor(targetWidth: Int, targetHeight: Int) {
+			mTargetWidth = targetWidth
+			mTargetHeight = targetHeight
+		}
 
-    /**
-     *
-     * 访问网络成功后被调用，执行在UI线程
-     */
-    public abstract void onResponse(T response);
+		constructor(imageView: ImageView) {
+			val width = imageView.width
+			val height = imageView.height
+			if (width <= 0 || height <= 0) {
+				throw RuntimeException("无法获取ImageView的width或height")
+			}
+			mTargetWidth = width
+			mTargetHeight = height
+		}
 
-    public static abstract class CallBackDefault extends CallBackUtil<RealResponse> {
-        @Override
-        public RealResponse onParseResponse(RealResponse response) {
-            return response;
-        }
-    }
+		override fun onParseResponse(response: RealResponse?): Bitmap? {
+			return if (mTargetWidth == 0 || mTargetHeight == 0) {
+				BitmapFactory.decodeStream(response?.inputStream)
+			} else {
+				val inputStream = response?.inputStream ?: return null
+				getZoomBitmap(inputStream)
+			}
+		}
 
-    public static abstract class CallBackString extends CallBackUtil<String> {
-        @Override
-        public String onParseResponse(RealResponse response) {
-            try {
-                return getRetString(response.inputStream);
-            } catch (Exception e) {
-                throw new RuntimeException("failure");
-            }
-        }
-    }
+		/**
+		 * 压缩图片，避免OOM异常
+		 */
+		private fun getZoomBitmap(inputStream: InputStream): Bitmap {
+			var data: ByteArray? = null
+			try {
+				data = input2byte(inputStream)
+			} catch (e: IOException) {
+				e.printStackTrace()
+			}
+			val options = BitmapFactory.Options()
+			options.inJustDecodeBounds = true
 
-    public static abstract class CallBackBitmap extends CallBackUtil<Bitmap> {
-        private int mTargetWidth;
-        private int mTargetHeight;
+			BitmapFactory.decodeByteArray(data, 0, data?.size ?: 0, options)
+			val picWidth = options.outWidth
+			val picHeight = options.outHeight
+			var sampleSize = 1
+			val heightRatio = floor((picWidth.toFloat() / mTargetWidth.toFloat()).toDouble()).toInt()
+			val widthRatio = floor((picHeight.toFloat() / mTargetHeight.toFloat()).toDouble()).toInt()
+			if (heightRatio > 1 || widthRatio > 1) {
+				sampleSize = max(heightRatio, widthRatio)
+			}
+			options.inSampleSize = sampleSize
+			options.inJustDecodeBounds = false
+			return BitmapFactory.decodeByteArray(data, 0, data?.size ?: 0, options) ?: throw RuntimeException("Failed to decode stream.")
+		}
+	}
 
-        public CallBackBitmap() {
-        }
+	/**
+	 * 下载文件时的回调类
+	 * 
+	 * @property destFileDir:文件目录
+	 * @property destFileName：文件名
+	 */
+	abstract class CallBackFile(private val destFileDir: String, private val destFileName: String) : CallBackUtil<File?>() {
+		override fun onParseResponse(response: RealResponse?): File? {
+			var inputStream: InputStream? = null
+			val buf = ByteArray(1024 * 8)
+			var len: Int
+			var fos: FileOutputStream? = null
+			try {
+				inputStream = response?.inputStream ?: return null
+				val total = response.contentLength
 
-        public CallBackBitmap(int targetWidth, int targetHeight) {
-            mTargetWidth = targetWidth;
-            mTargetHeight = targetHeight;
-        }
+				var sum: Long = 0
 
-        public CallBackBitmap(ImageView imageView) {
-            int width = imageView.getWidth();
-            int height = imageView.getHeight();
-            if (width <= 0 || height <= 0) {
-                throw new RuntimeException("无法获取ImageView的width或height");
-            }
-            mTargetWidth = width;
-            mTargetHeight = height;
-        }
+				val dir = File(destFileDir)
+				if (!dir.exists()) {
+					dir.mkdirs()
+				}
+				val file = File(dir, destFileName)
+				fos = FileOutputStream(file)
+				while ((inputStream.read(buf).also { len = it }) != -1) {
+					sum += len.toLong()
+					fos.write(buf, 0, len)
+					val finalSum = sum
+					mMainHandler.post { onProgress(finalSum * 100.0f / total, total) }
+				}
+				fos.flush()
 
-        @Override
-        public Bitmap onParseResponse(RealResponse response) {
-            if (mTargetWidth == 0 || mTargetHeight == 0) {
-                return BitmapFactory.decodeStream(response.inputStream);
-            } else {
-                return getZoomBitmap(response.inputStream);
-            }
-        }
+				return file
+			} catch (e: Exception) {
+				e.printStackTrace()
+			} finally {
+				try {
+					fos?.close()
+				} catch (ignored: IOException) {
+				}
+				try {
+					inputStream?.close()
+				} catch (ignored: IOException) {
+				}
+			}
+			return null
+		}
+	}
 
-        /**
-         * 压缩图片，避免OOM异常
-         */
-        private Bitmap getZoomBitmap(InputStream inputStream) {
-            byte[] data = null;
-            try {
-                data = input2byte(inputStream);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
+	companion object {
+		val mMainHandler: Handler = Handler(Looper.getMainLooper())
 
-            BitmapFactory.decodeByteArray(data, 0, data.length, options);
-            int picWidth = options.outWidth;
-            int picHeight = options.outHeight;
-            int sampleSize = 1;
-            int heightRatio = (int) Math.floor((float) picWidth / (float) mTargetWidth);
-            int widthRatio = (int) Math.floor((float) picHeight / (float) mTargetHeight);
-            if (heightRatio > 1 || widthRatio > 1) {
-                sampleSize = Math.max(heightRatio, widthRatio);
-            }
-            options.inSampleSize = sampleSize;
-            options.inJustDecodeBounds = false;
-            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length, options);
+		fun input2byte(inStream: InputStream): ByteArray {
+			val swapStream = ByteArrayOutputStream()
+			val buff = ByteArray(100)
+			var rc: Int
+			while ((inStream.read(buff, 0, 100).also { rc = it }) > 0) {
+				swapStream.write(buff, 0, rc)
+			}
+			return swapStream.toByteArray()
+		}
 
-            if (bitmap == null) {
-                throw new RuntimeException("Failed to decode stream.");
-            }
-            return bitmap;
-        }
-    }
-
-    /**
-     * 下载文件时的回调类
-     */
-    public static abstract class CallBackFile extends CallBackUtil<File> {
-
-        private final String mDestFileDir;
-        private final String mdestFileName;
-
-        /**
-         *
-         * @param destFileDir:文件目录
-         * @param destFileName：文件名
-         */
-        public CallBackFile(String destFileDir, String destFileName) {
-            mDestFileDir = destFileDir;
-            mdestFileName = destFileName;
-        }
-
-        @Override
-        public File onParseResponse(RealResponse response) {
-
-            InputStream is = null;
-            byte[] buf = new byte[1024 * 8];
-            int len;
-            FileOutputStream fos = null;
-            try {
-                is = response.inputStream;
-                final long total = response.contentLength;
-
-                long sum = 0;
-
-                File dir = new File(mDestFileDir);
-                if (!dir.exists()) {
-                    dir.mkdirs();
-                }
-                File file = new File(dir, mdestFileName);
-                fos = new FileOutputStream(file);
-                while ((len = is.read(buf)) != -1) {
-                    sum += len;
-                    fos.write(buf, 0, len);
-                    final long finalSum = sum;
-                    mMainHandler.post(() -> onProgress(finalSum * 100.0f / total, total));
-                }
-                fos.flush();
-
-                return file;
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    fos.close();
-                    if (is != null) is.close();
-                } catch (IOException ignored) {
-                }
-                try {
-                    fos.close();
-                } catch (IOException ignored) {
-                }
-
-            }
-            return null;
-        }
-    }
-
+		private fun getRetString(inputStream: InputStream?): String? {
+			try {
+				val safeStream = inputStream ?: return null
+				val reader = BufferedReader(InputStreamReader(safeStream, StandardCharsets.UTF_8))
+				val sb = StringBuilder()
+				var line: String?
+				while ((reader.readLine().also { line = it }) != null) {
+					sb.append(line).append("\n")
+				}
+				safeStream.close()
+				return sb.toString()
+			} catch (e: Exception) {
+				return null
+			}
+		}
+	}
 }

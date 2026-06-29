@@ -1,147 +1,130 @@
-package com.github.tvbox.osc.util.parser;
+package com.github.tvbox.osc.util.parser
 
-import android.util.Base64;
-
-import com.github.catvod.crawler.SpiderDebug;
-
-import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import okhttp3.Call;
-import okhttp3.Headers;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import android.util.Base64
+import com.github.catvod.crawler.SpiderDebug.log
+import okhttp3.Headers.Companion.toHeaders
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.util.concurrent.CompletionService
+import java.util.concurrent.ExecutorCompletionService
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 /**
  * 并发解析，直到获得第一个结果
  */
-public class JsonParallel {
+object JsonParallel {
+	private val futures: MutableList<Future<JSONObject?>> = ArrayList()
+	private var client: OkHttpClient? = null
+	private var executorService: ExecutorService? = null
 
-    private static final List<Future<JSONObject>> futures = new ArrayList<>();
-    private static OkHttpClient client;
-    private static ExecutorService executorService;
+	fun parse(jx: LinkedHashMap<String, String>, url: String): JSONObject {
+		try {
+			if (jx.isNotEmpty()) {
+				val localClient = OkHttpClient().also { client = it }
+				// 使用线程池并发处理任务
+				val localExecutor = Executors.newFixedThreadPool(5).also { executorService = it }
+				val completionService: CompletionService<JSONObject?> = ExecutorCompletionService(localExecutor)
+				futures.clear()
 
-    public static JSONObject parse(LinkedHashMap<String, String> jx, String url) {
-        try {
-            if (jx != null && !jx.isEmpty()) {
-                client = new OkHttpClient();
-                // 使用线程池并发处理任务
-                executorService = Executors.newFixedThreadPool(5);
-                CompletionService<JSONObject> completionService = new ExecutorCompletionService<>(executorService);
-                futures.clear();
+				// 遍历所有的解析配置
+				for ((jxName, parseUrl) in jx) {
+					futures.add(completionService.submit {
+						try {
+							// 获取请求头，并从中取出实际url
+							val reqHeaders = getReqHeader(parseUrl)
+							val realUrl = reqHeaders["url"] ?: return@submit null
+							reqHeaders.remove("url")
+							val headers = reqHeaders.toHeaders()
+							val request = Request.Builder()
+								.url(realUrl + url)
+								.headers(headers)
+								.tag("ParseTag")
+								.build()
 
-                // 遍历所有的解析配置
-                for (final String jxName : jx.keySet()) {
-                    final String parseUrl = jx.get(jxName);
-                    futures.add(completionService.submit(() -> {
-                        try {
-                            // 获取请求头，并从中取出实际url
-                            HashMap<String, String> reqHeaders = JsonParallel.getReqHeader(parseUrl);
-                            String realUrl = reqHeaders.get("url");
-                            reqHeaders.remove("url");
-                            Headers headers = Headers.of(reqHeaders);
-                            Request request = new Request.Builder()
-                                    .url(realUrl + url)
-                                    .headers(headers)
-                                    .tag("ParseTag")
-                                    .build();
+							val call = localClient.newCall(request)
+							val response = call.execute()
+							val json = response.body.string()
 
-                            Call call = client.newCall(request);
-                            Response response = call.execute();
-                            String json = response.body().string();
+							val taskResult = Utils.jsonParse(url, json) ?: return@submit null
+							taskResult.put("jxFrom", jxName)
+							return@submit taskResult
+						} catch (th: Throwable) {
+							// 输出日志
+							return@submit null
+						}
+					})
+				}
 
-                            JSONObject taskResult = Utils.jsonParse(url, json);
-                            taskResult.put("jxFrom", jxName);
-                            return taskResult;
-                        } catch (Throwable th) {
-                            // 输出日志
-                            return null;
-                        }
-                    }));
-                }
+				var pTaskResult: JSONObject? = null
+				for (i in futures.indices) {
+					val completed = completionService.take()
+					try {
+						pTaskResult = completed.get()
+						if (pTaskResult != null) {
+							localClient.dispatcher.cancelAll()
+							for (future in futures) {
+								try {
+									future.cancel(true)
+								} catch (t: Throwable) {
+									log(t)
+								}
+							}
+							futures.clear()
+							break
+						}
+					} catch (th: Throwable) {
+						log(th)
+					}
+				}
+				localExecutor.shutdownNow()
+				if (pTaskResult != null) return pTaskResult
+			}
+		} catch (th: Throwable) {
+			log(th)
+		}
+		return JSONObject()
+	}
 
-                JSONObject pTaskResult = null;
-                for (int i = 0; i < futures.size(); ++i) {
-                    Future<JSONObject> completed = completionService.take();
-                    try {
-                        pTaskResult = completed.get();
-                        if (pTaskResult != null) {
-                            client.dispatcher().cancelAll();
-                            for (Future<JSONObject> future : futures) {
-                                try {
-                                    future.cancel(true);
-                                } catch (Throwable t) {
-                                    SpiderDebug.log(t);
-                                }
-                            }
-                            futures.clear();
-                            break;
-                        }
-                    } catch (Throwable th) {
-                        SpiderDebug.log(th);
-                    }
-                }
-                executorService.shutdownNow();
-                if (pTaskResult != null)
-                    return pTaskResult;
-            }
-        } catch (Throwable th) {
-            SpiderDebug.log(th);
-        }
-        return new JSONObject();
-    }
+	fun cancelTasks() {
+		client?.dispatcher?.cancelAll()
+		for (future in futures) {
+			try {
+				future.cancel(true)
+			} catch (ignored: Throwable) {
+			}
+		}
+		futures.clear()
+		executorService?.shutdownNow()
+	}
 
-    public static void cancelTasks() {
-        if (client != null) {
-            client.dispatcher().cancelAll();
-        }
-        for (Future<JSONObject> future : futures) {
-            try {
-                future.cancel(true);
-            } catch (Throwable ignored) {
-            }
-        }
-        futures.clear();
-        if (executorService != null) {
-            executorService.shutdownNow();
-        }
-    }
-
-    public static HashMap<String, String> getReqHeader(String url) {
-        HashMap<String, String> reqHeaders = new HashMap<>();
-        reqHeaders.put("url", url);
-        if (url.contains("cat_ext")) {
-            try {
-                int start = url.indexOf("cat_ext=");
-                int end = url.indexOf("&", start);
-                String ext = url.substring(start + 8, end);
-                ext = new String(Base64.decode(ext, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP));
-                String newUrl = url.substring(0, start) + url.substring(end + 1);
-                JSONObject jsonObject = new JSONObject(ext);
-                if (jsonObject.has("header")) {
-                    JSONObject headerJson = jsonObject.optJSONObject("header");
-                    Iterator<String> keys = headerJson.keys();
-                    while (keys.hasNext()) {
-                        String key = keys.next();
-                        reqHeaders.put(key, headerJson.optString(key, ""));
-                    }
-                }
-                reqHeaders.put("url", newUrl);
-            } catch (Throwable ignored) {
-
-            }
-        }
-        return reqHeaders;
-    }
+	fun getReqHeader(url: String): HashMap<String, String> {
+		val reqHeaders = HashMap<String, String>()
+		reqHeaders["url"] = url
+		if (url.contains("cat_ext")) {
+			try {
+				val start = url.indexOf("cat_ext=")
+				val end = url.indexOf("&", start)
+				var ext = url.substring(start + 8, end)
+				ext = String(Base64.decode(ext, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP))
+				val newUrl = url.substring(0, start) + url.substring(end + 1)
+				val jsonObject = JSONObject(ext)
+				if (jsonObject.has("header")) {
+					val headerJson = jsonObject.optJSONObject("header")
+					if (headerJson != null) {
+						val keys = headerJson.keys()
+						while (keys.hasNext()) {
+							val key = keys.next()
+							reqHeaders[key] = headerJson.optString(key, "")
+						}
+					}
+				}
+				reqHeaders["url"] = newUrl
+			} catch (ignored: Throwable) {
+			}
+		}
+		return reqHeaders
+	}
 }

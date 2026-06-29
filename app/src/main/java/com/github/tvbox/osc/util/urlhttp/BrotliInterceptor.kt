@@ -1,73 +1,48 @@
-package com.github.tvbox.osc.util.urlhttp;
+package com.github.tvbox.osc.util.urlhttp
 
+import com.github.tvbox.osc.util.urlhttp.internal.BrotliSource.create
+import okhttp3.Interceptor
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.asResponseBody
+import okio.GzipSource
+import okio.buffer
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+class BrotliInterceptor : Interceptor {
+	override fun intercept(chain: Interceptor.Chain): Response {
+		var userRequest = chain.request()
+		if (chain.request().header("Accept-Encoding") == null) {
+			userRequest = chain.request().newBuilder()
+				.header("Accept-Encoding", "br,gzip")
+				.build()
+			return uncompress(chain.proceed(userRequest))
+		}
+		return chain.proceed(userRequest)
+	}
 
-import com.github.tvbox.osc.util.urlhttp.internal.BrotliSource;
+	fun uncompress(response: Response): Response {
+		val body = response.body
+		val encoding = response.header("Content-Encoding")
+		if (!encoding.isNullOrEmpty()) {
+			val brotliSource = when (encoding) {
+				"br" -> {
+					create(body.source())
+				}
 
-import org.jetbrains.annotations.NotNull;
+				"gzip" -> {
+					GzipSource(body.source())
+				}
 
-import java.io.IOException;
-
-import okhttp3.Interceptor;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import okhttp3.internal.http.RealResponseBody;
-import okio.GzipSource;
-import okio.Okio;
-import okio.Source;
-
-public class BrotliInterceptor implements Interceptor {
-
-    public static boolean isEmpty(CharSequence str) {
-        return str == null || str.length() == 0;
-    }
-
-    public static boolean isNotEmpty(@Nullable CharSequence str) {
-        return !isEmpty(str);
-    }
-
-    @NonNull
-    @Override
-    public Response intercept(Chain chain) throws IOException {
-        Request userRequest = chain.request();
-        if (chain.request().header("Accept-Encoding") == null) {
-            userRequest = chain.request().newBuilder()
-                    .header("Accept-Encoding", "br,gzip")
-                    .build();
-            return uncompress(chain.proceed(userRequest));
-        }
-        return chain.proceed(userRequest);
-    }
-
-    @NotNull
-    public final Response uncompress(@NotNull Response response) throws IOException {
-        ResponseBody body = response.body();
-        if (body != null) {
-            String encoding = response.header("Content-Encoding");
-            if (isNotEmpty(encoding)) {
-                Source brotliSource;
-                if (encoding.equals("br")) {
-                    brotliSource = BrotliSource.create(body.source());
-                } else if (encoding.equals("gzip")) {
-                    brotliSource = new GzipSource(body.source());
-                } else {
-                    return response;
-                }
-                return response.newBuilder()
-                        .removeHeader("Content-Encoding")
-                        .removeHeader("Content-Length")
-                        .body(RealResponseBody.create(body.contentType(), -1L, Okio.buffer(brotliSource)))
-                        .build();
-            } else {
-                return response;
-            }
-        } else {
-            return response;
-        }
-    }
+				else -> {
+					return response
+				}
+			}
+			return response.newBuilder()
+				.removeHeader("Content-Encoding")
+				.removeHeader("Content-Length")
+				.body(brotliSource.buffer().asResponseBody(body.contentType(), -1L))
+				.build()
+		} else {
+			return response
+		}
+	}
 }
-
-

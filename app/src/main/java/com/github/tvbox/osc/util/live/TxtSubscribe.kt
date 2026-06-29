@@ -1,165 +1,136 @@
-package com.github.tvbox.osc.util.live;
+package com.github.tvbox.osc.util.live
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import java.io.BufferedReader
+import java.io.StringReader
+import java.util.regex.Pattern
 
-import java.io.BufferedReader;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+object TxtSubscribe {
+	private val NAME_PATTERN: Pattern = Pattern.compile(".*,(.+?)$")
+	private val GROUP_PATTERN: Pattern = Pattern.compile("group-title=\"(.*?)\"")
 
-public class TxtSubscribe {
-    private static final Pattern NAME_PATTERN = Pattern.compile(".*,(.+?)$");
-    private static final Pattern GROUP_PATTERN = Pattern.compile("group-title=\"(.*?)\"");
+	fun parse(linkedHashMap: LinkedHashMap<String, LinkedHashMap<String, MutableList<String>>>, str: String) {
+		if (str.startsWith("#EXTM3U")) {
+			parseM3u(linkedHashMap, str)
+		} else {
+			parseTxt(linkedHashMap, str)
+		}
+	}
 
-    public static void parse(LinkedHashMap<String, LinkedHashMap<String, ArrayList<String>>> linkedHashMap, String str) {
-        if (str.startsWith("#EXTM3U")) {
-            parseM3u(linkedHashMap, str);
-        } else {
-            parseTxt(linkedHashMap, str);
-        }
-    }
+	//解析m3u后缀
+	private fun parseM3u(linkedHashMap: LinkedHashMap<String, LinkedHashMap<String, MutableList<String>>>, str: String) {
+		try {
+			val bufferedReader = BufferedReader(StringReader(str))
+			val linkedHashMap2 = LinkedHashMap<String, MutableList<String>>()
+			var line: String?
+			while ((bufferedReader.readLine().also { line = it }) != null) {
+				val currentLine = line ?: break
+				if (currentLine.isEmpty()) continue
+				if (currentLine.startsWith("#EXTM3U")) continue
+				if (isSetting(currentLine)) continue
+				if (currentLine.startsWith("#EXTINF") || currentLine.contains("#EXTINF")) {
+					val name = getStrByRegex(NAME_PATTERN, currentLine)
+					val group = getStrByRegex(GROUP_PATTERN, currentLine)
+					val url = bufferedReader.readLine()?.trim { it <= ' ' } ?: continue
+					if (isUrl(url)) {
+						val channelTemp = linkedHashMap.getOrPut(group) { LinkedHashMap() }
+						val urls = channelTemp.getOrPut(name) { ArrayList() }
+						if (!urls.contains(url)) urls.add(url)
+					}
+				}
+			}
+			bufferedReader.close()
+			if (linkedHashMap2.isEmpty()) return
+			linkedHashMap["未分组"] = linkedHashMap2
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+	}
 
-    //解析m3u后缀
-    private static void parseM3u(LinkedHashMap<String, LinkedHashMap<String, ArrayList<String>>> linkedHashMap, String str) {
-        ArrayList<String> urls;
-        try {
-            BufferedReader bufferedReader = new BufferedReader(new StringReader(str));
-            LinkedHashMap<String, ArrayList<String>> linkedHashMap2 = new LinkedHashMap<>();
-            LinkedHashMap<String, ArrayList<String>> channelTemp;
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                if (line.isEmpty()) continue;
-                if (line.startsWith("#EXTM3U")) continue;
-                if (isSetting(line)) continue;
-                if (line.startsWith("#EXTINF") || line.contains("#EXTINF")) {
-                    String name = getStrByRegex(NAME_PATTERN, line);
-                    String group = getStrByRegex(GROUP_PATTERN, line);
-                    String url = bufferedReader.readLine().trim();
-                    if (isUrl(url)) {
-                        if (linkedHashMap.containsKey(group)) {
-                            channelTemp = linkedHashMap.get(group);
-                        } else {
-                            channelTemp = new LinkedHashMap<>();
-                            linkedHashMap.put(group, channelTemp);
-                        }
-                        if (null != channelTemp && channelTemp.containsKey(name)) {
-                            urls = channelTemp.get(name);
-                        } else {
-                            urls = new ArrayList<>();
-                            channelTemp.put(name, urls);
-                        }
-                        if (null != urls && !urls.contains(url)) urls.add(url);
-                    }
-                }
-            }
-            bufferedReader.close();
-            if (linkedHashMap2.isEmpty()) return;
-            linkedHashMap.put("未分组", linkedHashMap2);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	private fun getStrByRegex(pattern: Pattern, line: String): String {
+		val matcher = pattern.matcher(line)
+		if (matcher.find()) return matcher.group(1) ?: "未命名"
+		return if (pattern.pattern() == GROUP_PATTERN.pattern()) "未分组" else "未命名"
+	}
 
-    private static String getStrByRegex(Pattern pattern, String line) {
-        Matcher matcher = pattern.matcher(line);
-        if (matcher.find()) return matcher.group(1);
-        return pattern.pattern().equals(GROUP_PATTERN.pattern()) ? "未分组" : "未命名";
-    }
+	private fun isUrl(url: String): Boolean {
+		return url.isNotEmpty() && (url.startsWith("http") || url.startsWith("rtp") || url.startsWith("rtsp") || url.startsWith("rtmp"))
+	}
 
-    private static boolean isUrl(String url) {
-        return !url.isEmpty() && (url.startsWith("http") || url.startsWith("rtp") || url.startsWith("rtsp") || url.startsWith("rtmp"));
-    }
+	private fun isSetting(line: String): Boolean {
+		return line.startsWith("ua") || line.startsWith("parse") || line.startsWith("click") || line.startsWith("player") || line.startsWith("header") || line.startsWith("format") || line.startsWith("origin") || line.startsWith("referer") || line.startsWith("#EXTHTTP:") || line.startsWith("#EXTVLCOPT:") || line.startsWith("#KODIPROP:")
+	}
 
-    private static boolean isSetting(String line) {
-        return line.startsWith("ua") || line.startsWith("parse") || line.startsWith("click") || line.startsWith("player") || line.startsWith("header") || line.startsWith("format") || line.startsWith("origin") || line.startsWith("referer") || line.startsWith("#EXTHTTP:") || line.startsWith("#EXTVLCOPT:") || line.startsWith("#KODIPROP:");
-    }
+	//解析txt后缀
+	fun parseTxt(linkedHashMap: LinkedHashMap<String, LinkedHashMap<String, MutableList<String>>>, str: String) {
+		try {
+			val bufferedReader = BufferedReader(StringReader(str))
+			var readLine = bufferedReader.readLine()
+			val linkedHashMap2 = LinkedHashMap<String, MutableList<String>>()
+			var linkedHashMap3: LinkedHashMap<String, MutableList<String>> = linkedHashMap2
+			while (readLine != null) {
+				val currentLine = readLine
+				if (currentLine.trim { it <= ' ' }.isEmpty() || currentLine.startsWith("#")) {
+					readLine = bufferedReader.readLine()
+				} else {
+					val split = currentLine.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+					if (split.size >= 2) {
+						if (currentLine.contains("#genre#")) {
+							val trim = split[0].trim { it <= ' ' }
+							linkedHashMap3 = linkedHashMap.getOrPut(trim) { LinkedHashMap() }
+						} else {
+							val trim2 = split[0].trim { it <= ' ' }
+							for (str2 in split[1].trim { it <= ' ' }.split("#".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
+								val trim3 = str2.trim { it <= ' ' }
+								if (isUrl(trim3)) {
+									val urls = linkedHashMap3.getOrPut(trim2) { ArrayList() }
+									if (!urls.contains(trim3)) {
+										urls.add(trim3)
+									}
+								}
+							}
+						}
+					}
+					readLine = bufferedReader.readLine()
+				}
+			}
+			bufferedReader.close()
+			if (linkedHashMap2.isEmpty()) {
+				return
+			}
+			linkedHashMap["未分组"] = linkedHashMap2
+		} catch (ignored: Throwable) {
+		}
+	}
 
-    //解析txt后缀
-    public static void parseTxt(LinkedHashMap<String, LinkedHashMap<String, ArrayList<String>>> linkedHashMap, String str) {
-        ArrayList<String> arrayList;
-        try {
-            BufferedReader bufferedReader = new BufferedReader(new StringReader(str));
-            String readLine = bufferedReader.readLine();
-            LinkedHashMap<String, ArrayList<String>> linkedHashMap2 = new LinkedHashMap<>();
-            LinkedHashMap<String, ArrayList<String>> linkedHashMap3 = linkedHashMap2;
-            while (readLine != null) {
-                if (readLine.trim().isEmpty() || readLine.startsWith("#")) {
-                    readLine = bufferedReader.readLine();
-                } else {
-                    String[] split = readLine.split(",");
-                    if (split.length >= 2) {
-                        if (readLine.contains("#genre#")) {
-                            String trim = split[0].trim();
-                            if (!linkedHashMap.containsKey(trim)) {
-                                linkedHashMap3 = new LinkedHashMap<>();
-                                linkedHashMap.put(trim, linkedHashMap3);
-                            } else {
-                                linkedHashMap3 = linkedHashMap.get(trim);
-                            }
-                        } else {
-                            String trim2 = split[0].trim();
-                            for (String str2 : split[1].trim().split("#")) {
-                                String trim3 = str2.trim();
-                                if (isUrl(trim3)) {
-                                    if (!linkedHashMap3.containsKey(trim2)) {
-                                        arrayList = new ArrayList<>();
-                                        linkedHashMap3.put(trim2, arrayList);
-                                    } else {
-                                        arrayList = linkedHashMap3.get(trim2);
-                                    }
-                                    if (!arrayList.contains(trim3)) {
-                                        arrayList.add(trim3);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    readLine = bufferedReader.readLine();
-                }
-            }
-            bufferedReader.close();
-            if (linkedHashMap2.isEmpty()) {
-                return;
-            }
-            linkedHashMap.put("未分组", linkedHashMap2);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    public static JsonArray live2JsonArray(LinkedHashMap<String, LinkedHashMap<String, ArrayList<String>>> linkedHashMap) {
-        JsonArray jsonarr = new JsonArray();
-        for (String str : linkedHashMap.keySet()) {
-            JsonArray jsonarr2 = new JsonArray();
-            LinkedHashMap<String, ArrayList<String>> linkedHashMap2 = linkedHashMap.get(str);
-            if (!linkedHashMap2.isEmpty()) {
-                for (String str2 : linkedHashMap2.keySet()) {
-                    ArrayList<String> arrayList = linkedHashMap2.get(str2);
-                    if (!arrayList.isEmpty()) {
-                        JsonArray jsonarr3 = new JsonArray();
-                        for (int i = 0; i < arrayList.size(); i++) {
-                            jsonarr3.add(arrayList.get(i));
-                        }
-                        JsonObject jsonobj = new JsonObject();
-                        try {
-                            jsonobj.addProperty("name", str2);
-                            jsonobj.add("urls", jsonarr3);
-                        } catch (Throwable ignored) {
-                        }
-                        jsonarr2.add(jsonobj);
-                    }
-                }
-                JsonObject jsonobj2 = new JsonObject();
-                try {
-                    jsonobj2.addProperty("group", str);
-                    jsonobj2.add("channels", jsonarr2);
-                } catch (Throwable ignored) {
-                }
-                jsonarr.add(jsonobj2);
-            }
-        }
-        return jsonarr;
-    }
+	fun live2JsonArray(linkedHashMap: LinkedHashMap<String, LinkedHashMap<String, MutableList<String>>>): JsonArray {
+		val jsonArr = JsonArray()
+		for ((group, channels) in linkedHashMap) {
+			if (channels.isEmpty()) continue
+			val jsonArr2 = JsonArray()
+			for ((name, urls) in channels) {
+				if (urls.isEmpty()) continue
+				val jsonArr3 = JsonArray()
+				for (url in urls) {
+					jsonArr3.add(url)
+				}
+				val jsonObj = JsonObject()
+				try {
+					jsonObj.addProperty("name", name)
+					jsonObj.add("urls", jsonArr3)
+				} catch (ignored: Throwable) {
+				}
+				jsonArr2.add(jsonObj)
+			}
+			val jsonObj2 = JsonObject()
+			try {
+				jsonObj2.addProperty("group", group)
+				jsonObj2.add("channels", jsonArr2)
+			} catch (ignored: Throwable) {
+			}
+			jsonArr.add(jsonObj2)
+		}
+		return jsonArr
+	}
 }

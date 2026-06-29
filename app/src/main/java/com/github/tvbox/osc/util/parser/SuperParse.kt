@@ -1,203 +1,177 @@
-package com.github.tvbox.osc.util.parser;
+package com.github.tvbox.osc.util.parser
 
-import android.util.Base64;
+import android.util.Base64
+import com.github.catvod.crawler.SpiderDebug.log
+import com.github.tvbox.osc.util.LOG
+import com.github.tvbox.osc.util.parser.JsonParallel.cancelTasks
+import com.github.tvbox.osc.util.parser.JsonParallel.parse
+import org.json.JSONObject
+import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
 
-import com.github.catvod.crawler.SpiderDebug;
-import com.github.tvbox.osc.util.LOG;
+object SuperParse {
+	val flagWebJx: HashMap<String, MutableList<String>> = HashMap()
+	var configs: HashMap<String, MutableList<String>>? = null
+	var jsonJx: LinkedHashMap<String, String>? = null
+	var webJx: MutableList<String>? = null
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+	fun parse(jx: LinkedHashMap<String, HashMap<String, String>>, flag: String, url: String): JSONObject {
+		try {
+			// 初始化全局配置（configs）一次
+			if (configs == null) {
+				val newConfigs = HashMap<String, MutableList<String>>()
+				for ((key, parseBean) in jx) {
+					val type = parseBean["type"] ?: continue
+					if ("1" == type || "0" == type) {
+						try {
+							val ext = parseBean["ext"] ?: continue
+							val flagsArray = JSONObject(ext).getJSONArray("flag")
+							for (j in 0..<flagsArray.length()) {
+								val flagKey = flagsArray.getString(j)
+								val flagJx = newConfigs.getOrPut(flagKey) { ArrayList() }
+								flagJx.add(key)
+							}
+						} catch (e: Exception) {
+							log(e)
+						}
+					}
+				}
+				configs = newConfigs
+			}
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+			// 根据配置构建 jsonJx 和 webJx
+			val localJsonJx = LinkedHashMap<String, String>()
+			val localWebJx = ArrayList<String>()
+			val currentConfigs = configs ?: return JSONObject()
+			val targetKeys = currentConfigs[flag]
+			if (!targetKeys.isNullOrEmpty()) {
+				for (key in targetKeys) {
+					val parseBean = jx[key] ?: continue
+					val type = parseBean["type"] ?: continue
+					if ("1" == type) {
+						val urlValue = parseBean["url"]
+						val ext = parseBean["ext"]
+						if (urlValue != null && ext != null) {
+							localJsonJx[key] = mixUrl(urlValue, ext)
+						}
+					} else if ("0" == type) {
+						val urlValue = parseBean["url"]
+						if (urlValue != null) {
+							localWebJx.add(urlValue)
+						}
+					}
+				}
+			} else {
+				for ((key, parseBean) in jx) {
+					val type = parseBean["type"] ?: continue
+					if ("1" == type) {
+						val urlValue = parseBean["url"]
+						val ext = parseBean["ext"]
+						if (urlValue != null && ext != null) {
+							localJsonJx[key] = mixUrl(urlValue, ext)
+						}
+					} else if ("0" == type) {
+						val urlValue = parseBean["url"]
+						if (urlValue != null) {
+							localWebJx.add(urlValue)
+						}
+					}
+				}
+			}
+			jsonJx = localJsonJx
+			webJx = localWebJx
 
-public class SuperParse {
-    public static final HashMap<String, ArrayList<String>> flagWebJx = new HashMap<>();
-    static HashMap<String, ArrayList<String>> configs = null;
-    static LinkedHashMap<String, String> jsonJx = null;
-    static ArrayList<String> webJx = null;
+			if (localWebJx.isNotEmpty()) {
+				flagWebJx[flag] = localWebJx
+			}
 
-    public static JSONObject parse(LinkedHashMap<String, HashMap<String, String>> jx, String flag, String url) {
-        try {
-            // 初始化全局配置（configs）一次
-            if (configs == null) {
-                configs = new HashMap<>();
-                for (Map.Entry<String, HashMap<String, String>> entry : jx.entrySet()) {
-                    String key = entry.getKey();
-                    HashMap<String, String> parseBean = entry.getValue();
-                    if (parseBean == null) {
-                        continue;
-                    }
-                    String type = parseBean.get("type");
-                    if (type == null) {
-                        continue;
-                    }
-                    if ("1".equals(type) || "0".equals(type)) {
-                        try {
-                            String ext = parseBean.get("ext");
-                            if (ext == null) {
-                                continue;
-                            }
-                            JSONArray flagsArray = new JSONObject(ext).getJSONArray("flag");
-                            for (int j = 0; j < flagsArray.length(); j++) {
-                                String flagKey = flagsArray.getString(j);
-                                ArrayList<String> flagJx = configs.computeIfAbsent(flagKey, k -> new ArrayList<>());
-                                flagJx.add(key);
-                            }
-                        } catch (Exception e) {
-                            SpiderDebug.log(e);
-                        }
-                    }
-                }
-            }
+			if (localWebJx.isNotEmpty()) {
+				val webResult = JSONObject()
+				webResult.put("url", "proxy://go=SuperParse&flag=" + flag + "&url=" + Base64.encodeToString(url.toByteArray(), Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP))
+				webResult.put("parse", 1)
+				webResult.put("ua", Utils.UA_WIN_CHROME)
+				return webResult
+			}
+		} catch (e: Exception) {
+			LOG.i("echo-result" + e.message)
+		}
+		return JSONObject()
+	}
 
-            // 根据配置构建 jsonJx 和 webJx
-            jsonJx = new LinkedHashMap<>();
-            webJx = new ArrayList<>();
-            List<String> targetKeys = configs.get(flag);
-            if (targetKeys != null && !targetKeys.isEmpty()) {
-                for (String key : targetKeys) {
-                    HashMap<String, String> parseBean = jx.get(key);
-                    if (parseBean == null) {
-                        continue;
-                    }
-                    String type = parseBean.get("type");
-                    if (type == null) {
-                        continue;
-                    }
-                    if ("1".equals(type)) {
-                        String urlValue = parseBean.get("url");
-                        String ext = parseBean.get("ext");
-                        if (urlValue != null && ext != null) {
-                            jsonJx.put(key, mixUrl(urlValue, ext));
-                        }
-                    } else if ("0".equals(type)) {
-                        String urlValue = parseBean.get("url");
-                        if (urlValue != null) {
-                            webJx.add(urlValue);
-                        }
-                    }
-                }
-            } else {
-                for (Map.Entry<String, HashMap<String, String>> entry : jx.entrySet()) {
-                    String key = entry.getKey();
-                    HashMap<String, String> parseBean = entry.getValue();
-                    if (parseBean == null) {
-                        continue;
-                    }
-                    String type = parseBean.get("type");
-                    if (type == null) {
-                        continue;
-                    }
-                    if ("1".equals(type)) {
-                        String urlValue = parseBean.get("url");
-                        String ext = parseBean.get("ext");
-                        if (urlValue != null && ext != null) {
-                            jsonJx.put(key, mixUrl(urlValue, ext));
-                        }
-                    } else if ("0".equals(type)) {
-                        String urlValue = parseBean.get("url");
-                        if (urlValue != null) {
-                            webJx.add(urlValue);
-                        }
-                    }
-                }
-            }
-            if (!webJx.isEmpty()) {
-                flagWebJx.put(flag, webJx);
-            }
+	fun doJsonJx(jsonJxs: LinkedHashMap<String, String>, url: String): JSONObject {
+		LOG.i("echo-jsonJx1$jsonJxs")
+		return parse(jsonJxs, url)
+	}
 
-            if (!webJx.isEmpty()) {
-                JSONObject webResult = new JSONObject();
-                webResult.put("url", "proxy://go=SuperParse&flag=" + flag + "&url=" + Base64.encodeToString(url.getBytes(), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP));
-                webResult.put("parse", 1);
-                webResult.put("ua", Utils.UaWinChrome);
-                return webResult;
-            }
-        } catch (Exception e) {
-            LOG.i("echo-result" + e.getMessage());
-        }
-        return new JSONObject();
-    }
+	fun doJsonJx(url: String): JSONObject {
+		LOG.i("echo-jsonJx2$jsonJx")
+		return parse(jsonJx ?: return JSONObject(), url)
+	}
 
-    public static JSONObject doJsonJx(LinkedHashMap<String, String> json_jxs, String url) {
-        LOG.i("echo-jsonJx1" + json_jxs.toString());
-        return JsonParallel.parse(json_jxs, url);
-    }
+	fun stopJsonJx() {
+		cancelTasks()
+	}
 
-    public static JSONObject doJsonJx(String url) {
-        LOG.i("echo-jsonJx2" + jsonJx.toString());
-        return JsonParallel.parse(jsonJx, url);
-    }
+	private fun mixUrl(url: String, ext: String): String {
+		if (ext.trim { it <= ' ' }.isNotEmpty()) {
+			val idx = url.indexOf("?")
+			if (idx > 0) {
+				return url.substring(0, idx + 1) + "cat_ext=" + Base64.encodeToString(ext.toByteArray(), Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP) + "&" + url.substring(idx + 1)
+			}
+		}
+		return url
+	}
 
-    public static void stopJsonJx() {
-        JsonParallel.cancelTasks();
-    }
+	fun loadHtml(flag: String, url: String?): Array<Any?>? {
+		val decodedUrl: String
+		try {
+			decodedUrl = String(Base64.decode(url, Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP), StandardCharsets.UTF_8)
+			var html = "\n" +
+					"<!doctype html>\n" +
+					"<html>\n" +
+					"<head>\n" +
+					"<title>解析</title>\n" +
+					"<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n" +
+					"<meta http-equiv=\"X-UA-Compatible\" content=\"IE=EmulateIE10\" />\n" +
+					"<meta name=\"renderer\" content=\"webkit|ie-comp|ie-stand\">\n" +
+					"<meta name=\"viewport\" content=\"width=device-width\">\n" +
+					"</head>\n" +
+					"<body>\n" +
+					"<script>\n" +
+					"var apiArray=[#jxs#];\n" +
+					"var urlPs=\"#url#\";\n" +
+					"var iframeHtml=\"\";\n" +
+					"for(var i=0;i<apiArray.length;i++){\n" +
+					"var URL=apiArray[i]+urlPs;\n" +
+					"iframeHtml=iframeHtml+\"<iframe sandbox='allow-scripts allow-same-origin allow-forms' frameborder='0' allowfullscreen='true' webkitallowfullscreen='true' mozallowfullscreen='true' src=\"+URL+\"></iframe>\";\n" +
+					"}\n" +
+					"document.write(iframeHtml);\n" +
+					"</script>\n" +
+					"</body>\n" +
+					"</html>"
 
-    private static String mixUrl(String url, String ext) {
-        if (!ext.trim().isEmpty()) {
-            int idx = url.indexOf("?");
-            if (idx > 0) {
-                return url.substring(0, idx + 1) + "cat_ext=" + Base64.encodeToString(ext.getBytes(), Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP) + "&" + url.substring(idx + 1);
-            }
-        }
-        return url;
-    }
-
-    public static Object[] loadHtml(String flag, String url) {
-        try {
-            url = new String(Base64.decode(url, Base64.DEFAULT | Base64.URL_SAFE | Base64.NO_WRAP), StandardCharsets.UTF_8);
-            String html = "\n" +
-                    "<!doctype html>\n" +
-                    "<html>\n" +
-                    "<head>\n" +
-                    "<title>解析</title>\n" +
-                    "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n" +
-                    "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=EmulateIE10\" />\n" +
-                    "<meta name=\"renderer\" content=\"webkit|ie-comp|ie-stand\">\n" +
-                    "<meta name=\"viewport\" content=\"width=device-width\">\n" +
-                    "</head>\n" +
-                    "<body>\n" +
-                    "<script>\n" +
-                    "var apiArray=[#jxs#];\n" +
-                    "var urlPs=\"#url#\";\n" +
-                    "var iframeHtml=\"\";\n" +
-                    "for(var i=0;i<apiArray.length;i++){\n" +
-                    "var URL=apiArray[i]+urlPs;\n" +
-                    "iframeHtml=iframeHtml+\"<iframe sandbox='allow-scripts allow-same-origin allow-forms' frameborder='0' allowfullscreen='true' webkitallowfullscreen='true' mozallowfullscreen='true' src=\"+URL+\"></iframe>\";\n" +
-                    "}\n" +
-                    "document.write(iframeHtml);\n" +
-                    "</script>\n" +
-                    "</body>\n" +
-                    "</html>";
-
-            StringBuilder jxs = new StringBuilder();
-            if (flagWebJx.containsKey(flag)) {
-                ArrayList<String> jxUrls = flagWebJx.get(flag);
-                for (int i = 0; i < jxUrls.size(); i++) {
-                    jxs.append("\"");
-                    jxs.append(jxUrls.get(i));
-                    jxs.append("\"");
-                    if (i < jxUrls.size() - 1) {
-                        jxs.append(",");
-                    }
-                }
-            }
-            html = html.replace("#url#", url).replace("#jxs#", jxs.toString());
-            Object[] result = new Object[3];
-            result[0] = 200;
-            result[1] = "text/html; charset=\"UTF-8\"";
-            ByteArrayInputStream baos = new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8));
-            result[2] = baos;
-            return result;
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-        return null;
-    }
+			val jxs = StringBuilder()
+			val jxUrls = flagWebJx[flag]
+			if (jxUrls != null) {
+				for (i in jxUrls.indices) {
+					jxs.append("\"")
+					jxs.append(jxUrls[i])
+					jxs.append("\"")
+					if (i < jxUrls.size - 1) {
+						jxs.append(",")
+					}
+				}
+			}
+			html = html.replace("#url#", decodedUrl).replace("#jxs#", jxs.toString())
+			val result = arrayOfNulls<Any>(3)
+			result[0] = 200
+			result[1] = "text/html; charset=\"UTF-8\""
+			val baos = ByteArrayInputStream(html.toByteArray(StandardCharsets.UTF_8))
+			result[2] = baos
+			return result
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+		return null
+	}
 }

@@ -1,165 +1,150 @@
-package com.github.tvbox.osc.util.urlhttp;
+package com.github.tvbox.osc.util.urlhttp
 
-import com.github.tvbox.osc.util.OkGoHelper;
-import com.github.tvbox.osc.util.UA;
-import com.lzy.okgo.OkGo;
+import com.github.tvbox.osc.util.OkGoHelper
+import com.github.tvbox.osc.util.UA
+import com.lzy.okgo.OkGo
+import okhttp3.Call
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import java.io.IOException
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+object OkHttpUtil {
+	const val METHOD_GET: String = "GET"
+	const val METHOD_POST: String = "POST"
 
-import okhttp3.Call;
-import okhttp3.OkHttpClient;
-import okhttp3.Response;
+	fun string(client: OkHttpClient, url: String, tag: String?, paramsMap: Map<String, String>?, headerMap: Map<String, String>?, respHeaderMap: MutableMap<String, List<String>>?): String? {
+		val stringCallback: OKCallBack<String> = object : OKCallBack<String>() {
+			public override fun onParseResponse(call: Call?, response: Response?): String {
+				try {
+					if (respHeaderMap != null && response != null) {
+						respHeaderMap.clear()
+						respHeaderMap.putAll(response.headers.toMultimap())
+					}
+					return response?.body?.string().orEmpty()
+				} catch (e: IOException) {
+					return ""
+				}
+			}
 
-public class OkHttpUtil {
+			public override fun onFailure(call: Call?, e: Exception?) {
+				result = ""
+			}
 
-    public static final String METHOD_GET = "GET";
-    public static final String METHOD_POST = "POST";
+			public override fun onResponse(response: String?) {
+			}
+		}
+		val req = OKRequest(METHOD_GET, url, paramsMap, headerMap, stringCallback)
+		req.setTag(tag)
+		req.execute(client)
+		return stringCallback.result
+	}
 
-    public static String string(OkHttpClient client, String url, String tag, Map<String, String> paramsMap, Map<String, String> headerMap, Map<String, List<String>> respHeaderMap) {
-        OKCallBack<String> stringCallback = new OKCallBack<String>() {
-            @Override
-            public String onParseResponse(Call call, Response response) {
-                try {
-                    if (respHeaderMap != null) {
-                        respHeaderMap.clear();
-                        respHeaderMap.putAll(response.headers().toMultimap());
-                    }
-                    return response.body().string();
-                } catch (IOException e) {
-                    return "";
-                }
-            }
+	fun stringNoRedirect(url: String, headerMap: Map<String, String>?, respHeaderMap: MutableMap<String, List<String>>?): String? {
+		return string(OkGoHelper.getNoRedirectClient(), url, null, null, headerMap, respHeaderMap)
+	}
 
-            @Override
-            public void onFailure(Call call, Exception e) {
-                setResult("");
-            }
+	fun string(url: String, headerMap: Map<String, String>?, respHeaderMap: MutableMap<String, List<String>>?): String? {
+		return string(OkGoHelper.getDefaultClient(), url, null, null, headerMap, respHeaderMap)
+	}
 
-            @Override
-            public void onResponse(String response) {
-            }
-        };
-        OKRequest req = new OKRequest(METHOD_GET, url, paramsMap, headerMap, stringCallback);
-        req.setTag(tag);
-        req.execute(client);
-        return stringCallback.getResult();
-    }
+	fun string(url: String, headerMap: Map<String, String>?): String? {
+		return string(OkGoHelper.getDefaultClient(), url, null, null, headerMap, null)
+	}
 
-    public static String stringNoRedirect(String url, Map<String, String> headerMap, Map<String, List<String>> respHeaderMap) {
-        return string(OkGoHelper.getNoRedirectClient(), url, null, null, headerMap, respHeaderMap);
-    }
+	fun string(url: String, tag: String?, headerMap: Map<String, String>?): String? {
+		return string(OkGoHelper.getDefaultClient(), url, tag, null, headerMap, null)
+	}
 
-    public static String string(String url, Map<String, String> headerMap, Map<String, List<String>> respHeaderMap) {
-        return string(OkGoHelper.getDefaultClient(), url, null, null, headerMap, respHeaderMap);
-    }
+	fun get(client: OkHttpClient, url: String, callBack: OKCallBack<*>?) {
+		get(client, url, null, null, callBack)
+	}
 
-    public static String string(String url, Map<String, String> headerMap) {
-        return string(OkGoHelper.getDefaultClient(), url, null, null, headerMap, null);
-    }
+	fun get(client: OkHttpClient, url: String, paramsMap: Map<String, String>?, callBack: OKCallBack<*>?) {
+		get(client, url, paramsMap, null, callBack)
+	}
 
-    public static String string(String url, String tag, Map<String, String> headerMap) {
-        return string(OkGoHelper.getDefaultClient(), url, tag, null, headerMap, null);
-    }
+	fun get(client: OkHttpClient, url: String, paramsMap: Map<String, String>?, headerMap: Map<String, String>?, callBack: OKCallBack<*>?) {
+		OKRequest(METHOD_GET, url, paramsMap, headerMap, callBack).execute(client)
+	}
 
-    public static void get(OkHttpClient client, String url, OKCallBack<?> callBack) {
-        get(client, url, null, null, callBack);
-    }
+	fun post(client: OkHttpClient, url: String, callBack: OKCallBack<*>?) {
+		post(client, url, null, callBack)
+	}
 
-    public static void get(OkHttpClient client, String url, Map<String, String> paramsMap, OKCallBack<?> callBack) {
-        get(client, url, paramsMap, null, callBack);
-    }
+	fun post(client: OkHttpClient, url: String, paramsMap: Map<String, String>?, callBack: OKCallBack<*>?) {
+		post(client, url, paramsMap, null, callBack)
+	}
 
-    public static void get(OkHttpClient client, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
-        new OKRequest(METHOD_GET, url, paramsMap, headerMap, callBack).execute(client);
-    }
+	fun post(client: OkHttpClient, url: String, paramsMap: Map<String, String>?, headerMap: Map<String, String>?, callBack: OKCallBack<*>?) {
+		OKRequest(METHOD_POST, url, paramsMap, headerMap, callBack).execute(client)
+	}
 
-    public static void post(OkHttpClient client, String url, OKCallBack<?> callBack) {
-        post(client, url, null, callBack);
-    }
+	fun post(client: OkHttpClient, url: String, tag: String?, paramsMap: Map<String, String>?, headerMap: Map<String, String>?, callBack: OKCallBack<*>?) {
+		val req = OKRequest(METHOD_POST, url, paramsMap, headerMap, callBack)
+		req.setTag(tag)
+		req.execute(client)
+	}
 
-    public static void post(OkHttpClient client, String url, Map<String, String> paramsMap, OKCallBack<?> callBack) {
-        post(client, url, paramsMap, null, callBack);
-    }
+	fun postJson(client: OkHttpClient, url: String, jsonStr: String?, callBack: OKCallBack<*>?) {
+		postJson(client, url, jsonStr, null, callBack)
+	}
 
-    public static void post(OkHttpClient client, String url, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
-        new OKRequest(METHOD_POST, url, paramsMap, headerMap, callBack).execute(client);
-    }
+	fun postJson(client: OkHttpClient, url: String, jsonStr: String?, headerMap: Map<String, String>?, callBack: OKCallBack<*>?) {
+		OKRequest(METHOD_POST, url, jsonStr, headerMap, callBack).execute(client)
+	}
 
-    public static void post(OkHttpClient client, String url, String tag, Map<String, String> paramsMap, Map<String, String> headerMap, OKCallBack<?> callBack) {
-        OKRequest req = new OKRequest(METHOD_POST, url, paramsMap, headerMap, callBack);
-        req.setTag(tag);
-        req.execute(client);
-    }
+	fun get(str: String?): String {
+		return try {
+			OkGo.get<String?>(str).headers("User-Agent", UA.random()).execute().body.string()
+		} catch (e: IOException) {
+			""
+		}
+	}
 
-    public static void postJson(OkHttpClient client, String url, String jsonStr, OKCallBack<?> callBack) {
-        postJson(client, url, jsonStr, null, callBack);
-    }
+	/**
+	 * 根据Tag取消请求
+	 */
+	fun cancel(client: OkHttpClient?, tag: Any?) {
+		if (client == null || tag == null) return
+		for (call in client.dispatcher.queuedCalls()) {
+			if (tag == call.request().tag()) {
+				call.cancel()
+			}
+		}
+		for (call in client.dispatcher.runningCalls()) {
+			if (tag == call.request().tag()) {
+				call.cancel()
+			}
+		}
+	}
 
-    public static void postJson(OkHttpClient client, String url, String jsonStr, Map<String, String> headerMap, OKCallBack<?> callBack) {
-        new OKRequest(METHOD_POST, url, jsonStr, headerMap, callBack).execute(client);
-    }
+	fun cancel(tag: Any?) {
+		cancel(OkGoHelper.getDefaultClient(), tag)
+	}
 
-    public static String get(String str) {
-        try {
-            return OkGo.<String>get(str).headers("User-Agent", UA.random()).execute().body().string();
-        } catch (IOException e) {
-            return "";
-        }
-    }
+	/**
+	 * 取消所有请求请求
+	 */
+	fun cancelAll(client: OkHttpClient? = OkGoHelper.getDefaultClient()) {
+		if (client == null) return
+		for (call in client.dispatcher.queuedCalls()) {
+			call.cancel()
+		}
+		for (call in client.dispatcher.runningCalls()) {
+			call.cancel()
+		}
+	}
 
-    /**
-     * 根据Tag取消请求
-     */
-    public static void cancel(OkHttpClient client, Object tag) {
-        if (client == null || tag == null) return;
-        for (Call call : client.dispatcher().queuedCalls()) {
-            if (tag.equals(call.request().tag())) {
-                call.cancel();
-            }
-        }
-        for (Call call : client.dispatcher().runningCalls()) {
-            if (tag.equals(call.request().tag())) {
-                call.cancel();
-            }
-        }
-    }
-
-    public static void cancel(Object tag) {
-        cancel(OkGoHelper.getDefaultClient(), tag);
-    }
-
-    public static void cancelAll() {
-        cancelAll(OkGoHelper.getDefaultClient());
-    }
-
-    /**
-     * 取消所有请求请求
-     */
-    public static void cancelAll(OkHttpClient client) {
-        if (client == null) return;
-        for (Call call : client.dispatcher().queuedCalls()) {
-            call.cancel();
-        }
-        for (Call call : client.dispatcher().runningCalls()) {
-            call.cancel();
-        }
-    }
-
-    /**
-     * 获取重定向地址
-     *
-     * @param headers
-     * @return
-     */
-    public static String getRedirectLocation(Map<String, List<String>> headers) {
-        if (headers == null)
-            return null;
-        if (headers.containsKey("location"))
-            return headers.get("location").get(0);
-        if (headers.containsKey("Location"))
-            return headers.get("Location").get(0);
-        return null;
-    }
+	/**
+	 * 获取重定向地址
+	 * 
+	 * @param headers
+	 * @return
+	 */
+	fun getRedirectLocation(headers: Map<String, MutableList<String>>?): String? {
+		if (headers == null) return null
+		headers["location"]?.let { return it[0] }
+		headers["Location"]?.let { return it[0] }
+		return null
+	}
 }

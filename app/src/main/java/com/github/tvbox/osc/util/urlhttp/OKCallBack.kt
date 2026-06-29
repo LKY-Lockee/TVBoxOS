@@ -1,60 +1,47 @@
-package com.github.tvbox.osc.util.urlhttp;
+package com.github.tvbox.osc.util.urlhttp
 
-import java.io.IOException;
+import okhttp3.Call
+import okhttp3.Response
+import java.io.IOException
 
-import okhttp3.Call;
-import okhttp3.Response;
+abstract class OKCallBack<T> {
+	var result: T? = null
+		protected set
 
+	open fun onError(call: Call?, e: Exception?) {
+		onFailure(call, e)
+	}
 
-public abstract class OKCallBack<T> {
+	fun onSuccess(call: Call?, response: Response?) {
+		val obj = onParseResponse(call, response)
+		this.result = obj
+		onResponse(obj)
+	}
 
-    private T result = null;
+	protected abstract fun onParseResponse(call: Call?, response: Response?): T?
 
-    public T getResult() {
-        return result;
-    }
+	protected abstract fun onFailure(call: Call?, e: Exception?)
 
-    protected void setResult(T val) {
-        result = val;
-    }
+	protected abstract fun onResponse(response: T?)
 
-    protected void onError(final Call call, final Exception e) {
-        onFailure(call, e);
-    }
+	abstract class OKCallBackDefault : OKCallBack<Response>() {
+		public override fun onParseResponse(call: Call?, response: Response?): Response? {
+			return response
+		}
+	}
 
-    protected void onSuccess(Call call, Response response) {
-        T obj = onParseResponse(call, response);
-        setResult(obj);
-        onResponse(obj);
-    }
+	abstract class OKCallBackString : OKCallBack<String>() {
+		override fun onError(call: Call?, e: Exception?) {
+			this.result = ""
+			super.onError(call, e)
+		}
 
-    protected abstract T onParseResponse(Call call, Response response);
-
-    protected abstract void onFailure(Call call, Exception e);
-
-    protected abstract void onResponse(T response);
-
-    public static abstract class OKCallBackDefault extends OKCallBack<Response> {
-        @Override
-        public Response onParseResponse(Call call, Response response) {
-            return response;
-        }
-    }
-
-    public static abstract class OKCallBackString extends OKCallBack<String> {
-        @Override
-        public void onError(Call call, Exception e) {
-            setResult("");
-            super.onError(call, e);
-        }
-
-        @Override
-        public String onParseResponse(Call call, Response response) {
-            try {
-                return response.body().string();
-            } catch (IOException e) {
-                return "";
-            }
-        }
-    }
+		public override fun onParseResponse(call: Call?, response: Response?): String {
+			return try {
+				response?.body?.string().orEmpty()
+			} catch (e: IOException) {
+				""
+			}
+		}
+	}
 }
