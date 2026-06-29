@@ -1,220 +1,180 @@
-package com.github.tvbox.osc.subtitle;
+package com.github.tvbox.osc.subtitle
 
-import android.net.Uri;
-import android.text.TextUtils;
-import android.util.Log;
-
-import com.github.tvbox.osc.subtitle.exception.FatalParsingException;
-import com.github.tvbox.osc.subtitle.format.FormatASS;
-import com.github.tvbox.osc.subtitle.format.FormatSRT;
-import com.github.tvbox.osc.subtitle.format.FormatSTL;
-import com.github.tvbox.osc.subtitle.format.TimedTextFileFormat;
-import com.github.tvbox.osc.subtitle.model.TimedTextObject;
-import com.github.tvbox.osc.subtitle.runtime.AppTaskExecutor;
-import com.github.tvbox.osc.util.FileUtils;
-import com.github.tvbox.osc.util.UnicodeReader;
-import com.lzy.okgo.OkGo;
-
-import org.apache.commons.io.input.ReaderInputStream;
-import org.mozilla.universalchardet.UniversalDetector;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
-import java.net.URLDecoder;
-import java.nio.charset.Charset;
-
-import okhttp3.Response;
+import android.util.Log
+import androidx.core.net.toUri
+import com.github.tvbox.osc.subtitle.format.FormatASS
+import com.github.tvbox.osc.subtitle.format.FormatSRT
+import com.github.tvbox.osc.subtitle.format.FormatSTL
+import com.github.tvbox.osc.subtitle.model.TimedTextObject
+import com.github.tvbox.osc.subtitle.runtime.AppTaskExecutor.Companion.deskIO
+import com.github.tvbox.osc.subtitle.runtime.AppTaskExecutor.Companion.mainThread
+import com.github.tvbox.osc.util.FileUtils
+import com.github.tvbox.osc.util.UnicodeReader
+import com.lzy.okgo.OkGo
+import org.apache.commons.io.input.ReaderInputStream
+import org.mozilla.universalchardet.UniversalDetector
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.InputStream
+import java.io.Reader
+import java.net.URLDecoder
+import java.nio.charset.Charset
 
 /**
  * @author AveryZhong.
  */
+object SubtitleLoader {
+	private val TAG: String = SubtitleLoader::class.java.simpleName
 
-public class SubtitleLoader {
-    private static final String TAG = SubtitleLoader.class.getSimpleName();
+	fun loadSubtitle(path: String?, callback: Callback?) {
+		if (path.isNullOrEmpty()) {
+			return
+		}
+		if (path.startsWith("http://") || path.startsWith("https://")) {
+			loadFromRemoteAsync(path, callback)
+		} else {
+			loadFromLocalAsync(path, callback)
+		}
+	}
 
-    private SubtitleLoader() {
-        throw new AssertionError("No instance for you.");
-    }
+	private fun loadFromRemoteAsync(remoteSubtitlePath: String, callback: Callback?) {
+		deskIO().execute {
+			try {
+				val subtitleLoadSuccessResult = loadFromRemote(remoteSubtitlePath)
+				callback?.let { cb ->
+					mainThread().execute { cb.onSuccess(subtitleLoadSuccessResult) }
+				}
+			} catch (e: Exception) {
+				e.printStackTrace()
+				callback?.let { cb ->
+					mainThread().execute { cb.onError(e) }
+				}
+			}
+		}
+	}
 
-    public static void loadSubtitle(final String path, final Callback callback) {
-        if (TextUtils.isEmpty(path)) {
-            return;
-        }
-        if (path.startsWith("http://")
-                || path.startsWith("https://")) {
-            loadFromRemoteAsync(path, callback);
-        } else {
-            loadFromLocalAsync(path, callback);
-        }
-    }
+	private fun loadFromLocalAsync(localSubtitlePath: String, callback: Callback?) {
+		deskIO().execute {
+			try {
+				val subtitleLoadSuccessResult = loadFromLocal(localSubtitlePath)
+				callback?.let { cb ->
+					mainThread().execute { cb.onSuccess(subtitleLoadSuccessResult) }
+				}
+			} catch (e: Exception) {
+				e.printStackTrace()
+				callback?.let { cb ->
+					mainThread().execute { cb.onError(e) }
+				}
+			}
+		}
+	}
 
-    private static void loadFromRemoteAsync(final String remoteSubtitlePath,
-                                            final Callback callback) {
-        AppTaskExecutor.deskIO().execute(() -> {
-            try {
-                final SubtitleLoadSuccessResult subtitleLoadSuccessResult = loadFromRemote(remoteSubtitlePath);
-                if (callback != null) {
-                    AppTaskExecutor.mainThread().execute(() -> callback.onSuccess(subtitleLoadSuccessResult));
-                }
+	private fun loadFromRemote(remoteSubtitlePath: String): SubtitleLoadSuccessResult {
+		Log.d(TAG, "parseRemote: remoteSubtitlePath = $remoteSubtitlePath")
+		var referer = ""
+		if (remoteSubtitlePath.contains("alicloud") || remoteSubtitlePath.contains("aliyundrive")) {
+			referer = "https://www.aliyundrive.com/"
+		} else if (remoteSubtitlePath.contains("assrt.net")) {
+			referer = "https://secure.assrt.net/"
+		}
+		val ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.54 Safari/537.36"
+		val response = OkGo.get<String>(remoteSubtitlePath.split("#")[0])
+			.headers("Referer", referer)
+			.headers("User-Agent", ua)
+			.execute()
+		val bytes = response.body.bytes()
+		val detector = UniversalDetector(null)
+		detector.handleData(bytes, 0, bytes.size)
+		detector.dataEnd()
+		var encoding = detector.detectedCharset
+		if (encoding.isEmpty()) encoding = "UTF-8"
+		val content = String(bytes, charset(encoding))
+		val inputStream: InputStream = ByteArrayInputStream(content.toByteArray())
+		var filename = ""
+		val contentDisposition = response.header("content-disposition", "")
+		val cd = contentDisposition?.split(";")
+		cd?.size?.let {
+			if (it > 1) {
+				var filenameInfo = cd[1]
+				filenameInfo = filenameInfo.trim()
+				if (filenameInfo.startsWith("filename=")) {
+					filename = filenameInfo.replace("filename=", "")
+					filename = filename.replace("\"", "")
+				} else if (filenameInfo.startsWith("filename*=")) {
+					filename = filenameInfo.substring(filenameInfo.lastIndexOf("''") + 2)
+				}
+				filename = filename.trim()
+				filename = URLDecoder.decode(filename)
+			}
+		}
+		var filePath = filename
+		if (filename.isEmpty()) {
+			val uri = remoteSubtitlePath.toUri()
+			filePath = uri.path.orEmpty()
+		}
+		if (!filePath.contains(".") && remoteSubtitlePath.contains("#")) {
+			filePath = remoteSubtitlePath.split("#")[1]
+			filePath = URLDecoder.decode(filePath)
+		}
+		val subtitleLoadSuccessResult = SubtitleLoadSuccessResult()
+		subtitleLoadSuccessResult.timedTextObject = loadAndParse(inputStream, filePath)
+		subtitleLoadSuccessResult.fileName = filePath
+		subtitleLoadSuccessResult.content = content
+		subtitleLoadSuccessResult.subtitlePath = remoteSubtitlePath
+		return subtitleLoadSuccessResult
+	}
 
-            } catch (final Exception e) {
-                e.printStackTrace();
-                if (callback != null) {
-                    AppTaskExecutor.mainThread().execute(() -> callback.onError(e));
-                }
+	private fun loadFromLocal(localSubtitlePath: String): SubtitleLoadSuccessResult? {
+		Log.d(TAG, "parseLocal: localSubtitlePath = $localSubtitlePath")
+		val file = File(localSubtitlePath)
+		if (!file.exists()) {
+			Log.d(TAG, "parseLocal: localSubtitlePath = $localSubtitlePath file not exists")
+			return null
+		}
+		val bytes = FileUtils.readSimple(file) ?: return null
+		val detector = UniversalDetector(null)
+		detector.handleData(bytes, 0, bytes.size)
+		detector.dataEnd()
+		val encoding = detector.detectedCharset
+		val content = String(bytes, charset(encoding))
+		val inputStream: InputStream = ByteArrayInputStream(content.toByteArray())
+		val filePath = file.path
+		val subtitleLoadSuccessResult = SubtitleLoadSuccessResult()
+		subtitleLoadSuccessResult.timedTextObject = loadAndParse(inputStream, filePath)
+		subtitleLoadSuccessResult.fileName = filePath.substring(filePath.lastIndexOf("/") + 1)
+		subtitleLoadSuccessResult.subtitlePath = localSubtitlePath
+		return subtitleLoadSuccessResult
+	}
 
-            }
-        });
-    }
+	private fun loadAndParse(inputStream: InputStream?, filePath: String): TimedTextObject? {
+		val nonNullIs = inputStream ?: return null
+		val fileName = filePath.substring(filePath.lastIndexOf("/") + 1)
+		var ext = ""
+		if (fileName.lastIndexOf(".") > 0) {
+			ext = fileName.substring(fileName.lastIndexOf("."))
+		}
+		Log.d(TAG, "parse: name = $fileName, ext = $ext")
+		val reader: Reader = UnicodeReader(nonNullIs)
+		val newInputStream: InputStream = ReaderInputStream(reader, Charset.defaultCharset())
+		when {
+			ext.equals(".srt", ignoreCase = true) -> return FormatSRT().parseFile(fileName, newInputStream)
+			ext.equals(".ass", ignoreCase = true) -> return FormatASS().parseFile(fileName, newInputStream)
+			ext.equals(".stl", ignoreCase = true) -> return FormatSTL().parseFile(fileName, newInputStream)
+			ext.equals(".ttml", ignoreCase = true) -> return FormatSTL().parseFile(fileName, newInputStream)
+		}
+		val arr = arrayOf(FormatSRT(), FormatASS(), FormatSTL(), FormatSTL())
+		for (oneFormat in arr) {
+			try {
+				return oneFormat.parseFile(fileName, newInputStream)
+			} catch (ignored: Exception) {
+			}
+		}
+		return null
+	}
 
-    private static void loadFromLocalAsync(final String localSubtitlePath,
-                                           final Callback callback) {
-        AppTaskExecutor.deskIO().execute(() -> {
-            try {
-                final SubtitleLoadSuccessResult subtitleLoadSuccessResult = loadFromLocal(localSubtitlePath);
-                if (callback != null) {
-                    AppTaskExecutor.mainThread().execute(() -> callback.onSuccess(subtitleLoadSuccessResult));
-                }
+	interface Callback {
+		fun onSuccess(subtitleLoadSuccessResult: SubtitleLoadSuccessResult?)
 
-            } catch (final Exception e) {
-                e.printStackTrace();
-                if (callback != null) {
-                    AppTaskExecutor.mainThread().execute(() -> callback.onError(e));
-                }
-
-            }
-        });
-    }
-
-    private static SubtitleLoadSuccessResult loadFromRemote(final String remoteSubtitlePath)
-            throws Exception {
-        Log.d(TAG, "parseRemote: remoteSubtitlePath = " + remoteSubtitlePath);
-        String referer = "";
-        if (remoteSubtitlePath.contains("alicloud") || remoteSubtitlePath.contains("aliyundrive")) {
-            referer = "https://www.aliyundrive.com/";
-        } else if (remoteSubtitlePath.contains("assrt.net")) {
-            referer = "https://secure.assrt.net/";
-        }
-        String ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.54 Safari/537.36";
-        Response response = OkGo.<String>get(remoteSubtitlePath.split("#")[0])
-                .headers("Referer", referer)
-                .headers("User-Agent", ua)
-                .execute();
-        byte[] bytes = response.body().bytes();
-        UniversalDetector detector = new UniversalDetector(null);
-        detector.handleData(bytes, 0, bytes.length);
-        detector.dataEnd();
-        String encoding = detector.getDetectedCharset();
-        if (TextUtils.isEmpty(encoding)) encoding = "UTF-8";
-        String content = new String(bytes, encoding);
-        InputStream is = new ByteArrayInputStream(content.getBytes());
-        String filename = "";
-        String contentDispostion = response.header("content-disposition", "");
-        String[] cd = contentDispostion.split(";");
-        if (cd.length > 1) {
-            String filenameInfo = cd[1];
-            filenameInfo = filenameInfo.trim();
-            if (filenameInfo.startsWith("filename=")) {
-                filename = filenameInfo.replace("filename=", "");
-                filename = filename.replace("\"", "");
-            } else if (filenameInfo.startsWith("filename*=")) {
-                filename = filenameInfo.substring(filenameInfo.lastIndexOf("''") + 2);
-            }
-            filename = filename.trim();
-            filename = URLDecoder.decode(filename);
-        }
-        String filePath = filename;
-        if (filename == null || filename.isEmpty()) {
-            Uri uri = Uri.parse(remoteSubtitlePath);
-            filePath = uri.getPath();
-        }
-        if (!filePath.contains(".") && remoteSubtitlePath.contains("#")) {
-            filePath = remoteSubtitlePath.split("#")[1];
-            filePath = URLDecoder.decode(filePath);
-        }
-        SubtitleLoadSuccessResult subtitleLoadSuccessResult = new SubtitleLoadSuccessResult();
-        subtitleLoadSuccessResult.timedTextObject = loadAndParse(is, filePath);
-        subtitleLoadSuccessResult.fileName = filePath;
-        subtitleLoadSuccessResult.content = content;
-        subtitleLoadSuccessResult.subtitlePath = remoteSubtitlePath;
-        return subtitleLoadSuccessResult;
-    }
-
-    private static SubtitleLoadSuccessResult loadFromLocal(final String localSubtitlePath)
-            throws IOException, FatalParsingException {
-        Log.d(TAG, "parseLocal: localSubtitlePath = " + localSubtitlePath);
-        File file = new File(localSubtitlePath);
-        if (!file.exists()) {
-            Log.d(TAG, "parseLocal: localSubtitlePath = " + localSubtitlePath + " file not exsits");
-            return null;
-        }
-        byte[] bytes = FileUtils.readSimple(file);
-        UniversalDetector detector = new UniversalDetector(null);
-        detector.handleData(bytes, 0, bytes.length);
-        detector.dataEnd();
-        String encoding = detector.getDetectedCharset();
-        String content = new String(bytes, encoding);
-        InputStream is = new ByteArrayInputStream(content.getBytes());
-        String filePath = file.getPath();
-        SubtitleLoadSuccessResult subtitleLoadSuccessResult = new SubtitleLoadSuccessResult();
-        subtitleLoadSuccessResult.timedTextObject = loadAndParse(is, filePath);
-        subtitleLoadSuccessResult.fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-        subtitleLoadSuccessResult.subtitlePath = localSubtitlePath;
-        return subtitleLoadSuccessResult;
-    }
-
-    private static TimedTextObject loadAndParse(final InputStream is, final String filePath)
-            throws IOException, FatalParsingException {
-        String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-        String ext = "";
-        if (fileName.lastIndexOf(".") > 0) {
-            ext = fileName.substring(fileName.lastIndexOf("."));
-        }
-        Log.d(TAG, "parse: name = " + fileName + ", ext = " + ext);
-        Reader reader = new UnicodeReader(is); //处理有BOM头的utf8
-        InputStream newInputStream = new ReaderInputStream(reader, Charset.defaultCharset());
-        if (".srt".equalsIgnoreCase(ext)) {
-            return new FormatSRT().parseFile(fileName, newInputStream);
-        } else if (".ass".equalsIgnoreCase(ext)) {
-            return new FormatASS().parseFile(fileName, newInputStream);
-        } else if (".stl".equalsIgnoreCase(ext)) {
-            return new FormatSTL().parseFile(fileName, newInputStream);
-        } else if (".ttml".equalsIgnoreCase(ext)) {
-            return new FormatSTL().parseFile(fileName, newInputStream);
-        }
-        TimedTextFileFormat[] arr = {new FormatSRT(), new FormatASS(), new FormatSTL(), new FormatSTL()};
-        for (TimedTextFileFormat oneFormat : arr) {
-            try {
-                return oneFormat.parseFile(fileName, newInputStream);
-            } catch (Exception ignored) {
-            }
-        }
-        return null;
-    }
-
-    public SubtitleLoadSuccessResult loadSubtitle(String path) {
-        if (TextUtils.isEmpty(path)) {
-            return null;
-        }
-        try {
-            if (path.startsWith("http://")
-                    || path.startsWith("https://")) {
-                return loadFromRemote(path);
-            } else {
-                return loadFromLocal(path);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public interface Callback {
-        void onSuccess(SubtitleLoadSuccessResult SubtitleLoadSuccessResult);
-
-        void onError(Exception exception);
-    }
+		fun onError(exception: Exception)
+	}
 }

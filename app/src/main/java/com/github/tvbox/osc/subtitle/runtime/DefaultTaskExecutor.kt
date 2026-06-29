@@ -23,44 +23,32 @@
  *              Buddha bless, there will never be bug!!!
  */
 
-package com.github.tvbox.osc.subtitle.runtime;
+package com.github.tvbox.osc.subtitle.runtime
 
-import android.os.Handler;
-import android.os.Looper;
-
-import androidx.annotation.Nullable;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * @author AveryZhong.
  */
+class DefaultTaskExecutor : TaskExecutor() {
+	private val mLock = Any()
+	private val mDeskIO: ExecutorService = Executors.newFixedThreadPool(3)
+	private var mMainHandler: Handler? = null
 
-public class DefaultTaskExecutor extends TaskExecutor {
+	override val isMainThread: Boolean
+		get() = Thread.currentThread() === Looper.getMainLooper().thread
 
-    private final Object mLock = new Object();
-    private final ExecutorService mDeskIO = Executors.newFixedThreadPool(3);
-    @Nullable
-    private Handler mMainHandler;
+	override fun executeOnDeskIO(task: Runnable) {
+		mDeskIO.execute(task)
+	}
 
-    @Override
-    public void executeOnDeskIO(final Runnable task) {
-        mDeskIO.execute(task);
-    }
-
-    @Override
-    public void postToMainThread(final Runnable task) {
-        if (mMainHandler == null) {
-            synchronized (mLock) {
-                mMainHandler = new Handler(Looper.getMainLooper());
-            }
-        }
-        mMainHandler.post(task);
-    }
-
-    @Override
-    public boolean isMainThread() {
-        return Thread.currentThread() == Looper.getMainLooper().getThread();
-    }
+	override fun postToMainThread(task: Runnable) {
+		val handler = mMainHandler ?: synchronized(mLock) {
+			mMainHandler ?: Handler(Looper.getMainLooper()).also { mMainHandler = it }
+		}
+		handler.post(task)
+	}
 }

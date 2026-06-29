@@ -23,69 +23,50 @@
  *              Buddha bless, there will never be bug!!!
  */
 
-package com.github.tvbox.osc.subtitle.runtime;
+package com.github.tvbox.osc.subtitle.runtime
 
-
-import androidx.annotation.NonNull;
-
-import java.util.concurrent.Executor;
+import java.util.concurrent.Executor
 
 /**
  * @author AveryZhong.
  */
+class AppTaskExecutor private constructor() : TaskExecutor() {
+	private val mDefaultTaskExecutor = DefaultTaskExecutor()
+	private var mDelegate: TaskExecutor = mDefaultTaskExecutor
 
-public class AppTaskExecutor extends TaskExecutor {
+	override val isMainThread: Boolean
+		get() = mDelegate.isMainThread
 
-    private static AppTaskExecutor sInstance;
-    private static final Executor sDeskIO = command -> getInstance().executeOnDeskIO(command);
-    private static final Executor sMainThread = command -> getInstance().executeOnMainThread(command);
-    private final TaskExecutor mDefaultTaskExecutor;
-    private TaskExecutor mDelegate;
+	fun setDelegate(taskExecutor: TaskExecutor?) {
+		mDelegate = taskExecutor ?: mDefaultTaskExecutor
+	}
 
-    private AppTaskExecutor() {
-        mDefaultTaskExecutor = new DefaultTaskExecutor();
-        mDelegate = mDefaultTaskExecutor;
-    }
+	override fun executeOnDeskIO(task: Runnable) {
+		mDelegate.executeOnDeskIO(task)
+	}
 
-    @NonNull
-    public static TaskExecutor getInstance() {
-        if (sInstance == null) {
-            synchronized (AppTaskExecutor.class) {
-                sInstance = new AppTaskExecutor();
-            }
-        }
-        return sInstance;
-    }
+	override fun executeOnMainThread(task: Runnable) {
+		mDelegate.executeOnMainThread(task)
+	}
 
-    public static Executor deskIO() {
-        return sDeskIO;
-    }
+	override fun postToMainThread(task: Runnable) {
+		mDelegate.postToMainThread(task)
+	}
 
-    public static Executor mainThread() {
-        return sMainThread;
-    }
+	companion object {
+		private val sDeskIO = Executor { command -> instance.executeOnDeskIO(command) }
+		private val sMainThread = Executor { command -> instance.executeOnMainThread(command) }
 
-    public void setDelegate(final TaskExecutor taskExecutor) {
-        mDelegate = taskExecutor == null ? mDefaultTaskExecutor : taskExecutor;
-    }
+		val instance: AppTaskExecutor by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+			AppTaskExecutor()
+		}
 
-    @Override
-    public void executeOnDeskIO(final Runnable task) {
-        mDelegate.executeOnDeskIO(task);
-    }
+		fun deskIO(): Executor {
+			return sDeskIO
+		}
 
-    @Override
-    public void executeOnMainThread(final Runnable task) {
-        mDelegate.executeOnMainThread(task);
-    }
-
-    @Override
-    public void postToMainThread(final Runnable task) {
-        mDelegate.postToMainThread(task);
-    }
-
-    @Override
-    public boolean isMainThread() {
-        return mDelegate.isMainThread();
-    }
+		fun mainThread(): Executor {
+			return sMainThread
+		}
+	}
 }

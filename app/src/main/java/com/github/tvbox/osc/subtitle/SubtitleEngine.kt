@@ -23,103 +23,85 @@
  *              Buddha bless, there will never be bug!!!
  */
 
-package com.github.tvbox.osc.subtitle;
+package com.github.tvbox.osc.subtitle
 
-import androidx.annotation.Nullable;
-
-import com.github.tvbox.osc.subtitle.model.Subtitle;
-
-import java.util.List;
-
-import xyz.doikki.videoplayer.player.AbstractPlayer;
+import com.github.tvbox.osc.subtitle.model.Subtitle
+import xyz.doikki.videoplayer.player.AbstractPlayer
 
 /**
  * @author AveryZhong.
  */
+interface SubtitleEngine {
+	/**
+	 * 设置字幕路径，加载字幕
+	 * 
+	 * @param path 字幕路径（本地路径或者是远程路径）
+	 */
+	fun setSubtitlePath(path: String)
 
-public interface SubtitleEngine {
+	/**
+	 * 字幕延时
+	 */
+	fun setSubtitleDelay(milliseconds: Int)
 
-    /**
-     * 设置字幕路径，加载字幕
-     *
-     * @param path 字幕路径（本地路径或者是远程路径）
-     */
-    void setSubtitlePath(String path);
+	var playSubtitleCacheKey: String?
 
-    /**
-     * 字幕延时
-     *
-     * @param milliseconds
-     */
-    void setSubtitleDelay(Integer milliseconds);
+	/**
+	 * 开启字幕刷新任务
+	 */
+	fun start()
 
-    String getPlaySubtitleCacheKey();
+	/**
+	 * 暂停
+	 */
+	fun pause()
 
-    void setPlaySubtitleCacheKey(String cacheKey);
+	/**
+	 * 恢复
+	 */
+	fun resume()
 
-    /**
-     * 开启字幕刷新任务
-     */
-    void start();
+	/**
+	 * 停止字幕刷新任务
+	 */
+	fun stop()
 
-    /**
-     * 暂停
-     */
-    void pause();
+	/**
+	 * 重置
+	 */
+	fun reset()
 
-    /**
-     * 恢复
-     */
-    void resume();
+	/**
+	 * 销毁字幕
+	 */
+	fun destroy()
 
-    /**
-     * 停止字幕刷新任务
-     */
-    void stop();
+	/**
+	 * 绑定AbstractPlayer
+	 */
+	fun bindToMediaPlayer(mediaPlayer: AbstractPlayer)
 
-    /**
-     * 重置
-     */
-    void reset();
+	/**
+	 * 设置字幕准备完成监接口
+	 */
+	fun setOnSubtitlePreparedListener(listener: OnSubtitlePreparedListener)
 
-    /**
-     * 销毁字幕
-     */
-    void destroy();
+	/**
+	 * 设置字幕改变监听接口
+	 */
+	fun setOnSubtitleChangeListener(listener: OnSubtitleChangeListener)
 
-    /**
-     * 绑定AbstractPlayer
-     *
-     * @param mediaPlayer mediaPlayer
-     */
-    void bindToMediaPlayer(AbstractPlayer mediaPlayer);
+	/**
+	 * 幕准备完成监接口
+	 */
+	interface OnSubtitlePreparedListener {
+		fun onSubtitlePrepared(subtitles: List<Subtitle>?)
+	}
 
-    /**
-     * 设置字幕准备完成监接口
-     *
-     * @param listener OnSubtitlePreparedListener
-     */
-    void setOnSubtitlePreparedListener(OnSubtitlePreparedListener listener);
-
-    /**
-     * 设置字幕改变监听接口
-     *
-     * @param listener OnSubtitleChangeListener
-     */
-    void setOnSubtitleChangeListener(OnSubtitleChangeListener listener);
-
-    /**
-     * 幕准备完成监接口
-     */
-    interface OnSubtitlePreparedListener {
-        void onSubtitlePrepared(@Nullable List<Subtitle> subtitles);
-    }
-
-    /**
-     * 字幕改变监听接口
-     */
-    interface OnSubtitleChangeListener {
-        void onSubtitleChanged(@Nullable Subtitle subtitle);
-    }
-
+	/**
+	 * 字幕改变监听接口
+	 */
+	interface OnSubtitleChangeListener {
+		fun onSubtitleChanged(subtitle: Subtitle?)
+	}
 }

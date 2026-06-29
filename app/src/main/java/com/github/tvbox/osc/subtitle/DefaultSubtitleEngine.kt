@@ -23,253 +23,200 @@
  *              Buddha bless, there will never be bug!!!
  */
 
-package com.github.tvbox.osc.subtitle;
+package com.github.tvbox.osc.subtitle
 
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.text.TextUtils;
-import android.util.Log;
-
-import androidx.annotation.Nullable;
-
-import com.github.tvbox.osc.base.App;
-import com.github.tvbox.osc.cache.CacheManager;
-import com.github.tvbox.osc.subtitle.model.Subtitle;
-import com.github.tvbox.osc.subtitle.model.Time;
-import com.github.tvbox.osc.util.FileUtils;
-import com.github.tvbox.osc.util.MD5;
-import com.github.tvbox.osc.util.SubtitleHelper;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeMap;
-
-import xyz.doikki.videoplayer.player.AbstractPlayer;
+import android.os.Handler
+import android.os.HandlerThread
+import android.text.TextUtils
+import android.util.Log
+import com.github.tvbox.osc.base.App.Companion.instance
+import com.github.tvbox.osc.cache.CacheManager.save
+import com.github.tvbox.osc.subtitle.SubtitleEngine.OnSubtitleChangeListener
+import com.github.tvbox.osc.subtitle.SubtitleEngine.OnSubtitlePreparedListener
+import com.github.tvbox.osc.subtitle.model.Subtitle
+import com.github.tvbox.osc.util.FileUtils
+import com.github.tvbox.osc.util.MD5
+import com.github.tvbox.osc.util.SubtitleHelper
+import xyz.doikki.videoplayer.player.AbstractPlayer
+import java.io.File
 
 /**
  * @author AveryZhong.
  */
+class DefaultSubtitleEngine : SubtitleEngine {
+	override var playSubtitleCacheKey: String? = null
+	private var mHandlerThread: HandlerThread? = null
+	private var mWorkHandler: Handler? = null
+	private var mSubtitles: List<Subtitle>? = null
+	private var mUIRenderTask: UIRenderTask? = null
+	private var mMediaPlayer: AbstractPlayer? = null
+	private var mOnSubtitlePreparedListener: OnSubtitlePreparedListener? = null
+	private var mOnSubtitleChangeListener: OnSubtitleChangeListener? = null
 
-public class DefaultSubtitleEngine implements SubtitleEngine {
-    private static final String TAG = DefaultSubtitleEngine.class.getSimpleName();
-    private static final int MSG_REFRESH = 0x888;
-    private static final int REFRESH_INTERVAL = 100;
-    private static String playSubtitleCacheKey;
-    @Nullable
-    private HandlerThread mHandlerThread;
-    @Nullable
-    private Handler mWorkHandler;
-    @Nullable
-    private List<Subtitle> mSubtitles;
-    private UIRenderTask mUIRenderTask;
-    private AbstractPlayer mMediaPlayer;
-    private OnSubtitlePreparedListener mOnSubtitlePreparedListener;
-    private OnSubtitleChangeListener mOnSubtitleChangeListener;
+	override fun bindToMediaPlayer(mediaPlayer: AbstractPlayer) {
+		mMediaPlayer = mediaPlayer
+	}
 
-    public DefaultSubtitleEngine() {
+	override fun setSubtitlePath(path: String) {
+		initWorkThread()
+		reset()
+		if (TextUtils.isEmpty(path)) {
+			Log.w(TAG, "loadSubtitleFromRemote: path is null.")
+			return
+		}
 
-    }
+		SubtitleLoader.loadSubtitle(path, object : SubtitleLoader.Callback {
+			override fun onSuccess(subtitleLoadSuccessResult: SubtitleLoadSuccessResult?) {
+				val successResult = subtitleLoadSuccessResult ?: run {
+					Log.d(TAG, "onSuccess: subtitleLoadSuccessResult is null.")
+					return
+				}
+				val timedTextObject = successResult.timedTextObject ?: run {
+					Log.d(TAG, "onSuccess: timedTextObject is null.")
+					return
+				}
+				mSubtitles = ArrayList(timedTextObject.captions.values)
+				setSubtitleDelay(SubtitleHelper.getTimeDelay())
+				notifyPrepared()
 
-    @Override
-    public void bindToMediaPlayer(AbstractPlayer mediaPlayer) {
-        mMediaPlayer = mediaPlayer;
-    }
+				val subtitlePath = successResult.subtitlePath
+				if (subtitlePath.startsWith("http://") || subtitlePath.startsWith("https://")) {
+					val subtitleFileCacheDir = instance.cacheDir.absolutePath + "/zimu/"
+					val cacheDir = File(subtitleFileCacheDir)
+					if (!cacheDir.exists()) {
+						cacheDir.mkdirs()
+					}
+					val subtitleFile = subtitleFileCacheDir + successResult.fileName
+					val cacheSubtitleFile = File(subtitleFile)
+					val writeResult = FileUtils.writeSimple(subtitleLoadSuccessResult.content.toByteArray(), cacheSubtitleFile)
+					if (writeResult && Companion.playSubtitleCacheKey != null) {
+						save(MD5.string2MD5(playSubtitleCacheKey), subtitleFile)
+					}
+				} else {
+					save(MD5.string2MD5(playSubtitleCacheKey), path)
+				}
+			}
 
-    @Override
-    public void setSubtitlePath(final String path) {
-        initWorkThread();
-        reset();
-        if (TextUtils.isEmpty(path)) {
-            Log.w(TAG, "loadSubtitleFromRemote: path is null.");
-            return;
-        }
+			override fun onError(exception: Exception) {
+				Log.e(TAG, "onError: " + exception.message)
+			}
+		})
+	}
 
-        SubtitleLoader.loadSubtitle(path, new SubtitleLoader.Callback() {
-            @Override
-            public void onSuccess(final SubtitleLoadSuccessResult subtitleLoadSuccessResult) {
-                if (subtitleLoadSuccessResult == null) {
-                    Log.d(TAG, "onSuccess: subtitleLoadSuccessResult is null.");
-                    return;
-                }
-                if (subtitleLoadSuccessResult.timedTextObject == null) {
-                    Log.d(TAG, "onSuccess: timedTextObject is null.");
-                    return;
-                }
-                final TreeMap<Integer, Subtitle> captions = subtitleLoadSuccessResult.timedTextObject.captions;
-                mSubtitles = new ArrayList<>(captions.values());
-                setSubtitleDelay(SubtitleHelper.getTimeDelay());
-                notifyPrepared();
+	override fun setSubtitleDelay(milliseconds: Int) {
+		if (milliseconds == 0) {
+			return
+		}
+		val thisSubtitles = mSubtitles ?: return
+		if (thisSubtitles.isEmpty()) {
+			return
+		}
+		mSubtitles = null
+		for (subtitle in thisSubtitles) {
+			val start = subtitle.start ?: return
+			val end = subtitle.end ?: return
+			start.mSeconds += milliseconds
+			end.mSeconds += milliseconds
+			if (start.mSeconds <= 0) {
+				start.mSeconds = 0
+			}
+			if (end.mSeconds <= 0) {
+				end.mSeconds = 0
+			}
+			subtitle.start = start
+			subtitle.end = end
+		}
+		mSubtitles = thisSubtitles
+	}
 
-                String subtitlePath = subtitleLoadSuccessResult.subtitlePath;
-                if (subtitlePath.startsWith("http://") || subtitlePath.startsWith("https://")) {
-                    String subtitleFileCacheDir = App.getInstance().getCacheDir().getAbsolutePath() + "/zimu/";
-                    File cacheDir = new File(subtitleFileCacheDir);
-                    if (!cacheDir.exists()) {
-                        cacheDir.mkdirs();
-                    }
-                    String subtitleFile = subtitleFileCacheDir + subtitleLoadSuccessResult.fileName;
-                    File cacheSubtitleFile = new File(subtitleFile);
-                    boolean writeResult = FileUtils.writeSimple(subtitleLoadSuccessResult.content.getBytes(), cacheSubtitleFile);
-                    if (writeResult && playSubtitleCacheKey != null) {
-                        CacheManager.save(MD5.string2MD5(getPlaySubtitleCacheKey()), subtitleFile);
-                    }
-                } else {
-                    CacheManager.save(MD5.string2MD5(getPlaySubtitleCacheKey()), path);
-                }
-            }
+	override fun reset() {
+		stop()
+		mSubtitles = null
+		mUIRenderTask = null
+	}
 
-            @Override
-            public void onError(final Exception exception) {
-                Log.e(TAG, "onError: " + exception.getMessage());
-            }
-        });
-    }
+	override fun start() {
+		Log.d(TAG, "start: ")
+		if (mMediaPlayer == null) {
+			Log.w(
+				TAG, ("MediaPlayer is not bind, You must bind MediaPlayer to ${SubtitleEngine::class.java.simpleName} before start() method be called, you can do this by call bindToMediaPlayer(MediaPlayer mediaPlayer) method.")
+			)
+			return
+		}
+		stop()
+		mWorkHandler?.sendEmptyMessageDelayed(MSG_REFRESH, REFRESH_INTERVAL.toLong())
+	}
 
-    @Override
-    public void setSubtitleDelay(Integer milliseconds) {
-        if (milliseconds == 0) {
-            return;
-        }
-        if (mSubtitles == null || mSubtitles.isEmpty()) {
-            return;
-        }
-        List<Subtitle> thisSubtitles = mSubtitles;
-        mSubtitles = null;
-        for (int i = 0; i < thisSubtitles.size(); i++) {
-            Subtitle subtitle = thisSubtitles.get(i);
-            Time start = subtitle.start;
-            Time end = subtitle.end;
-            start.mseconds += milliseconds;
-            end.mseconds += milliseconds;
-            if (start.mseconds <= 0) {
-                start.mseconds = 0;
-            }
-            if (end.mseconds <= 0) {
-                end.mseconds = 0;
-            }
-            subtitle.start = start;
-            subtitle.end = end;
-        }
-        mSubtitles = thisSubtitles;
-    }
+	override fun pause() {
+		stop()
+	}
 
-    public String getPlaySubtitleCacheKey() {
-        return playSubtitleCacheKey;
-    }
+	override fun resume() {
+		start()
+	}
 
-    public void setPlaySubtitleCacheKey(String cacheKey) {
-        playSubtitleCacheKey = cacheKey;
-    }
+	override fun stop() {
+		mWorkHandler?.removeMessages(MSG_REFRESH)
+	}
 
-    @Override
-    public void reset() {
-        stop();
-        mSubtitles = null;
-        mUIRenderTask = null;
-    }
+	override fun destroy() {
+		Log.d(TAG, "destroy: ")
+		stopWorkThread()
+		reset()
+	}
 
-    @Override
-    public void start() {
-        Log.d(TAG, "start: ");
-        if (mMediaPlayer == null) {
-            Log.w(TAG, "MediaPlayer is not bind, You must bind MediaPlayer to "
-                    + SubtitleEngine.class.getSimpleName()
-                    + " before start() method be called,"
-                    + " you can do this by call " +
-                    "bindToMediaPlayer(MediaPlayer mediaPlayer) method.");
-            return;
-        }
-        stop();
-        if (mWorkHandler != null) {
-            mWorkHandler.sendEmptyMessageDelayed(MSG_REFRESH, REFRESH_INTERVAL);
-        }
+	private fun initWorkThread() {
+		stopWorkThread()
+		mHandlerThread = HandlerThread("SubtitleFindThread").also { it.start() }
+		val looper = mHandlerThread?.looper ?: return
+		mWorkHandler = Handler(looper) { msg ->
+			try {
+				var delay = REFRESH_INTERVAL.toLong()
+				val player = mMediaPlayer
+				if (player != null && player.isPlaying) {
+					val position = player.currentPosition
+					val subtitle = SubtitleFinder.find(position, mSubtitles)
+					notifyRefreshUI(subtitle)
+					subtitle?.end?.let { delay = it.mSeconds - position }
+				}
+				mWorkHandler?.sendEmptyMessageDelayed(MSG_REFRESH, delay)
+			} catch (e: Exception) {
+				// ignored
+			}
+			true
+		}
+	}
 
-    }
+	private fun stopWorkThread() {
+		mHandlerThread?.quit()
+		mHandlerThread = null
+		mWorkHandler?.removeCallbacksAndMessages(null)
+		mWorkHandler = null
+	}
 
-    @Override
-    public void pause() {
-        stop();
-    }
+	private fun notifyRefreshUI(subtitle: Subtitle?) {
+		val task = mUIRenderTask ?: UIRenderTask(
+			mOnSubtitleChangeListener ?: return
+		).also { mUIRenderTask = it }
+		task.execute(subtitle)
+	}
 
-    @Override
-    public void resume() {
-        start();
-    }
+	private fun notifyPrepared() {
+		mOnSubtitlePreparedListener?.onSubtitlePrepared(mSubtitles)
+	}
 
-    @Override
-    public void stop() {
-        if (mWorkHandler != null) {
-            mWorkHandler.removeMessages(MSG_REFRESH);
-        }
-    }
+	override fun setOnSubtitlePreparedListener(listener: OnSubtitlePreparedListener) {
+		mOnSubtitlePreparedListener = listener
+	}
 
-    @Override
-    public void destroy() {
-        Log.d(TAG, "destroy: ");
-        stopWorkThread();
-        reset();
+	override fun setOnSubtitleChangeListener(listener: OnSubtitleChangeListener) {
+		mOnSubtitleChangeListener = listener
+	}
 
-    }
-
-    private void initWorkThread() {
-        stopWorkThread();
-        mHandlerThread = new HandlerThread("SubtitleFindThread");
-        mHandlerThread.start();
-        mWorkHandler = new Handler(mHandlerThread.getLooper(), msg -> {
-            try {
-                long delay = REFRESH_INTERVAL;
-                if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
-                    long position = mMediaPlayer.getCurrentPosition();
-                    Subtitle subtitle = SubtitleFinder.find(position, mSubtitles);
-                    notifyRefreshUI(subtitle);
-                    if (subtitle != null) {
-                        delay = subtitle.end.mseconds - position;
-                    }
-
-                }
-                if (mWorkHandler != null) {
-                    mWorkHandler.sendEmptyMessageDelayed(MSG_REFRESH, delay);
-                }
-            } catch (Exception e) {
-                // ignored
-            }
-            return true;
-        });
-    }
-
-    private void stopWorkThread() {
-        if (mHandlerThread != null) {
-            mHandlerThread.quit();
-            mHandlerThread = null;
-        }
-        if (mWorkHandler != null) {
-            mWorkHandler.removeCallbacksAndMessages(null);
-            mWorkHandler = null;
-        }
-    }
-
-    private void notifyRefreshUI(final Subtitle subtitle) {
-        if (mUIRenderTask == null) {
-            mUIRenderTask = new UIRenderTask(mOnSubtitleChangeListener);
-        }
-        mUIRenderTask.execute(subtitle);
-    }
-
-    private void notifyPrepared() {
-        if (mOnSubtitlePreparedListener != null) {
-            mOnSubtitlePreparedListener.onSubtitlePrepared(mSubtitles);
-        }
-    }
-
-    @Override
-    public void setOnSubtitlePreparedListener(final OnSubtitlePreparedListener listener) {
-        mOnSubtitlePreparedListener = listener;
-    }
-
-    @Override
-    public void setOnSubtitleChangeListener(final OnSubtitleChangeListener listener) {
-        mOnSubtitleChangeListener = listener;
-    }
-
+	companion object {
+		private val TAG: String = DefaultSubtitleEngine::class.java.simpleName
+		private const val MSG_REFRESH = 0x888
+		private const val REFRESH_INTERVAL = 100
+		private var playSubtitleCacheKey: String? = null
+	}
 }

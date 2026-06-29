@@ -23,226 +23,187 @@
  *              Buddha bless, there will never be bug!!!
  */
 
-package com.github.tvbox.osc.subtitle.widget;
+package com.github.tvbox.osc.subtitle.widget
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.text.Html;
-import android.text.TextPaint;
-import android.text.TextUtils;
-import android.util.AttributeSet;
-import android.view.ViewGroup;
-import android.widget.TextView;
-
-import androidx.annotation.Nullable;
-
-import com.github.tvbox.osc.cache.CacheManager;
-import com.github.tvbox.osc.subtitle.DefaultSubtitleEngine;
-import com.github.tvbox.osc.subtitle.SubtitleEngine;
-import com.github.tvbox.osc.subtitle.model.Subtitle;
-import com.github.tvbox.osc.util.MD5;
-
-import java.util.List;
-
-import xyz.doikki.videoplayer.player.AbstractPlayer;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.text.Html
+import android.text.TextUtils
+import android.util.AttributeSet
+import android.view.ViewGroup
+import android.widget.TextView
+import com.github.tvbox.osc.cache.CacheManager.delete
+import com.github.tvbox.osc.subtitle.DefaultSubtitleEngine
+import com.github.tvbox.osc.subtitle.SubtitleEngine
+import com.github.tvbox.osc.subtitle.SubtitleEngine.OnSubtitleChangeListener
+import com.github.tvbox.osc.subtitle.SubtitleEngine.OnSubtitlePreparedListener
+import com.github.tvbox.osc.subtitle.model.Subtitle
+import com.github.tvbox.osc.util.MD5
+import xyz.doikki.videoplayer.player.AbstractPlayer
 
 /**
  * @author AveryZhong.
  */
-
 @SuppressLint("AppCompatCustomView")
-public class SimpleSubtitleView extends TextView
-        implements SubtitleEngine, SubtitleEngine.OnSubtitleChangeListener,
-        SubtitleEngine.OnSubtitlePreparedListener {
+class SimpleSubtitleView : TextView, SubtitleEngine, OnSubtitleChangeListener, OnSubtitlePreparedListener {
+	var isInternal: Boolean = false
+	var hasInternal: Boolean = false
+	private val backGroundText: TextView //用于描边的TextView
+	private val mSubtitleEngine: SubtitleEngine = DefaultSubtitleEngine()
 
-    private static final String EMPTY_TEXT = "";
-    private final TextView backGroundText;//用于描边的TextView
-    public boolean isInternal = false;
-    public boolean hasInternal = false;
-    private SubtitleEngine mSubtitleEngine;
+	constructor(context: Context?) : super(context) {
+		backGroundText = TextView(context)
+		init()
+	}
 
-    public SimpleSubtitleView(final Context context) {
-        super(context);
-        backGroundText = new TextView(context);
-        init();
-    }
+	constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
+		backGroundText = TextView(context, attrs)
+		init()
+	}
 
-    public SimpleSubtitleView(final Context context, final AttributeSet attrs) {
-        super(context, attrs);
-        backGroundText = new TextView(context, attrs);
-        init();
-    }
+	constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
+		backGroundText = TextView(context, attrs, defStyleAttr)
+		init()
+	}
 
-    public SimpleSubtitleView(final Context context, final AttributeSet attrs,
-                              final int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        backGroundText = new TextView(context, attrs, defStyleAttr);
-        init();
-    }
+	private fun init() {
+		mSubtitleEngine.setOnSubtitlePreparedListener(this)
+		mSubtitleEngine.setOnSubtitleChangeListener(this)
+	}
 
-    private void init() {
-        mSubtitleEngine = new DefaultSubtitleEngine();
-        mSubtitleEngine.setOnSubtitlePreparedListener(this);
-        mSubtitleEngine.setOnSubtitleChangeListener(this);
-    }
+	override fun onSubtitlePrepared(subtitles: List<Subtitle>?) {
+		start()
+	}
 
-    @Override
-    public void onSubtitlePrepared(@Nullable final List<Subtitle> subtitles) {
-        start();
-    }
+	override fun onSubtitleChanged(subtitle: Subtitle?) {
+		if (subtitle == null) {
+			text = ""
+			return
+		}
+		var text = subtitle.content
+		text = text.replace("\\r\\n".toRegex(), "<br />")
+		text = text.replace("\\r".toRegex(), "<br />")
+		text = text.replace("\\n".toRegex(), "<br />")
+		text = text.replace("\\\\N".toRegex(), "<br />")
+		text = text.replace("\\{[\\s\\S]*?\\}".toRegex(), "")
+		text = text.replace("^.*?,.*?,.*?,.*?,.*?,.*?,.*?,.*?,.*?,".toRegex(), "")
+		setText(Html.fromHtml(text))
+	}
 
-    @Override
-    public void onSubtitleChanged(@Nullable final Subtitle subtitle) {
-        if (subtitle == null) {
-            setText(EMPTY_TEXT);
-            return;
-        }
-        String text = subtitle.content;
-        text = text.replaceAll("(?:\\r\\n)", "<br />");
-        text = text.replaceAll("(?:\\r)", "<br />");
-        text = text.replaceAll("(?:\\n)", "<br />");
-        text = text.replaceAll("\\\\N", "<br />");
-        text = text.replaceAll("\\{[\\s\\S]*?\\}", "");
-        text = text.replaceAll("^.*?,.*?,.*?,.*?,.*?,.*?,.*?,.*?,.*?,", "");
-        setText(Html.fromHtml(text));
-    }
+	override fun setSubtitlePath(path: String) {
+		isInternal = false
+		mSubtitleEngine.setSubtitlePath(path)
+	}
 
-    @Override
-    public void setSubtitlePath(final String path) {
-        isInternal = false;
-        mSubtitleEngine.setSubtitlePath(path);
-    }
+	override fun setSubtitleDelay(milliseconds: Int) {
+		mSubtitleEngine.setSubtitleDelay(milliseconds)
+	}
 
-    @Override
-    public void setSubtitleDelay(Integer mseconds) {
-        mSubtitleEngine.setSubtitleDelay(mseconds);
-    }
+	override var playSubtitleCacheKey: String?
+		get() = mSubtitleEngine.playSubtitleCacheKey
+		set(value) {
+			mSubtitleEngine.playSubtitleCacheKey = value
+		}
 
-    public String getPlaySubtitleCacheKey() {
-        return mSubtitleEngine.getPlaySubtitleCacheKey();
-    }
+	fun clearSubtitleCache() {
+		val subtitleCacheKey = playSubtitleCacheKey
+		if (!subtitleCacheKey.isNullOrEmpty()) {
+			delete(MD5.string2MD5(subtitleCacheKey), "")
+		}
+	}
 
-    public void setPlaySubtitleCacheKey(String cacheKey) {
-        mSubtitleEngine.setPlaySubtitleCacheKey(cacheKey);
-    }
+	override fun reset() {
+		mSubtitleEngine.reset()
+	}
 
-    public void clearSubtitleCache() {
-        String subtitleCacheKey = getPlaySubtitleCacheKey();
-        if (subtitleCacheKey != null && !subtitleCacheKey.isEmpty()) {
-            CacheManager.delete(MD5.string2MD5(subtitleCacheKey), "");
-        }
-    }
+	override fun start() {
+		mSubtitleEngine.start()
+	}
 
-    @Override
-    public void reset() {
-        mSubtitleEngine.reset();
-    }
+	override fun pause() {
+		mSubtitleEngine.pause()
+	}
 
-    @Override
-    public void start() {
-        mSubtitleEngine.start();
-    }
+	override fun resume() {
+		mSubtitleEngine.resume()
+	}
 
-    @Override
-    public void pause() {
-        mSubtitleEngine.pause();
-    }
+	override fun stop() {
+		mSubtitleEngine.stop()
+	}
 
-    @Override
-    public void resume() {
-        mSubtitleEngine.resume();
-    }
+	override fun destroy() {
+		mSubtitleEngine.destroy()
+	}
 
-    @Override
-    public void stop() {
-        mSubtitleEngine.stop();
-    }
+	override fun bindToMediaPlayer(mediaPlayer: AbstractPlayer) {
+		mSubtitleEngine.bindToMediaPlayer(mediaPlayer)
+	}
 
-    @Override
-    public void destroy() {
-        mSubtitleEngine.destroy();
-    }
+	override fun setOnSubtitlePreparedListener(listener: OnSubtitlePreparedListener) {
+		mSubtitleEngine.setOnSubtitlePreparedListener(listener)
+	}
 
-    @Override
-    public void bindToMediaPlayer(AbstractPlayer mediaPlayer) {
-        mSubtitleEngine.bindToMediaPlayer(mediaPlayer);
-    }
+	override fun setOnSubtitleChangeListener(listener: OnSubtitleChangeListener) {
+		mSubtitleEngine.setOnSubtitleChangeListener(listener)
+	}
 
-    @Override
-    public void setOnSubtitlePreparedListener(final OnSubtitlePreparedListener listener) {
-        mSubtitleEngine.setOnSubtitlePreparedListener(listener);
-    }
+	override fun onDetachedFromWindow() {
+		destroy()
+		super.onDetachedFromWindow()
+	}
 
-    @Override
-    public void setOnSubtitleChangeListener(final OnSubtitleChangeListener listener) {
-        mSubtitleEngine.setOnSubtitleChangeListener(listener);
-    }
+	override fun setLayoutParams(params: ViewGroup.LayoutParams?) {
+		// 同步布局参数
+		backGroundText.layoutParams = params
+		super.setLayoutParams(params)
+	}
 
-    @Override
-    protected void onDetachedFromWindow() {
-        destroy();
-        super.onDetachedFromWindow();
-    }
+	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+		val tt = backGroundText.text
+		// 两个TextView上的文字必须一致
+		if (TextUtils.isEmpty(tt) || tt != this.text) {
+			backGroundText.text = text
+			this.postInvalidate()
+		}
+		backGroundText.measure(widthMeasureSpec, heightMeasureSpec)
+		super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+	}
 
-    @Override
-    public void setLayoutParams(ViewGroup.LayoutParams params) {
-        //同步布局参数
-        backGroundText.setLayoutParams(params);
-        super.setLayoutParams(params);
-    }
+	override fun setTextSize(size: Float) {
+		super.setTextSize(size)
+		backGroundText.textSize = size
+	}
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        CharSequence tt = backGroundText.getText();
-        //两个TextView上的文字必须一致
-        if (TextUtils.isEmpty(tt) || !tt.equals(this.getText())) {
-            backGroundText.setText(getText());
-            this.postInvalidate();
-        }
-        backGroundText.measure(widthMeasureSpec, heightMeasureSpec);
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-    }
+	override fun onTextChanged(text: CharSequence?, start: Int, lengthBefore: Int, lengthAfter: Int) {
+		backGroundText.text = text
+		super.onTextChanged(text, start, lengthBefore, lengthAfter)
+	}
 
-    @Override
-    public void setTextSize(float size) {
-        super.setTextSize(size);
-        backGroundText.setTextSize(size);
-    }
+	override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+		backGroundText.layout(left, top, right, bottom)
+		super.onLayout(changed, left, top, right, bottom)
+	}
 
-    @Override
-    protected void onTextChanged(CharSequence text, int start, int lengthBefore, int lengthAfter) {
-        if (backGroundText != null) {
-            backGroundText.setText(text);
-        }
-        super.onTextChanged(text, start, lengthBefore, lengthAfter);
-    }
+	override fun onDraw(canvas: Canvas) {
+		// 其他地方，backGroundText和super的先后顺序影响不会很大，但是此处必须要先绘制backGroundText，
+		drawBackGroundText()
+		backGroundText.draw(canvas)
+		super.onDraw(canvas)
+	}
 
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        backGroundText.layout(left, top, right, bottom);
-        super.onLayout(changed, left, top, right, bottom);
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        //其他地方，backGroundText和super的先后顺序影响不会很大，但是此处必须要先绘制backGroundText，
-        drawBackGroundText();
-        backGroundText.draw(canvas);
-        super.onDraw(canvas);
-    }
-
-    private void drawBackGroundText() {
-        TextPaint tp = backGroundText.getPaint();
-        //设置描边宽度
-        tp.setStrokeWidth(10);
-        //背景描边并填充全部
-        tp.setStyle(Paint.Style.FILL_AND_STROKE);
-        //设置描边颜色
-        backGroundText.setTextColor(Color.BLACK);
-        //将背景的文字对齐方式做同步
-        backGroundText.setGravity(getGravity());
-    }
+	private fun drawBackGroundText() {
+		val tp = backGroundText.paint
+		// 设置描边宽度
+		tp.strokeWidth = 10f
+		// 背景描边并填充全部
+		tp.style = Paint.Style.FILL_AND_STROKE
+		// 设置描边颜色
+		backGroundText.setTextColor(Color.BLACK)
+		// 将背景的文字对齐方式做同步
+		backGroundText.gravity = gravity
+	}
 }
