@@ -167,14 +167,14 @@ class PythonLoader {
 					override fun onResponse(response: Response?) {
 					}
 				}
-				OkHttpUtil.get(OkGoHelper.defaultClient, url, str2map(param), str2map(header), callBack)
-				callBack.result.body.byteStream()
+				OkHttpUtil.get(OkGoHelper.defaultClient, url.orEmpty(), str2map(param), str2map(header), callBack)
+				callBack.result?.body?.byteStream() ?: throw RuntimeException("Empty response body")
 			}
 	}
 
 	fun getFileString(url: String?, header: String?): String? {
 		return stringCallback?.get(url, str2map(header))
-			?: OkHttpUtil.string(url, str2map(header))
+			?: OkHttpUtil.string(url.orEmpty(), str2map(header))
 	}
 
 	fun setFileStreamCallback(callback: FileStreamCallback?): PythonLoader {

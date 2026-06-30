@@ -2,6 +2,7 @@ package com.github.tvbox.osc.base
 
 import android.app.Activity
 import android.app.Application
+import androidx.media3.common.util.UnstableApi
 import com.github.catvod.crawler.JsLoader
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.callback.EmptyCallback
@@ -30,8 +31,9 @@ class App : Application() {
 	var vodInfo: VodInfo? = null
 
 	val currentActivity: Activity?
-		get() = AppManager.getInstance().currentActivity()
+		get() = AppManager.instance.currentActivity()
 
+	@UnstableApi
 	override fun onCreate() {
 		super.onCreate()
 		instance = this
@@ -80,7 +82,7 @@ class App : Application() {
 		fun getP2P(): P2PClass? {
 			try {
 				if (p == null) {
-					p = P2PClass(FileUtils.getExternalCachePath())
+					p = P2PClass(FileUtils.externalCachePath)
 				}
 				return p
 			} catch (e: Exception) {

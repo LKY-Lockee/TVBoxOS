@@ -21,6 +21,7 @@ import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.media3.common.util.UnstableApi
 import androidx.recyclerview.widget.DiffUtil
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
@@ -402,7 +403,7 @@ class VodController(context: Context) : BaseController(context) {
 			handle.postDelayed(runnable, myHandleSeconds.toLong())
 			try {
 				var playerType = mPlayerConfig?.getInt("pl") ?: return@setOnClickListener
-				val existPlayerTypes = PlayerHelper.getExistPlayerTypes()
+				val existPlayerTypes = PlayerHelper.existPlayerTypes
 				var playerTypeIdx = 0
 				val playerTypeSize = existPlayerTypes.size
 				for (i in 0..<playerTypeSize) {
@@ -435,7 +436,7 @@ class VodController(context: Context) : BaseController(context) {
 			try {
 				val playerType = mPlayerConfig?.getInt("pl") ?: return@setOnLongClickListener true
 				var defaultPos = 0
-				val players = PlayerHelper.getExistPlayerTypes()
+				val players = PlayerHelper.existPlayerTypes
 				val renders = ArrayList<Int>()
 				for (p in players.indices) {
 					renders.add(p)
@@ -643,10 +644,11 @@ class VodController(context: Context) : BaseController(context) {
 	}
 
 	fun initLandscapePortraitBtnInfo() {
-		if (mControlWrapper != null && mActivity != null) {
+		val activity = mActivity ?: return
+		if (mControlWrapper != null) {
 			val width = mControlWrapper.videoSize[0]
 			val height = mControlWrapper.videoSize[1]
-			val screenSqrt = ScreenUtils.getSqrt(mActivity)
+			val screenSqrt = ScreenUtils.getSqrt(activity)
 			if (screenSqrt < 10.0 && width <= height) {
 				mLandscapePortraitBtn?.visibility = VISIBLE
 				mLandscapePortraitBtn?.text = "竖屏"
@@ -676,7 +678,7 @@ class VodController(context: Context) : BaseController(context) {
 	}
 
 	fun initSubtitleInfo() {
-		val subtitleTextSize = SubtitleHelper.getTextSize(mActivity)
+		val subtitleTextSize = SubtitleHelper.getTextSize(mActivity ?: return)
 		mSubtitleView?.setTextSize(subtitleTextSize.toFloat())
 	}
 
@@ -1150,6 +1152,7 @@ class VodController(context: Context) : BaseController(context) {
 			.tag("m3u8-1")
 			.headers(okGoHeaders)
 			.execute(object : AbsCallback<String>() {
+				@UnstableApi
 				override fun onSuccess(response: Response<String>?) {
 					val content = response?.body()
 					content?.let {
@@ -1201,6 +1204,7 @@ class VodController(context: Context) : BaseController(context) {
 		return !line.startsWith("#") && (line.endsWith(".m3u8") || line.contains(".m3u8?"))
 	}
 
+	@UnstableApi
 	private fun processM3u8Content(url: String, content: String?, headers: HashMap<String?, String?>?) {
 		val basePath = getBasePath(url)
 		RemoteServer.m3u8Content = M3U8.purify(basePath, content)
@@ -1221,6 +1225,7 @@ class VodController(context: Context) : BaseController(context) {
 			.tag("m3u8-2")
 			.headers(okGoHeaders)
 			.execute(object : AbsCallback<String>() {
+				@UnstableApi
 				override fun onSuccess(response: Response<String>) {
 					val content = response.body()
 					TVBoxRuntimeLog.i("echo-m3u82-to-play")

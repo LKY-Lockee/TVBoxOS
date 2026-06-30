@@ -12,24 +12,24 @@ import androidx.room.Query
  */
 @Dao
 interface VodCollectDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(record: VodCollect): Long
+	@Insert(onConflict = OnConflictStrategy.REPLACE)
+	fun insert(record: VodCollect): Long
 
-    @Delete
-    fun delete(record: VodCollect): Int
+	@Delete
+	fun delete(record: VodCollect): Int
 
-    @Query("delete from vodCollect where `id`=:id")
-    fun delete(id: Int)
+	@Query("delete from vodCollect where `id`=:id")
+	fun delete(id: Int)
 
-    @Query("delete from vodCollect")
-    fun deleteAll()
+	@Query("delete from vodCollect")
+	fun deleteAll()
 
-    @Query("select * from vodCollect where `id`=:id")
-    fun getVodCollect(id: Int): VodCollect?
+	@Query("select * from vodCollect where `id`=:id")
+	fun getVodCollect(id: Int): VodCollect?
 
-    @Query("select * from vodCollect where `sourceKey`=:sourceKey and `vodId`=:vodId")
-    fun getVodCollect(sourceKey: String, vodId: String): VodCollect?
+	@Query("select * from vodCollect where `sourceKey`=:sourceKey and `vodId`=:vodId")
+	fun getVodCollect(sourceKey: String, vodId: String): VodCollect?
 
-    @Query("select * from vodCollect order by updateTime desc")
-    fun getAll(): List<VodCollect>
+	@Query("select * from vodCollect order by updateTime desc")
+	fun getAll(): List<VodCollect>
 }

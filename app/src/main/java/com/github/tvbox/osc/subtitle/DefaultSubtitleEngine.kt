@@ -76,7 +76,7 @@ class DefaultSubtitleEngine : SubtitleEngine {
 					return
 				}
 				mSubtitles = ArrayList(timedTextObject.captions.values)
-				setSubtitleDelay(SubtitleHelper.getTimeDelay())
+				setSubtitleDelay(SubtitleHelper.timeDelay)
 				notifyPrepared()
 
 				val subtitlePath = successResult.subtitlePath

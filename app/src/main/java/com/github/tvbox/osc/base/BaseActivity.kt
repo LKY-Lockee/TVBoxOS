@@ -66,7 +66,7 @@ abstract class BaseActivity : AppCompatActivity(), CustomAdapt {
 		super.onCreate(savedInstanceState)
 		setContentView(this.layoutResID)
 		mContext = this
-		AppManager.getInstance().addActivity(this)
+		AppManager.instance.addActivity(this)
 		setupAppBarTransparency()
 		init()
 	}
@@ -92,7 +92,7 @@ abstract class BaseActivity : AppCompatActivity(), CustomAdapt {
 
 	override fun onDestroy() {
 		super.onDestroy()
-		AppManager.getInstance().finishActivity(this)
+		AppManager.instance.finishActivity(this)
 	}
 
 	protected abstract fun init()

@@ -25,7 +25,7 @@ object AppDataManager {
 			.also { dbInstance = it }
 	}
 
-	fun backup(path: File?): Boolean {
+	fun backup(path: File): Boolean {
 		dbInstance?.let { db ->
 			if (db.isOpen) {
 				db.close()
@@ -40,7 +40,7 @@ object AppDataManager {
 		}
 	}
 
-	fun restore(path: File?): Boolean {
+	fun restore(path: File): Boolean {
 		dbInstance?.let { db ->
 			if (db.isOpen) {
 				db.close()

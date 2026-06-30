@@ -150,7 +150,7 @@ class RemoteServer(port: Int, private val mContext: Context) : NanoHTTPD(port) {
 				} else if (fileName == "/dns-query") {
 					val name = session.parameters["name"]?.firstOrNull()
 					val rs: ByteArray? = try {
-						OkGoHelper.dnsOverHttps.lookupHttpsForwardSync(name ?: return null)
+						OkGoHelper.dnsOverHttps?.lookupHttpsForwardSync(name ?: return null)
 					} catch (th: Throwable) {
 						ByteArray(0)
 					}
@@ -276,7 +276,7 @@ class RemoteServer(port: Int, private val mContext: Context) : NanoHTTPD(port) {
 
 	val serverAddress: String
 		get() {
-			val ipAddress: String? = getLocalIPAddress(mContext)
+			val ipAddress: String = getLocalIPAddress(mContext)
 			return "http://$ipAddress:$serverPort/"
 		}
 
@@ -375,7 +375,7 @@ class RemoteServer(port: Int, private val mContext: Context) : NanoHTTPD(port) {
 
 		@SuppressLint("DefaultLocale")
 		@Suppress("DEPRECATION")
-		fun getLocalIPAddress(context: Context): String? {
+		fun getLocalIPAddress(context: Context): String {
 			val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
 			val ipAddress = wifiManager.connectionInfo.ipAddress
 			if (ipAddress == 0) {
@@ -389,7 +389,7 @@ class RemoteServer(port: Int, private val mContext: Context) : NanoHTTPD(port) {
 							while (enumIpAddr.hasMoreElements()) {
 								val inetAddress = enumIpAddr.nextElement()
 								if (!inetAddress.isLoopbackAddress && inetAddress is Inet4Address) {
-									return inetAddress.hostAddress
+									return inetAddress.hostAddress ?: "0.0.0.0"
 								}
 							}
 						}

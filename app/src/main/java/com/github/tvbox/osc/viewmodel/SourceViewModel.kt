@@ -242,7 +242,7 @@ class SourceViewModel : ViewModel() {
 					if (extend.isNotEmpty()) {
 						params["extend"] = extend
 					}
-					RemoteTVBox.post(sourceBean.api, params, object : Callback {
+					RemoteTVBox.post(sourceBean.api ?: run { sortResult.postValue(null); return }, params, object : Callback {
 						override fun onFailure(call: Call, e: okio.IOException) {
 							sortResult.postValue(null)
 						}
@@ -531,7 +531,7 @@ class SourceViewModel : ViewModel() {
 							xml(detailResult, xml ?: return, sourceBean.key)
 						} else {
 							val json = response?.body()
-							TVBoxRuntimeLog.i(json)
+							TVBoxRuntimeLog.i(json ?: "")
 							json(detailResult, json, sourceBean.key)
 						}
 					}
@@ -699,7 +699,7 @@ class SourceViewModel : ViewModel() {
 
 					override fun onSuccess(response: com.lzy.okgo.model.Response<String?>) {
 						val json = response.body()
-						TVBoxRuntimeLog.i(json)
+						TVBoxRuntimeLog.i(json ?: "")
 						json(quickSearchResult, json, sourceBean.key)
 					}
 
@@ -767,8 +767,9 @@ class SourceViewModel : ViewModel() {
 				val result = JSONObject()
 				try {
 					result.put("key", url)
-					val playUrl = (sourceBean.playerUrl ?: return).trim { it <= ' ' }
-					if (DefaultConfig.isVideoFormat(url) && playUrl.isEmpty()) {
+					val playerUrlNonNull = sourceBean.playerUrl ?: return
+					val playUrl = playerUrlNonNull.trim { it <= ' ' }
+					if (DefaultConfig.isVideoFormat(url.orEmpty()) && playUrl.isEmpty()) {
 						result.put("parse", 0)
 						result.put("url", url)
 					} else {
@@ -805,7 +806,7 @@ class SourceViewModel : ViewModel() {
 
 					override fun onSuccess(response: com.lzy.okgo.model.Response<String?>?) {
 						val json = response?.body()
-						TVBoxRuntimeLog.i(json)
+						TVBoxRuntimeLog.i(json ?: "")
 						try {
 							val result = JSONObject(json ?: return)
 							result.put("key", url)
@@ -843,13 +844,13 @@ class SourceViewModel : ViewModel() {
 		val future: Future<String> = spThreadPool.submit<String> {
 			var result = extend
 			if (extend.startsWith("http://127.0.0.1")) {
-				var path = extend.replace("^http.+/file/".toRegex(), FileUtils.getRootPath() + "/")
+				var path = extend.replace("^http.+/file/".toRegex(), FileUtils.rootPath + "/")
 				path = path.replace("localhost/".toRegex(), "/")
 				result = FileUtils.readFileToString(path, "UTF-8")
 				result = tryMinifyJson(result)
 				extendCache.putIfAbsent(key, result)
 			} else if (extend.startsWith("http")) {
-				result = OkHttpUtil.string(extend, null)
+				result = OkHttpUtil.string(extend, null) ?: result
 				if (result.isNotEmpty()) {
 					result = tryMinifyJson(result)
 					if (result.length > 2500) result = extend

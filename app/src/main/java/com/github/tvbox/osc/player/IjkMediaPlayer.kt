@@ -70,7 +70,7 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 	}
 
 	override fun setDataSource(path: String?, headers: MutableMap<String?, String?>?) {
-		var resolvedPath = path
+		var resolvedPath = path ?: return
 		try {
 			when (getStreamType(resolvedPath)) {
 				RTSP_UDP_RTP -> {
@@ -82,7 +82,7 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 				}
 
 				CACHE_VIDEO -> if (Hawk.get(HawkConfig.IJK_CACHE_PLAY, false)) {
-					val cachePath = FileUtils.getCachePath() + "/ijkcaches/"
+					val cachePath = FileUtils.cachePath + "/ijkcaches/"
 					val cacheFile = File(cachePath)
 					if (!cacheFile.exists()) cacheFile.mkdirs()
 					val tmpMd5 = MD5.string2MD5(resolvedPath)
@@ -218,7 +218,7 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 
 	fun loadDefaultTrack(trackInfo: TrackInfo?, playKey: String?) {
 		if (trackInfo != null && trackInfo.audio.size > 1) {
-			val trackIndex: Int = memory.ijkLoad(playKey)
+			val trackIndex: Int = memory.ijkLoad(playKey ?: return)
 			if (trackIndex == -1) {
 				val firstIndex = trackInfo.audio[0].index
 				setTrack(firstIndex)

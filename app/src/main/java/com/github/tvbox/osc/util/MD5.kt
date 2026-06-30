@@ -32,7 +32,7 @@ object MD5 {
 	/**
 	 * 消息摘要
 	 */
-	private val sDigest: MessageDigest? = try {
+	private val messageDigest: MessageDigest? = try {
 		MessageDigest.getInstance("MD5")
 	} catch (e: NoSuchAlgorithmException) {
 		Log.e("获取MD5信息摘要失败", e.message.orEmpty())
@@ -52,13 +52,13 @@ object MD5 {
 	 * @param res 源字符串
 	 * @return MD5值
 	 */
-	fun encode(res: String): String? {
+	fun encode(res: String): String {
 		return encode(res.toByteArray())
 	}
 
-	private fun encode(bytes: ByteArray): String? {
+	private fun encode(bytes: ByteArray): String {
 		return try {
-			val digest = sDigest ?: return null
+			val digest = messageDigest ?: return ""
 			digest.update(bytes)
 			val md = digest.digest()
 			val j = md.size
@@ -70,7 +70,7 @@ object MD5 {
 			}
 			String(str)
 		} catch (e: Exception) {
-			null
+			""
 		}
 	}
 
@@ -106,19 +106,19 @@ object MD5 {
 	/**
 	 * MD5加码 生成32位md5码
 	 */
-	fun string2MD5(inStr: String): String? {
-		if (sDigest == null) {
+	fun string2MD5(inStr: String?): String {
+		if (messageDigest == null) {
 			Log.e("MD5", "MD5信息摘要初始化失败")
-			return null
-		} else if (TextUtils.isEmpty(inStr)) {
+			return ""
+		} else if (inStr.isNullOrEmpty()) {
 			Log.e("MD5", "参数strSource不能为空")
-			return null
+			return ""
 		}
 		val charArray = inStr.toCharArray()
 		val byteArray = ByteArray(charArray.size)
 
 		for (i in charArray.indices) byteArray[i] = charArray[i].code.toByte()
-		val md5Bytes = sDigest.digest(byteArray)
+		val md5Bytes = messageDigest.digest(byteArray)
 		val hexValue = StringBuilder()
 		for (md5Byte in md5Bytes) {
 			val value = md5Byte.toInt() and 0xff
@@ -134,21 +134,21 @@ object MD5 {
 	 * @param strSource 待加密的源字符串
 	 * @return 加密后的字符串，不支持此类字符集合返回null
 	 */
-	fun encrypt(strSource: String): String? {
-		if (sDigest == null) {
+	fun encrypt(strSource: String): String {
+		if (messageDigest == null) {
 			Log.e("MD5", "MD5信息摘要初始化失败")
-			return null
+			return ""
 		} else if (TextUtils.isEmpty(strSource)) {
 			Log.e("MD5", "参数strSource不能为空")
-			return null
+			return ""
 		}
-		val md5Bytes = sDigest.digest(strSource.toByteArray(StandardCharsets.UTF_8))
+		val md5Bytes = messageDigest.digest(strSource.toByteArray(StandardCharsets.UTF_8))
 		val encryptBytes = Base64.encode(md5Bytes, Base64.DEFAULT)
 		val strEncrypt = String(encryptBytes, StandardCharsets.UTF_8)
 		return strEncrypt.substring(0, strEncrypt.length - 1) // 截断Base64产生的换行符
 	}
 
-	fun encrypt4login(strSource: String, appSecret: String): String? {
+	fun encrypt4login(strSource: String, appSecret: String): String {
 		val str = encrypt(strSource) + appSecret
 		return string2MD5(str)
 	}

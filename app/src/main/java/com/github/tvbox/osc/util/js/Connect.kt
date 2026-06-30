@@ -14,7 +14,6 @@ import okhttp3.Headers
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -22,7 +21,7 @@ import okhttp3.Response
 import java.util.Random
 
 object Connect {
-	var client: OkHttpClient = OkGoHelper.defaultClient
+	private var client = OkGoHelper.defaultClient
 
 	fun to(url: String, req: Req): Call {
 		return client.newCall(getRequest(url, req, req.header.toHeaders()))

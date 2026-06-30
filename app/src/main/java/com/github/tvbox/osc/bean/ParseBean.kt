@@ -24,7 +24,7 @@ class ParseBean {
 	var ext: String? = null
 
 	var url: String? = null
-		get() = DefaultConfig.checkReplaceProxy(field)
+		get() = DefaultConfig.checkReplaceProxy(field.orEmpty())
 
 	fun mixUrl(): String? {
 		val currentExt = ext ?: return null

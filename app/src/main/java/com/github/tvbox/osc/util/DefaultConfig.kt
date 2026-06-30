@@ -109,7 +109,7 @@ object DefaultConfig {
 		return snifferMatch.matcher(url).find()
 	}
 
-	fun safeJsonString(obj: JsonObject, key: String, defaultVal: String?): String? {
+	fun safeJsonString(obj: JsonObject, key: String, defaultVal: String): String {
 		return try {
 			if (obj.has(key)) {
 				if (obj.get(key).isJsonObject || obj.get(key).isJsonArray)

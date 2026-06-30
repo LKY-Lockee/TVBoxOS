@@ -16,7 +16,7 @@ class SearchReceiver : BroadcastReceiver() {
 	override fun onReceive(context: Context, intent: Intent) {
 		if (ACTION != intent.action || intent.extras == null) return
 		val searchTitle = intent.extras?.getString("title") ?: return
-		if (AppManager.getInstance().getActivity(HomeActivity::class.java) != null) {
+		if (AppManager.instance.getActivity(HomeActivity::class.java) != null) {
 			EventBus.getDefault().post(ServerEvent(ServerEvent.SERVER_SEARCH, searchTitle))
 		} else {
 			val newIntent = Intent(context, HomeActivity::class.java)

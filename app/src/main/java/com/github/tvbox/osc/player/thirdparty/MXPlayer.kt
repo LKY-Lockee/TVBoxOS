@@ -6,9 +6,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Parcelable
 import android.util.Log
+import androidx.core.net.toUri
 import com.github.tvbox.osc.base.App.Companion.instance
 import java.net.URLEncoder
-import androidx.core.net.toUri
 
 object MXPlayer {
 	const val TAG: String = "ThirdParty.MXPlayer"

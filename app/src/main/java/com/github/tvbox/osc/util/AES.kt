@@ -7,7 +7,7 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
 object AES {
-	private fun rightPadding(key: String, replace: String, length: Int): String {
+	fun rightPadding(key: String, replace: String, length: Int): String {
 		val curLength = key.trim().length
 		return when {
 			curLength > length -> key.trim().substring(0, length)
@@ -16,7 +16,7 @@ object AES {
 		}
 	}
 
-	fun ecb(data: String, key: String): String? {
+	fun ecb(data: String, key: String): String {
 		return try {
 			val paddedKey = rightPadding(key, "0", 16)
 			val data2 = toBytes(data)
@@ -26,11 +26,11 @@ object AES {
 			String(cipher.doFinal(data2))
 		} catch (e: Exception) {
 			e.printStackTrace()
-			null
+			""
 		}
 	}
 
-	fun cbc(data: String, key: String, iv: String): String? {
+	fun cbc(data: String, key: String, iv: String): String {
 		return try {
 			val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
 			val keySpec = SecretKeySpec(key.toByteArray(), "AES")
@@ -39,7 +39,7 @@ object AES {
 			String(cipher.doFinal(toBytes(data)))
 		} catch (e: Exception) {
 			e.printStackTrace()
-			null
+			""
 		}
 	}
 

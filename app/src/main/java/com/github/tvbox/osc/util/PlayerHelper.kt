@@ -58,6 +58,7 @@ object PlayerHelper {
 					}
 				}
 			}
+
 			2 -> ExoMediaPlayerFactory.create()
 			else -> AndroidMediaPlayerFactory.create()
 		}
@@ -94,6 +95,7 @@ object PlayerHelper {
 					}
 				}
 			}
+
 			2 -> ExoMediaPlayerFactory.create()
 			else -> AndroidMediaPlayerFactory.create()
 		}
@@ -231,6 +233,7 @@ object PlayerHelper {
 				val df = if (mbps < 0.1) DecimalFormat("0.00") else DecimalFormat("0.0")
 				df.format(mbps) + "Mbps"
 			}
+
 			else -> if (show) "0bps" else ""
 		}
 	}

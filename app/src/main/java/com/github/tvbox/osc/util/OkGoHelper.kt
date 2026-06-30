@@ -39,8 +39,10 @@ object OkGoHelper {
 	var is_doh: Boolean = false
 	var myHosts: MutableMap<String, String>? = null
 	var ItvClient: OkHttpClient? = null
-	var defaultClient: OkHttpClient? = null
-	var noRedirectClient: OkHttpClient? = null
+	lateinit var defaultClient: OkHttpClient
+		private set
+	lateinit var noRedirectClient: OkHttpClient
+		private set
 
 	@UnstableApi
 	fun initExoOkHttpClient() {

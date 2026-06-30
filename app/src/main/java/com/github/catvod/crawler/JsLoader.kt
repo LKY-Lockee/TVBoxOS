@@ -23,7 +23,7 @@ class JsLoader {
 		classes.clear()
 	}
 
-	fun getSpider(key: String, api: String?, ext: String?, jar: String): Spider? {
+	fun getSpider(key: String, api: String, ext: String?, jar: String): Spider? {
 		if (spiders.containsKey(key)) {
 			Log.i("JSLoader", "echo-getSpider cached")
 			return spiders[key]
