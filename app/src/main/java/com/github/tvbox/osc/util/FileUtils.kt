@@ -1,389 +1,370 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.os.Environment;
-import android.text.TextUtils;
-import android.util.Base64;
+import android.os.Environment
+import android.text.TextUtils
+import android.util.Base64
+import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.server.ControlManager
+import com.github.tvbox.osc.util.urlhttp.OkHttpUtil
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.orhanobut.hawk.Hawk
+import org.json.JSONObject
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.util.regex.Pattern
+import kotlin.math.max
 
-import com.github.tvbox.osc.base.App;
-import com.github.tvbox.osc.server.ControlManager;
-import com.github.tvbox.osc.util.urlhttp.OkHttpUtil;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.orhanobut.hawk.Hawk;
+object FileUtils {
+	// JS 工具方法
+	private val URL_JOIN: Pattern = Pattern.compile("^http.*\\.(js|txt|json)", Pattern.MULTILINE or Pattern.CASE_INSENSITIVE)
+	private val cachedDirFiles: MutableMap<String, MutableSet<String>> = HashMap()
 
-import org.json.JSONObject;
+	fun writeSimple(data: ByteArray?, dst: File): Boolean {
+		return try {
+			if (dst.exists()) dst.delete()
+			BufferedOutputStream(Files.newOutputStream(dst.toPath())).use { bos ->
+				bos.write(data)
+			}
+			true
+		} catch (e: IOException) {
+			e.printStackTrace()
+			false
+		}
+	}
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+	fun readSimple(src: File): ByteArray? {
+		return try {
+			BufferedInputStream(Files.newInputStream(src.toPath())).use { bis ->
+				val len = bis.available()
+				val data = ByteArray(len)
+				bis.read(data)
+				data
+			}
+		} catch (e: IOException) {
+			e.printStackTrace()
+			null
+		}
+	}
 
-public class FileUtils {
+	fun copyFile(source: File, dest: File) {
+		Files.newInputStream(source.toPath()).use { input ->
+			Files.newOutputStream(dest.toPath()).use { output ->
+				val buffer = ByteArray(1024)
+				var length: Int
+				while ((input.read(buffer).also { length = it }) > 0) {
+					output.write(buffer, 0, length)
+				}
+			}
+		}
+	}
 
-    //JS  工具方法
-    private static final Pattern URL_JOIN = Pattern.compile("^http.*\\.(js|txt|json)", Pattern.MULTILINE | Pattern.CASE_INSENSITIVE);
-    private static final Map<String, Set<String>> cachedDirFiles = new HashMap<>();
+	fun recursiveDelete(file: File) {
+		if (!file.exists()) return
+		if (file.isDirectory) {
+			file.listFiles()?.forEach { recursiveDelete(it) }
+		}
+		file.delete()
+	}
 
-    public static boolean writeSimple(byte[] data, File dst) {
-        try {
-            if (dst.exists())
-                dst.delete();
-            BufferedOutputStream bos = new BufferedOutputStream(Files.newOutputStream(dst.toPath()));
-            bos.write(data);
-            bos.close();
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
+	fun readFileToString(path: String, charsetName: String): String {
+		// 定义返回结果
+		val jsonString = StringBuilder()
 
-    public static byte[] readSimple(File src) {
-        try {
-            BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(src.toPath()));
-            int len = bis.available();
-            byte[] data = new byte[len];
-            bis.read(data);
-            bis.close();
-            return data;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
+		try {
+			BufferedReader(InputStreamReader(Files.newInputStream(Paths.get(path)), charsetName)).use { reader ->
+				// 读取文件
+				var thisLine: String?
+				while ((reader.readLine().also { thisLine = it }) != null) {
+					jsonString.append(thisLine)
+				}
+			}
+		} catch (e: IOException) {
+			e.printStackTrace()
+		}
+		// 返回拼接好的JSON String
+		return jsonString.toString()
+	}
 
-    public static void copyFile(File source, File dest) throws IOException {
-        try (InputStream is = Files.newInputStream(source.toPath()); OutputStream os = Files.newOutputStream(dest.toPath())) {
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = is.read(buffer)) > 0) {
-                os.write(buffer, 0, length);
-            }
-        }
-    }
+	val rootPath: String
+		get() = Environment.getExternalStorageDirectory().absolutePath
 
-    public static void recursiveDelete(File file) {
-        if (!file.exists())
-            return;
-        if (file.isDirectory()) {
-            for (File f : file.listFiles()) {
-                recursiveDelete(f);
-            }
-        }
-        file.delete();
-    }
+	fun getLocal(path: String): File {
+		return File(path.replace("file:/", rootPath))
+	}
 
-    public static String readFileToString(String path, String charsetName) {
-        // 定义返回结果
-        StringBuilder jsonString = new StringBuilder();
+	val cacheDir: File?
+		get() = App.instance.cacheDir
 
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(Files.newInputStream(Paths.get(path)), charsetName))) {
-            // 读取文件
-            String thisLine;
-            while ((thisLine = in.readLine()) != null) {
-                jsonString.append(thisLine);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // 返回拼接好的JSON String
-        return jsonString.toString();
-    }
+	val cachePath: String
+		get() = cacheDir?.absolutePath.orEmpty()
 
-    public static String getRootPath() {
-        return Environment.getExternalStorageDirectory().getAbsolutePath();
-    }
+	val filePath: String
+		get() = App.instance.filesDir.absolutePath
 
-    public static File getLocal(String path) {
-        return new File(path.replace("file:/", getRootPath()));
-    }
+	fun cleanDirectory(dir: File) {
+		if (!dir.exists()) return
+		dir.listFiles()?.forEach { one ->
+			try {
+				deleteFile(one)
+			} catch (e: Exception) {
+				e.printStackTrace()
+			}
+		}
+	}
 
-    public static File getCacheDir() {
-        return App.getInstance().getCacheDir();
-    }
+	fun isWeekAgo(file: File): Boolean {
+		val oneWeekMillis = 3L * 24 * 60 * 60 * 1000
+		val timeDiff = System.currentTimeMillis() - file.lastModified()
+		return timeDiff > oneWeekMillis
+	}
 
-    public static String getCachePath() {
-        return getCacheDir().getAbsolutePath();
-    }
+	fun deleteFile(file: File) {
+		if (!file.exists()) return
+		if (file.isFile) {
+			if (file.canWrite()) file.delete()
+			return
+		}
+		if (file.isDirectory) {
+			val files = file.listFiles()
+			if (files == null || files.isEmpty()) {
+				if (file.canWrite()) file.delete()
+				return
+			}
+			for (one in files) {
+				deleteFile(one)
+			}
+		}
+	}
 
-    public static String getFilePath() {
-        return App.getInstance().getFilesDir().getAbsolutePath();
-    }
+	fun cleanPlayerCache() {
+		val ijkCachePath = "$cachePath/ijkcaches/"
+		val thunderCachePath = "$cachePath/thunder/"
+		val ijkCacheDir = File(ijkCachePath)
+		val thunderCacheDir = File(thunderCachePath)
+		try {
+			if (ijkCacheDir.exists()) cleanDirectory(ijkCacheDir)
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+		try {
+			if (thunderCacheDir.exists()) cleanDirectory(thunderCacheDir)
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+	}
 
-    public static void cleanDirectory(File dir) {
-        if (!dir.exists()) return;
-        File[] files = dir.listFiles();
-        if (files == null) return;
-        for (File one : files) {
-            try {
-                deleteFile(one);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
+	fun read(path: String): String {
+		return try {
+			val br = BufferedReader(InputStreamReader(Files.newInputStream(getLocal(path).toPath())))
+			val sb = StringBuilder()
+			var text: String?
+			while ((br.readLine().also { text = it }) != null) sb.append(text).append("\n")
+			br.close()
+			sb.toString()
+		} catch (e: Exception) {
+			""
+		}
+	}
 
-    public static boolean isWeekAgo(File file) {
-        long oneWeekMillis = 3L * 24 * 60 * 60 * 1000;
-        long timeDiff = System.currentTimeMillis() - file.lastModified();
-        return timeDiff > oneWeekMillis;
-    }
+	fun getFileName(filePath: String): String {
+		if (TextUtils.isEmpty(filePath)) return ""
+		var fileName = filePath
+		val p = fileName.lastIndexOf(File.separatorChar)
+		if (p != -1) {
+			fileName = fileName.substring(p + 1)
+		}
+		return fileName
+	}
 
-    public static void deleteFile(File file) {
-        if (!file.exists()) return;
-        if (file.isFile()) {
-            if (file.canWrite()) file.delete();
-            return;
-        }
-        if (file.isDirectory()) {
-            File[] files = file.listFiles();
-            if (files == null || files.length == 0) {
-                if (file.canWrite()) file.delete();
-                return;
-            }
-            for (File one : files) {
-                deleteFile(one);
-            }
-        }
-    }
+	fun getFileNameWithoutExt(filePath: String): String {
+		if (TextUtils.isEmpty(filePath)) return ""
+		var fileName = filePath
+		var p = fileName.lastIndexOf(File.separatorChar)
+		if (p != -1) {
+			fileName = fileName.substring(p + 1)
+		}
+		p = fileName.indexOf('.')
+		if (p != -1) {
+			fileName = fileName.substring(0, p)
+		}
+		return fileName
+	}
 
-    public static void cleanPlayerCache() {
-        String ijkCachePath = getCachePath() + "/ijkcaches/";
-        String thunderCachePath = getCachePath() + "/thunder/";
-        File ijkCacheDir = new File(ijkCachePath);
-        File thunderCacheDir = new File(thunderCachePath);
-        try {
-            if (ijkCacheDir.exists()) cleanDirectory(ijkCacheDir);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            if (thunderCacheDir.exists()) cleanDirectory(thunderCacheDir);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	fun hasExtension(path: String): Boolean {
+		val lastDotIndex = path.lastIndexOf(".")
+		val lastSlashIndex = max(path.lastIndexOf("/"), path.lastIndexOf("\\"))
+		// 如果路径中有点号，并且点号在最后一个斜杠之后，认为有后缀
+		return lastDotIndex > lastSlashIndex && lastDotIndex < path.length - 1
+	}
 
-    public static String read(String path) {
-        try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(getLocal(path).toPath())));
-            StringBuilder sb = new StringBuilder();
-            String text;
-            while ((text = br.readLine()) != null) sb.append(text).append("\n");
-            br.close();
-            return sb.toString();
-        } catch (Exception e) {
-            return "";
-        }
-    }
+	fun saveCache(cache: File, json: String) {
+		try {
+			val cacheDir = cache.parentFile ?: return
+			if (!cacheDir.exists()) cacheDir.mkdirs()
+			if (cache.exists()) cache.delete()
+			FileOutputStream(cache).use { fos ->
+				fos.write(json.toByteArray(StandardCharsets.UTF_8))
+				fos.flush()
+			}
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+	}
 
-    public static String getFileName(String filePath) {
-        if (TextUtils.isEmpty(filePath)) return "";
-        String fileName = filePath;
-        int p = fileName.lastIndexOf(File.separatorChar);
-        if (p != -1) {
-            fileName = fileName.substring(p + 1);
-        }
-        return fileName;
-    }
+	fun loadModule(name: String): String? {
+		var resolvedName = name
+		var rel: String? = null
+		try {
+			resolvedName = when {
+				resolvedName.contains("gbk.js") -> "gbk.js"
+				resolvedName.contains("模板.js") -> "模板.js"
+				resolvedName.contains("cat.js") -> "cat.js"
+				else -> resolvedName
+			}
+			TVBoxRuntimeLog.i("echo-loadModule $resolvedName")
+			val m = URL_JOIN.matcher(resolvedName)
+			if (m.find()) {
+				if (!Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+					val cache = getCache(MD5.encode(resolvedName))
+					rel = cache
+					if (StringUtils.isEmpty(cache)) {
+						val netStr = get(resolvedName)
+						if (!TextUtils.isEmpty(netStr)) {
+							setCache(604800, MD5.encode(resolvedName), netStr)
+						}
+						rel = netStr
+					}
+				} else {
+					rel = get(resolvedName)
+				}
+			} else if (resolvedName.startsWith("assets://")) {
+				rel = getAsOpen(resolvedName.substring(9))
+			} else if (isAsFile(resolvedName, "js/lib")) {
+				rel = getAsOpen("js/lib/$resolvedName")
+			} else if (resolvedName.startsWith("file://")) {
+				rel = get(
+					ControlManager.instance
+						.getAddress(true) + "file/" + resolvedName.replace("file:///", "")
+						.replace("file://", "")
+				)
+			} else if (resolvedName.startsWith("clan://localhost/")) {
+				rel = get(
+					ControlManager.instance
+						.getAddress(true) + "file/" + resolvedName.replace("clan://localhost/", "")
+				)
+			} else if (resolvedName.startsWith("clan://")) {
+				val substring = resolvedName.substring(7)
+				val indexOf = substring.indexOf('/')
+				rel = get("http://" + substring.substring(0, indexOf) + "/file/" + substring.substring(indexOf + 1))
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+		return rel
+	}
 
-    public static String getFileNameWithoutExt(String filePath) {
-        if (TextUtils.isEmpty(filePath)) return "";
-        String fileName = filePath;
-        int p = fileName.lastIndexOf(File.separatorChar);
-        if (p != -1) {
-            fileName = fileName.substring(p + 1);
-        }
-        p = fileName.indexOf('.');
-        if (p != -1) {
-            fileName = fileName.substring(0, p);
-        }
-        return fileName;
-    }
+	fun isAsFile(name: String, dir: String): Boolean {
+		// 1. 先从缓存里取目录列表
+		var files = cachedDirFiles[dir]
+		if (files == null) {
+			TVBoxRuntimeLog.i("echo-读取AssetsList")
+			try {
+				val list = App.instance.assets.list(dir)
+				files = if (list != null) HashSet(listOf(*list)) else mutableSetOf()
+			} catch (e: IOException) {
+				files = mutableSetOf()
+			}
+			cachedDirFiles[dir] = files
+		}
+		// 2. 内存查找
+		return files.contains(name.trim())
+	}
 
-    public static boolean hasExtension(String path) {
-        int lastDotIndex = path.lastIndexOf(".");
-        int lastSlashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-        // 如果路径中有点号，并且点号在最后一个斜杠之后，认为有后缀
-        return lastDotIndex > lastSlashIndex && lastDotIndex < path.length() - 1;
-    }
+	fun getAsOpen(name: String): String {
+		return try {
+			App.instance.assets.open(name).use { input ->
+				val data = ByteArray(input.available())
+				input.read(data)
+				String(data, StandardCharsets.UTF_8)
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+			""
+		}
+	}
 
-    public static void saveCache(File cache, String json) {
-        try {
-            File cacheDir = cache.getParentFile();
-            if (!cacheDir.exists())
-                cacheDir.mkdirs();
-            if (cache.exists())
-                cache.delete();
-            FileOutputStream fos = new FileOutputStream(cache);
-            fos.write(json.getBytes(StandardCharsets.UTF_8));
-            fos.flush();
-            fos.close();
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-    }
+	fun getCache(name: String?): String? {
+		return try {
+			var code = ""
+			val file = open(name)
+			if (file.exists()) {
+				code = String(readSimple(file) ?: return null)
+			}
+			if (TextUtils.isEmpty(code)) {
+				return ""
+			}
+			val asJsonObject = Gson().fromJson(code, JsonObject::class.java).asJsonObject
+			if ((asJsonObject.get("expires").asInt.toLong()) <= System.currentTimeMillis() / 1000) {
+				recursiveDelete(open(name))
+			}
+			asJsonObject.get("data").asString
+		} catch (e4: Exception) {
+			""
+		}
+	}
 
-    public static String loadModule(String name) {
-        String rel = null;
-        try {
-            if (name.contains("gbk.js")) {
-                name = "gbk.js";
-            } else if (name.contains("模板.js")) {
-                name = "模板.js";
-            } else if (name.contains("cat.js")) {
-                name = "cat.js";
-            }
-            LOG.i("echo-loadModule " + name);
-            Matcher m = URL_JOIN.matcher(name);
-            if (m.find()) {
-                if (!Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-                    String cache = getCache(MD5.encode(name));
-                    rel = cache;
-                    if (StringUtils.isEmpty(cache)) {
-                        String netStr = get(name);
-                        if (!TextUtils.isEmpty(netStr)) {
-                            setCache(604800, MD5.encode(name), netStr);
-                        }
-                        rel = netStr;
-                    }
-                } else {
-                    rel = get(name);
-                }
-            } else if (name.startsWith("assets://")) {
-                rel = getAsOpen(name.substring(9));
-            } else if (isAsFile(name, "js/lib")) {
-                rel = getAsOpen("js/lib/" + name);
-            } else if (name.startsWith("file://")) {
-                rel = get(ControlManager.get()
-                        .getAddress(true) + "file/" + name.replace("file:///", "")
-                        .replace("file://", ""));
-            } else if (name.startsWith("clan://localhost/")) {
-                rel = get(ControlManager.get()
-                        .getAddress(true) + "file/" + name.replace("clan://localhost/", ""));
-            } else if (name.startsWith("clan://")) {
-                String substring = name.substring(7);
-                int indexOf = substring.indexOf(47);
-                rel = get("http://" + substring.substring(0, indexOf) + "/file/" + substring.substring(indexOf + 1));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return rel;
-    }
+	fun setCache(time: Int, name: String?, data: String?) {
+		try {
+			val jSONObject = JSONObject()
+			jSONObject.put("expires", (time + (System.currentTimeMillis() / 1000)).toInt())
+			jSONObject.put("data", data)
+			writeSimple(jSONObject.toString().toByteArray(), open(name))
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+	}
 
-    public static boolean isAsFile(String name, String dir) {
-        // 1. 先从缓存里取目录列表
-        Set<String> files = cachedDirFiles.get(dir);
-        if (files == null) {
-            LOG.i("echo-读取AssetsList");
-            try {
-                String[] list = App.getInstance().getAssets().list(dir);
-                files = new HashSet<>(Arrays.asList(list));
-            } catch (IOException e) {
-                files = Collections.emptySet();
-            }
-            cachedDirFiles.put(dir, files);
-        }
-        // 2. 内存查找
-        return files.contains(name.trim());
-    }
+	fun setCacheByte(name: String?, data: ByteArray?) {
+		try {
+			writeSimple(byteMerger("//DRPY".toByteArray(), Base64.encode(data, Base64.URL_SAFE)), open("B_$name"))
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+	}
 
-    public static String getAsOpen(String name) {
-        try {
-            InputStream is = App.getInstance().getAssets().open(name);
-            byte[] data = new byte[is.available()];
-            is.read(data);
-            return new String(data, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
+	fun byteMerger(bt1: ByteArray, bt2: ByteArray): ByteArray {
+		val bt3 = ByteArray(bt1.size + bt2.size)
+		System.arraycopy(bt1, 0, bt3, 0, bt1.size)
+		System.arraycopy(bt2, 0, bt3, bt1.size, bt2.size)
+		return bt3
+	}
 
-    public static String getCache(String name) {
-        try {
-            String code = "";
-            File file = open(name);
-            if (file.exists()) {
-                code = new String(readSimple(file));
-            }
-            if (TextUtils.isEmpty(code)) {
-                return "";
-            }
-            JsonObject asJsonObject = (new Gson().fromJson(code, JsonObject.class)).getAsJsonObject();
-            if (((long) asJsonObject.get("expires").getAsInt()) <= System.currentTimeMillis() / 1000) {
-                recursiveDelete(open(name));
-            }
-            return asJsonObject.get("data").getAsString();
-        } catch (Exception e4) {
-            return "";
-        }
-    }
+	fun get(str: String): String? {
+		return get(str, null)
+	}
 
-    public static void setCache(int time, String name, String data) {
-        try {
-            JSONObject jSONObject = new JSONObject();
-            jSONObject.put("expires", (int) (time + (System.currentTimeMillis() / 1000)));
-            jSONObject.put("data", data);
-            writeSimple(jSONObject.toString().getBytes(), open(name));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	fun get(str: String, headerMap: MutableMap<String, String>?): String? {
+		val headers = headerMap ?: HashMap<String, String>().also {
+			it["User-Agent"] = if (str.startsWith("https://gitcode.net/")) UA.random() else "okhttp/3.15"
+		}
+		return OkHttpUtil.string(str, headers)
+	}
 
-    public static void setCacheByte(String name, byte[] data) {
-        try {
-            writeSimple(byteMerger("//DRPY".getBytes(), Base64.encode(data, Base64.URL_SAFE)), open("B_" + name));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+	fun open(str: String?): File {
+		return File("$externalCachePath/qjscache_$str.js")
+	}
 
-    public static byte[] byteMerger(byte[] bt1, byte[] bt2) {
-        byte[] bt3 = new byte[bt1.length + bt2.length];
-        System.arraycopy(bt1, 0, bt3, 0, bt1.length);
-        System.arraycopy(bt2, 0, bt3, bt1.length, bt2.length);
-        return bt3;
-    }
-
-    public static String get(String str) {
-        return get(str, null);
-    }
-
-    public static String get(String str, Map<String, String> headerMap) {
-        if (headerMap == null) {
-            headerMap = new HashMap<>();
-            headerMap.put("User-Agent", str.startsWith("https://gitcode.net/") ? UA.random() : "okhttp/3.15");
-        }
-        return OkHttpUtil.string(str, headerMap);
-    }
-
-    public static File open(String str) {
-        return new File(getExternalCachePath() + "/qjscache_" + str + ".js");
-    }
-
-    public static String getExternalCachePath() {
-        File externalCacheDir = App.getInstance().getExternalCacheDir();
-        if (externalCacheDir == null) {
-            return getCachePath();
-        }
-        return externalCacheDir.getAbsolutePath();
-    }
+	val externalCachePath: String
+		get() {
+			return App.instance.externalCacheDir?.absolutePath ?: cachePath
+		}
 }

@@ -167,7 +167,7 @@ class PythonLoader {
 					override fun onResponse(response: Response?) {
 					}
 				}
-				OkHttpUtil.get(OkGoHelper.getDefaultClient(), url, str2map(param), str2map(header), callBack)
+				OkHttpUtil.get(OkGoHelper.defaultClient, url, str2map(param), str2map(header), callBack)
 				callBack.result.body.byteStream()
 			}
 	}

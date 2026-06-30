@@ -1,67 +1,61 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.content.res.AssetManager;
+import com.github.tvbox.osc.base.App.Companion.instance
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStreamReader
+import java.lang.reflect.Type
+import java.nio.charset.StandardCharsets
 
-import com.github.tvbox.osc.base.App;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+object EpgUtil {
+	private val epgHashMap = HashMap<String, JsonObject>()
+	private var epgDoc: JsonObject? = null
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+	fun init() {
+		if (epgDoc != null) return
+		try {
+			val assetManager = instance.assets // 获得assets资源管理器（assets中的文件无法直接访问，可以使用AssetManager访问）
+			val inputStreamReader = InputStreamReader(assetManager.open("epg_data.json"), StandardCharsets.UTF_8) // 使用IO流读取json文件内容
+			val br = BufferedReader(inputStreamReader) // 使用字符高效流
+			val builder = StringBuilder()
+			var line: String?
+			while ((br.readLine().also { line = it }) != null) {
+				builder.append(line)
+			}
+			br.close()
+			inputStreamReader.close()
+			if (builder.isNotEmpty()) {
+				epgDoc = Gson().fromJson(builder.toString(), JsonObject::class.java as Type) // 从builder中读取了json中的数据。
+				epgDoc?.let { doc ->
+					for (opt in doc.get("epgs").getAsJsonArray()) {
+						val obj = opt as JsonObject
+						val name = obj.get("name").asString.trim()
+						val names = name.split(",").toTypedArray()
+						for (string in names) {
+							epgHashMap[string] = obj
+						}
+					}
+				}
+			}
+		} catch (e: IOException) {
+			e.printStackTrace()
+		}
+	}
 
-public class EpgUtil {
-
-    private static final HashMap<String, JsonObject> epgHashMap = new HashMap<>();
-    private static JsonObject epgDoc = null;
-
-    public static void init() {
-        if (epgDoc != null)
-            return;
-        try {
-            AssetManager assetManager = App.getInstance().getAssets(); //获得assets资源管理器（assets中的文件无法直接访问，可以使用AssetManager访问）
-            InputStreamReader inputStreamReader = new InputStreamReader(assetManager.open("epg_data.json"), StandardCharsets.UTF_8); //使用IO流读取json文件内容
-            BufferedReader br = new BufferedReader(inputStreamReader);//使用字符高效流
-            String line;
-            StringBuilder builder = new StringBuilder();
-            while ((line = br.readLine()) != null) {
-                builder.append(line);
-            }
-            br.close();
-            inputStreamReader.close();
-            if (!builder.toString().isEmpty()) {
-                epgDoc = new Gson().fromJson(builder.toString(), (Type) JsonObject.class);// 从builder中读取了json中的数据。
-                for (JsonElement opt : epgDoc.get("epgs").getAsJsonArray()) {
-                    JsonObject obj = (JsonObject) opt;
-                    String name = obj.get("name").getAsString().trim();
-                    String[] names = name.split(",");
-                    for (String string : names) {
-                        epgHashMap.put(string, obj);
-                    }
-                }
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static String[] getEpgInfo(String channelName) {
-        try {
-            if (epgHashMap.containsKey(channelName)) {
-                JsonObject obj = epgHashMap.get(channelName);
-                return new String[]{
-                        obj.get("logo").getAsString(),
-                        obj.get("epgid").getAsString()
-                };
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return null;
-    }
+	fun getEpgInfo(channelName: String?): Array<String>? {
+		return try {
+			if (channelName != null && epgHashMap.containsKey(channelName)) {
+				val obj = epgHashMap[channelName] ?: return null
+				arrayOf(
+					obj.get("logo").asString,
+					obj.get("epgid").asString
+				)
+			} else null
+		} catch (ex: Exception) {
+			ex.printStackTrace()
+			null
+		}
+	}
 }

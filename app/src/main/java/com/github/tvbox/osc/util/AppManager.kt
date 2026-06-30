@@ -1,134 +1,116 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.app.Activity;
-
-import java.util.Stack;
+import android.app.Activity
+import android.os.Process
+import java.util.Stack
+import kotlin.system.exitProcess
 
 /**
  * @author pj567
- * @date :2020/12/23
- * @description:
+ * @date 2020/12/23
  */
-public class AppManager {
-    private static Stack<Activity> activityStack;
+class AppManager private constructor() {
+	/**
+	 * 添加Activity到堆栈
+	 */
+	fun addActivity(activity: Activity) {
+		activityStack.add(activity)
+	}
 
-    private AppManager() {
-    }
+	/**
+	 * 是否有activity
+	 */
+	val isActivity: Boolean
+		get() = activityStack.isNotEmpty()
 
-    public static AppManager getInstance() {
-        return SingleHolder.instance;
-    }
+	/**
+	 * 获取当前Activity（堆栈中最后一个压入的）
+	 */
+	fun currentActivity(): Activity? {
+		return if (activityStack.isEmpty()) null else activityStack.lastElement()
+	}
 
-    /**
-     * 添加Activity到堆栈
-     */
-    public void addActivity(Activity activity) {
-        if (activityStack == null) {
-            activityStack = new Stack<>();
-        }
-        activityStack.add(activity);
-    }
+	/**
+	 * 结束当前Activity（堆栈中最后一个压入的）
+	 */
+	fun finishActivity() {
+		if (activityStack.isEmpty()) return
+		val activity = activityStack.lastElement()
+		if (!activity.isFinishing) {
+			activity.finish()
+		}
+	}
 
-    /**
-     * 是否有activity
-     */
-    public boolean isActivity() {
-        if (activityStack != null) {
-            return !activityStack.isEmpty();
-        }
-        return false;
-    }
+	fun finishActivity(activity: Activity) {
+		activityStack.remove(activity)
+	}
 
-    /**
-     * 获取当前Activity（堆栈中最后一个压入的）
-     */
-    public Activity currentActivity() {
-        return activityStack.lastElement();
-    }
+	/**
+	 * 结束指定类名的Activity
+	 */
+	fun finishActivity(cls: Class<*>) {
+		for (activity in activityStack) {
+			if (activity.javaClass == cls) {
+				if (!activity.isFinishing) {
+					activity.finish()
+				}
+				break
+			}
+		}
+	}
 
-    /**
-     * 结束当前Activity（堆栈中最后一个压入的）
-     */
-    public void finishActivity() {
-        Activity activity = activityStack.lastElement();
-        if (!activity.isFinishing()) {
-            activity.finish();
-        }
-    }
+	fun backActivity(cls: Class<*>) {
+		while (activityStack.isNotEmpty()) {
+			val activity = activityStack.pop()
+			if (activity.javaClass == cls) {
+				activityStack.push(activity)
+				break
+			} else {
+				activity.finish()
+			}
+		}
+	}
 
-    public void finishActivity(Activity activity) {
-        activityStack.remove(activity);
-    }
+	/**
+	 * 结束所有Activity
+	 */
+	fun finishAllActivity() {
+		for (activity in activityStack) {
+			if (!activity.isFinishing) {
+				activity.finish()
+			}
+		}
+		activityStack.clear()
+	}
 
-    /**
-     * 结束指定类名的Activity
-     */
-    public void finishActivity(Class<?> cls) {
-        for (Activity activity : activityStack) {
-            if (activity.getClass().equals(cls)) {
-                if (!activity.isFinishing()) {
-                    activity.finish();
-                }
-                break;
-            }
-        }
-    }
+	/**
+	 * 获取指定的Activity
+	 */
+	fun getActivity(cls: Class<*>): Activity? {
+		for (activity in activityStack) {
+			if (activity.javaClass == cls) {
+				return activity
+			}
+		}
+		return null
+	}
 
-    public void backActivity(Class<?> cls) {
-        while (!activityStack.empty()) {
-            Activity activity = activityStack.pop();
-            if (activity.getClass().equals(cls)) {
-                activityStack.push(activity);
-                break;
-            } else {
-                activity.finish();
-            }
-        }
-    }
+	fun appExit(code: Int) {
+		try {
+			finishAllActivity()
+			Process.killProcess(Process.myPid())
+			exitProcess(code)
+		} catch (e: Exception) {
+			activityStack.clear()
+			e.printStackTrace()
+		}
+	}
 
-    /**
-     * 结束所有Activity
-     */
-    public void finishAllActivity() {
-        if (activityStack != null && !activityStack.isEmpty()) {
-            for (int i = 0, size = activityStack.size(); i < size; i++) {
-                Activity activity = activityStack.get(i);
-                if (null != activityStack.get(i)) {
-                    if (!activity.isFinishing()) {
-                        activity.finish();
-                    }
-                }
-            }
-            activityStack.clear();
-        }
-    }
+	companion object {
+		private val activityStack = Stack<Activity>()
 
-    /**
-     * 获取指定的Activity
-     */
-    public Activity getActivity(Class<?> cls) {
-        if (activityStack != null) {
-            for (Activity activity : activityStack) {
-                if (activity.getClass().equals(cls)) {
-                    return activity;
-                }
-            }
-        }
-        return null;
-    }
-
-    public void appExit(int code) {
-        try {
-            finishAllActivity();
-            android.os.Process.killProcess(android.os.Process.myPid());
-            System.exit(code);
-        } catch (Exception e) {
-            activityStack.clear();
-            e.printStackTrace();
-        }
-    }
-
-    private static class SingleHolder {
-        private static final AppManager instance = new AppManager();
-    }
+		val instance: AppManager by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+			AppManager()
+		}
+	}
 }

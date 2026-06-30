@@ -5,8 +5,8 @@ import android.text.TextUtils
 import android.util.Base64
 import com.github.catvod.crawler.Spider
 import com.github.tvbox.osc.util.FileUtils
-import com.github.tvbox.osc.util.LOG
 import com.github.tvbox.osc.util.MD5
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.js.Connect.cancelByTag
 import com.github.tvbox.osc.util.js.Json.invalid
 import com.github.tvbox.osc.util.js.Json.valid
@@ -53,10 +53,10 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 			val callArgs = arrayOf(*args)
 			return submit<Any?> { Async.run(jsObject, func, callArgs).get() }?.get() // 等待 executor 线程完成 JS 调用
 		} catch (e: InterruptedException) {
-			LOG.i("Executor 提交或等待失败$e")
+			TVBoxRuntimeLog.i("Executor 提交或等待失败$e")
 			return null
 		} catch (e: ExecutionException) {
-			LOG.i("Executor 提交或等待失败$e")
+			TVBoxRuntimeLog.i("Executor 提交或等待失败$e")
 			return null
 		}
 	}
@@ -199,7 +199,7 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 			override fun getModuleBytecode(moduleName: String): ByteArray? {
 				val ss = FileUtils.loadModule(moduleName)
 				if (TextUtils.isEmpty(ss)) {
-					LOG.i("echo-getModuleBytecode empty :$moduleName")
+					TVBoxRuntimeLog.i("echo-getModuleBytecode empty :$moduleName")
 					return ctx.compileModule("", moduleName)
 				}
 				if ((ss ?: return null).startsWith("//DRPY")) {
@@ -223,19 +223,19 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 		})
 		ctx.setConsole(object : QuickJSContext.Console {
 			override fun log(info: String?) {
-				LOG.i("QuJs$info")
+				TVBoxRuntimeLog.i("QuJs$info")
 			}
 
 			override fun info(info: String?) {
-				LOG.i("QuJs$info")
+				TVBoxRuntimeLog.i("QuJs$info")
 			}
 
 			override fun warn(info: String?) {
-				LOG.i("QuJs$info")
+				TVBoxRuntimeLog.i("QuJs$info")
 			}
 
 			override fun error(info: String?) {
-				LOG.e("QuJs$info")
+				TVBoxRuntimeLog.e("QuJs$info")
 			}
 		})
 
@@ -354,7 +354,7 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 						headers[key] = json.optString(key)
 					}
 				} catch (e: JSONException) {
-					LOG.i("getHeader: 无法解析 String 为 JSON$e")
+					TVBoxRuntimeLog.i("getHeader: 无法解析 String 为 JSON$e")
 				}
 			}
 

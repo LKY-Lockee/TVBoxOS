@@ -22,7 +22,7 @@ object RemoteTVBox {
 	private var availableSuccessNum = 0
 	private var availableIpNum = 0
 
-	fun run(activity: Activity?, url: String?, title: String?, subtitle: String?, headers: HashMap<String?, String?>?): Boolean {
+	fun run(activity: Activity, url: String?, title: String?, subtitle: String?, headers: HashMap<String, String>?): Boolean {
 		var resolvedUrl = url
 		val actionUrl: String = availableActionUrl
 		if (actionUrl.isEmpty()) {

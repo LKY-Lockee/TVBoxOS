@@ -1,193 +1,164 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.text.TextUtils;
-
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.bean.MovieSort;
-import com.github.tvbox.osc.bean.SourceBean;
-import com.github.tvbox.osc.server.ControlManager;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.regex.Pattern;
+import android.content.Context
+import android.content.pm.PackageManager
+import android.text.TextUtils
+import androidx.core.net.toUri
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.bean.MovieSort.SortData
+import com.github.tvbox.osc.server.ControlManager
+import com.google.gson.JsonObject
+import java.util.regex.Pattern
 
 /**
  * @author pj567
- * @date :2020/12/21
- * @description:
+ * @date 2020/12/21
  */
-public class DefaultConfig {
+object DefaultConfig {
+	private val snifferMatch: Pattern = Pattern.compile(
+		"http((?!http).){12,}?\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)\\?.*|" +
+				"http((?!http).){12,}\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)|" +
+				"http((?!http).)*?video/tos*|" +
+				"http((?!http).){20,}?/m3u8\\?pt=m3u8.*|" +
+				"http((?!http).)*?default\\.ixigua\\.com/.*|" +
+				"http((?!http).)*?dycdn-tos\\.pstatp[^?]*|" +
+				"http.*?/player/m3u8play\\.php\\?url=.*|" +
+				"http.*?/player/.*?[pP]lay\\.php\\?url=.*|" +
+				"http.*?/playlist/m3u8/\\?vid=.*|" +
+				"http.*?\\.php\\?type=m3u8&.*|" +
+				"http.*?/download.aspx\\?.*|" +
+				"http.*?/api/up_api.php\\?.*|" +
+				"https.*?\\.66yk\\.cn.*|" +
+				"http((?!http).)*?netease\\.com/file/.*"
+	)
+	private val NO_AD_KEYWORDS: List<String> = listOf(
+		"tx", "youku", "qq", "qiyi", "letv", "leshi", "sohu", "mgtv", "bilibili", "imgo", "优酷", "芒果", "腾讯", "奇艺"
+	)
 
-    private static final Pattern snifferMatch = Pattern.compile(
-            "http((?!http).){12,}?\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)\\?.*|" +
-                    "http((?!http).){12,}\\.(m3u8|mp4|flv|avi|mkv|rm|wmv|mpg|m4a)|" +
-                    "http((?!http).)*?video/tos*|" +
-                    "http((?!http).){20,}?/m3u8\\?pt=m3u8.*|" +
-                    "http((?!http).)*?default\\.ixigua\\.com/.*|" +
-                    "http((?!http).)*?dycdn-tos\\.pstatp[^\\?]*|" +
-                    "http.*?/player/m3u8play\\.php\\?url=.*|" +
-                    "http.*?/player/.*?[pP]lay\\.php\\?url=.*|" +
-                    "http.*?/playlist/m3u8/\\?vid=.*|" +
-                    "http.*?\\.php\\?type=m3u8&.*|" +
-                    "http.*?/download.aspx\\?.*|" +
-                    "http.*?/api/up_api.php\\?.*|" +
-                    "https.*?\\.66yk\\.cn.*|" +
-                    "http((?!http).)*?netease\\.com/file/.*"
-    );
-    private static final List<String> NO_AD_KEYWORDS = Arrays.asList(
-            "tx", "youku", "qq", "qiyi", "letv", "leshi", "sohu", "mgtv", "bilibili", "imgo", "优酷", "芒果", "腾讯", "奇艺"
-    );
+	fun adjustSort(sourceKey: String?, list: MutableList<SortData>, withMy: Boolean): MutableList<SortData> {
+		val data: MutableList<SortData> = ArrayList()
+		if (sourceKey != null) {
+			val sb = ApiConfig.instance.getSource(sourceKey) ?: return ArrayList()
+			val categories = sb.categories
+			if (!categories.isNullOrEmpty()) {
+				for (cate in categories) {
+					for (sortData in list) {
+						if (sortData.name == cate) {
+							data.add(sortData)
+						}
+					}
+				}
+			} else {
+				data.addAll(list)
+			}
+		}
+		if (withMy) data.add(0, SortData("my0", "主页"))
+		data.sort()
+		return data
+	}
 
-    public static List<MovieSort.SortData> adjustSort(String sourceKey, List<MovieSort.SortData> list, boolean withMy) {
-        List<MovieSort.SortData> data = new ArrayList<>();
-        if (sourceKey != null) {
-            SourceBean sb = ApiConfig.get().getSource(sourceKey);
-            ArrayList<String> categories = sb.getCategories();
-            if (!categories.isEmpty()) {
-                for (String cate : categories) {
-                    for (MovieSort.SortData sortData : list) {
-                        if (sortData.name.equals(cate)) {
-                            if (sortData.filters == null)
-                                sortData.filters = new ArrayList<>();
-                            data.add(sortData);
-                        }
-                    }
-                }
-            } else {
-                for (MovieSort.SortData sortData : list) {
-                    if (sortData.filters == null)
-                        sortData.filters = new ArrayList<>();
-                    data.add(sortData);
-                }
-            }
-        }
-        if (withMy)
-            data.add(0, new MovieSort.SortData("my0", "主页"));
-        Collections.sort(data);
-        return data;
-    }
+	fun getAppVersionCode(mContext: Context): Int {
+		// 包管理操作管理类
+		return try {
+			val packageInfo = mContext.packageManager.getPackageInfo(mContext.packageName, 0)
+			packageInfo.versionCode
+		} catch (e: PackageManager.NameNotFoundException) {
+			e.printStackTrace()
+			-1
+		}
+	}
 
-    public static int getAppVersionCode(Context mContext) {
-        //包管理操作管理类
-        PackageManager pm = mContext.getPackageManager();
-        try {
-            PackageInfo packageInfo = pm.getPackageInfo(mContext.getPackageName(), 0);
-            return packageInfo.versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-        return -1;
-    }
+	fun getAppVersionName(mContext: Context): String {
+		// 包管理操作管理类
+		return try {
+			val packageInfo = mContext.packageManager.getPackageInfo(mContext.packageName, 0)
+			packageInfo.versionName ?: ""
+		} catch (e: PackageManager.NameNotFoundException) {
+			e.printStackTrace()
+			""
+		}
+	}
 
-    public static String getAppVersionName(Context mContext) {
-        //包管理操作管理类
-        PackageManager pm = mContext.getPackageManager();
-        try {
-            PackageInfo packageInfo = pm.getPackageInfo(mContext.getPackageName(), 0);
-            return packageInfo.versionName;
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
+	/**
+	 * 后缀
+	 */
+	fun getFileSuffix(name: String): String {
+		if (TextUtils.isEmpty(name)) {
+			return ""
+		}
+		val endP = name.lastIndexOf(".")
+		return if (endP > -1) name.substring(endP) else ""
+	}
 
-    /**
-     * 后缀
-     *
-     * @param name
-     * @return
-     */
-    public static String getFileSuffix(String name) {
-        if (TextUtils.isEmpty(name)) {
-            return "";
-        }
-        int endP = name.lastIndexOf(".");
-        return endP > -1 ? name.substring(endP) : "";
-    }
+	/**
+	 * 获取文件的前缀
+	 */
+	fun getFilePrefixName(fileName: String): String {
+		if (TextUtils.isEmpty(fileName)) {
+			return ""
+		}
+		val start = fileName.lastIndexOf(".")
+		return if (start > -1) fileName.substring(0, start) else fileName
+	}
 
-    /**
-     * 获取文件的前缀
-     *
-     * @param fileName
-     * @return
-     */
-    public static String getFilePrefixName(String fileName) {
-        if (TextUtils.isEmpty(fileName)) {
-            return "";
-        }
-        int start = fileName.lastIndexOf(".");
-        return start > -1 ? fileName.substring(0, start) : fileName;
-    }
+	fun isVideoFormat(url: String): Boolean {
+		val path = url.toUri().path
+		if (TextUtils.isEmpty(path)) {
+			return false
+		}
+		return snifferMatch.matcher(url).find()
+	}
 
-    public static boolean isVideoFormat(String url) {
-        Uri uri = Uri.parse(url);
-        String path = uri.getPath();
-        if (TextUtils.isEmpty(path)) {
-            return false;
-        }
-        return snifferMatch.matcher(url).find();
-    }
+	fun safeJsonString(obj: JsonObject, key: String, defaultVal: String?): String? {
+		return try {
+			if (obj.has(key)) {
+				if (obj.get(key).isJsonObject || obj.get(key).isJsonArray)
+					obj.get(key).toString().trim()
+				else
+					obj.getAsJsonPrimitive(key).asString.trim()
+			} else defaultVal
+		} catch (ignored: Throwable) {
+			defaultVal
+		}
+	}
 
-    public static String safeJsonString(JsonObject obj, String key, String defaultVal) {
-        try {
-            if (obj.has(key)) {
-                return obj.get(key).isJsonObject() || obj.get(key).isJsonArray() ? obj.get(key).toString().trim() : obj.getAsJsonPrimitive(key).getAsString().trim();
-            } else
-                return defaultVal;
-        } catch (Throwable ignored) {
-        }
-        return defaultVal;
-    }
+	fun safeJsonInt(obj: JsonObject, key: String, defaultVal: Int): Int {
+		return try {
+			if (obj.has(key)) obj.getAsJsonPrimitive(key).asInt else defaultVal
+		} catch (ignored: Throwable) {
+			defaultVal
+		}
+	}
 
-    public static int safeJsonInt(JsonObject obj, String key, int defaultVal) {
-        try {
-            if (obj.has(key))
-                return obj.getAsJsonPrimitive(key).getAsInt();
-            else
-                return defaultVal;
-        } catch (Throwable ignored) {
-        }
-        return defaultVal;
-    }
+	fun safeJsonStringList(obj: JsonObject, key: String): ArrayList<String> {
+		val result = ArrayList<String>()
+		try {
+			if (obj.has(key)) {
+				if (obj.get(key).isJsonObject) {
+					result.add(obj.get(key).asString)
+				} else {
+					for (opt in obj.getAsJsonArray(key)) {
+						result.add(opt.asString)
+					}
+				}
+			}
+		} catch (ignored: Throwable) {
+		}
+		return result
+	}
 
-    public static ArrayList<String> safeJsonStringList(JsonObject obj, String key) {
-        ArrayList<String> result = new ArrayList<>();
-        try {
-            if (obj.has(key)) {
-                if (obj.get(key).isJsonObject()) {
-                    result.add(obj.get(key).getAsString());
-                } else {
-                    for (JsonElement opt : obj.getAsJsonArray(key)) {
-                        result.add(opt.getAsString());
-                    }
-                }
-            }
-        } catch (Throwable ignored) {
-        }
-        return result;
-    }
+	fun checkReplaceProxy(urlOri: String): String {
+		if (urlOri.startsWith("proxy://")) return urlOri.replace("proxy://", ControlManager.instance.getAddress(true) + "proxy?")
+		return urlOri
+	}
 
-    public static String checkReplaceProxy(String urlOri) {
-        if (urlOri.startsWith("proxy://"))
-            return urlOri.replace("proxy://", ControlManager.get().getAddress(true) + "proxy?");
-        return urlOri;
-    }
-
-    public static boolean noAd(String flag) {
-        if (flag == null || flag.isEmpty()) return false;
-        for (String keyword : NO_AD_KEYWORDS) {
-            if (flag.equals(keyword) || flag.contains(keyword)) {
-                return true;
-            }
-        }
-        return false;
-    }
+	fun noAd(flag: String?): Boolean {
+		if (flag.isNullOrEmpty()) return false
+		for (keyword in NO_AD_KEYWORDS) {
+			if (flag == keyword || flag.contains(keyword)) {
+				return true
+			}
+		}
+		return false
+	}
 }

@@ -19,8 +19,8 @@ import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import com.github.tvbox.osc.util.DefaultConfig
 import com.github.tvbox.osc.util.FileUtils
 import com.github.tvbox.osc.util.HawkConfig
-import com.github.tvbox.osc.util.LOG
 import com.github.tvbox.osc.util.MD5
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.thunder.Thunder
 import com.github.tvbox.osc.util.thunder.Thunder.ThunderCallback
 import com.github.tvbox.osc.util.urlhttp.OkHttpUtil
@@ -67,7 +67,7 @@ class SourceViewModel : ViewModel() {
 
 	// homeContent
 	fun getSort(sourceKey: String?) {
-		LOG.i("echo--getSort-start")
+		TVBoxRuntimeLog.i("echo--getSort-start")
 		if (sourceKey == null) {
 			sortResult.postValue(null)
 			return
@@ -76,7 +76,7 @@ class SourceViewModel : ViewModel() {
 		// 优先检查缓存
 		val cached: AbsSortXml? = sortCache[sourceKey]
 		if (cached != null) {
-			LOG.i("echo--getSort-cached--$sourceKey")
+			TVBoxRuntimeLog.i("echo--getSort-cached--$sourceKey")
 			val homeRec = Hawk.get(HawkConfig.HOME_REC, 0)
 			val videoList = cached.videoList
 			val shouldUseCache = (homeRec != 1) || !videoList.isNullOrEmpty()
@@ -277,7 +277,7 @@ class SourceViewModel : ViewModel() {
 
 	// categoryContent
 	fun getList(sortData: SortData, page: Int) {
-		LOG.i("echo-getList:")
+		TVBoxRuntimeLog.i("echo-getList:")
 		val homeSourceBean = ApiConfig.instance.homeSourceBean
 		when (val type = homeSourceBean.type) {
 			3 -> {
@@ -285,7 +285,7 @@ class SourceViewModel : ViewModel() {
 					try {
 						val sp = ApiConfig.instance.getCSP(homeSourceBean) ?: return@execute
 						val json = sp.categoryContent(sortData.id, page.toString() + "", true, sortData.filterSelect)
-						LOG.i("echo-categoryContent:$json")
+						TVBoxRuntimeLog.i("echo-categoryContent:$json")
 						json(listResult, json, homeSourceBean.key)
 					} catch (th: Throwable) {
 						th.printStackTrace()
@@ -353,14 +353,14 @@ class SourceViewModel : ViewModel() {
 						try {
 							return response.body.string()
 						} catch (e: Exception) {
-							LOG.i("echo-list: convertResponse error" + e.message)
+							TVBoxRuntimeLog.i("echo-list: convertResponse error" + e.message)
 							throw e // 重新抛出异常
 						}
 					}
 
 					override fun onSuccess(response: com.lzy.okgo.model.Response<String?>) {
 						val json = response.body()
-						LOG.i("echo-list: $json")
+						TVBoxRuntimeLog.i("echo-list: $json")
 						json(listResult, json, homeSourceBean.key)
 					}
 
@@ -487,7 +487,7 @@ class SourceViewModel : ViewModel() {
 						try {
 							return@submit sp?.detailContent(ids)
 						} catch (e: Exception) {
-							LOG.i("echo--getDetail--error: " + e.message)
+							TVBoxRuntimeLog.i("echo--getDetail--error: " + e.message)
 							return@submit ""
 						}
 					}
@@ -495,12 +495,12 @@ class SourceViewModel : ViewModel() {
 					var json: String? = null
 					try {
 						json = future.get(15, TimeUnit.SECONDS)
-						LOG.i("echo--getDetail--result:$json")
+						TVBoxRuntimeLog.i("echo--getDetail--result:$json")
 					} catch (e: TimeoutException) {
-						LOG.i("echo--getDetail--timeout")
+						TVBoxRuntimeLog.i("echo--getDetail--timeout")
 						future.cancel(true)
 					} catch (e: Exception) {
-						LOG.i("echo--getDetail--error: " + e.message)
+						TVBoxRuntimeLog.i("echo--getDetail--error: " + e.message)
 					} finally {
 						json(detailResult, json, sourceBean.key)
 						executor.shutdown()
@@ -531,7 +531,7 @@ class SourceViewModel : ViewModel() {
 							xml(detailResult, xml ?: return, sourceBean.key)
 						} else {
 							val json = response?.body()
-							LOG.i(json)
+							TVBoxRuntimeLog.i(json)
 							json(detailResult, json, sourceBean.key)
 						}
 					}
@@ -621,12 +621,12 @@ class SourceViewModel : ViewModel() {
 
 					override fun onSuccess(response: com.lzy.okgo.model.Response<String?>) {
 						val json = response.body()
-						LOG.i("echo-t4 search onSuccess$json")
+						TVBoxRuntimeLog.i("echo-t4 search onSuccess$json")
 						json(searchResult, json, sourceBean.key)
 					}
 
 					override fun onError(response: com.lzy.okgo.model.Response<String?>?) {
-						LOG.i("echo-t4 search-onError")
+						TVBoxRuntimeLog.i("echo-t4 search-onError")
 						super.onError(response)
 						EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_SEARCH_RESULT, null))
 					}
@@ -699,7 +699,7 @@ class SourceViewModel : ViewModel() {
 
 					override fun onSuccess(response: com.lzy.okgo.model.Response<String?>) {
 						val json = response.body()
-						LOG.i(json)
+						TVBoxRuntimeLog.i(json)
 						json(quickSearchResult, json, sourceBean.key)
 					}
 
@@ -730,13 +730,13 @@ class SourceViewModel : ViewModel() {
 						try {
 							return@submit sp?.playerContent(playFlag, url, ApiConfig.instance.vipParseFlags)
 						} catch (e: Exception) {
-							LOG.i("echo--getPlay--error: " + e.message)
+							TVBoxRuntimeLog.i("echo--getPlay--error: " + e.message)
 							return@submit ""
 						}
 					}
 					try {
 						val json = future.get(10, TimeUnit.SECONDS)
-						LOG.i("echo--getPlay--result:$json")
+						TVBoxRuntimeLog.i("echo--getPlay--result:$json")
 						// 处理返回的 JSON
 						if (!json.isNullOrEmpty()) {
 							val result = JSONObject(json)
@@ -750,12 +750,12 @@ class SourceViewModel : ViewModel() {
 						}
 					} catch (e: TimeoutException) {
 						// 如果超时了，处理超时逻辑
-						LOG.i("echo--getPlay--timeout")
+						TVBoxRuntimeLog.i("echo--getPlay--timeout")
 						future.cancel(true)
 						playResult.postValue(null)
 					} catch (e: Exception) {
 						// 捕获其他异常
-						LOG.i("echo--getPlay--error: " + e.message)
+						TVBoxRuntimeLog.i("echo--getPlay--error: " + e.message)
 						playResult.postValue(null)
 					} finally {
 						executor.shutdown()
@@ -805,7 +805,7 @@ class SourceViewModel : ViewModel() {
 
 					override fun onSuccess(response: com.lzy.okgo.model.Response<String?>?) {
 						val json = response?.body()
-						LOG.i(json)
+						TVBoxRuntimeLog.i(json)
 						try {
 							val result = JSONObject(json ?: return)
 							result.put("key", url)
@@ -837,7 +837,7 @@ class SourceViewModel : ViewModel() {
 		if (!extend.startsWith("http")) return extend
 		val key = MD5.string2MD5(extend)
 		if (extendCache.containsKey(key)) {
-			LOG.i("echo-getFixUrl Cache")
+			TVBoxRuntimeLog.i("echo-getFixUrl Cache")
 			return extendCache.getValue(key)
 		}
 		val future: Future<String> = spThreadPool.submit<String> {
@@ -1132,7 +1132,7 @@ class SourceViewModel : ViewModel() {
 				Thunder.parse(App.instance, urlBean, object : ThunderCallback {
 					override fun status(code: Int, info: String) {
 						if (code >= 0) {
-							LOG.i(info)
+							TVBoxRuntimeLog.i(info)
 						} else {
 							(infoList[0].beanList ?: return)[0].name = info
 							detailResult.postValue(data)

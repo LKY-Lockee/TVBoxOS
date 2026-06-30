@@ -1,55 +1,48 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.util.Pair;
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Pair
+import androidx.core.content.edit
 
 /**
  * 音轨记忆
  */
-public class AudioTrackMemory {
-    private static final String PREFS_NAME = "audio_track_prefs";
-    private static final String KEY_GROUP_SUFFIX = "_group";
-    private static final String KEY_TRACK_SUFFIX = "_track";
-    private static AudioTrackMemory instance;
-    private final SharedPreferences prefs;
+class AudioTrackMemory private constructor(context: Context) {
+	private val prefs: SharedPreferences = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private AudioTrackMemory(Context context) {
-        prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-    }
+	fun save(playKey: String, groupIndex: Int, trackIndex: Int) {
+		TVBoxRuntimeLog.i("echo-AudioTrackMemory save playKey:$playKey")
+		val key = "${playKey}_exo"
+		prefs.edit { putInt(key + KEY_GROUP_SUFFIX, groupIndex).putInt(key + KEY_TRACK_SUFFIX, trackIndex) }
+	}
 
-    public static synchronized AudioTrackMemory getInstance(Context context) {
-        if (instance == null) {
-            instance = new AudioTrackMemory(context);
-        }
-        return instance;
-    }
+	fun save(playKey: String, trackIndex: Int) {
+		TVBoxRuntimeLog.i("echo-AudioTrackMemory save playKey:$playKey")
+		prefs.edit { putInt("${playKey}_ijk$KEY_TRACK_SUFFIX", trackIndex) }
+	}
 
-    public void save(String playKey, int groupIndex, int trackIndex) {
-        LOG.i("echo-AudioTrackMemory save playKey:" + playKey);
-        playKey = playKey + "_exo";
-        prefs.edit().putInt(playKey + KEY_GROUP_SUFFIX, groupIndex).putInt(playKey + KEY_TRACK_SUFFIX, trackIndex).apply();
-    }
+	fun exoLoad(playKey: String): Pair<Int, Int>? {
+		val key = "${playKey}_exo"
+		val group = prefs.getInt(key + KEY_GROUP_SUFFIX, -1)
+		val track = prefs.getInt(key + KEY_TRACK_SUFFIX, -1)
+		return if (group >= 0 && track >= 0) Pair.create(group, track) else null
+	}
 
-    public void save(String playKey, int trackIndex) {
-        LOG.i("echo-AudioTrackMemory save playKey:" + playKey);
-        prefs.edit().putInt(playKey + "_ijk" + KEY_TRACK_SUFFIX, trackIndex).apply();
-    }
+	fun ijkLoad(playKey: String): Int {
+		return prefs.getInt("${playKey}_ijk$KEY_TRACK_SUFFIX", -1)
+	}
 
-    public Pair<Integer, Integer> exoLoad(String playKey) {
-        playKey = playKey + "_exo";
-        Pair<Integer, Integer> p;
-        int group = prefs.getInt(playKey + KEY_GROUP_SUFFIX, -1);
-        int track = prefs.getInt(playKey + KEY_TRACK_SUFFIX, -1);
-        if (group >= 0 && track >= 0) {
-            p = Pair.create(group, track);
-            return p;
-        }
-        return null;
-    }
+	companion object {
+		private const val PREFS_NAME = "audio_track_prefs"
+		private const val KEY_GROUP_SUFFIX = "_group"
+		private const val KEY_TRACK_SUFFIX = "_track"
+		private var instance: AudioTrackMemory? = null
 
-    public Integer ijkLoad(String playKey) {
-        playKey = playKey + "_ijk";
-        return prefs.getInt(playKey + KEY_TRACK_SUFFIX, -1);
-    }
+		fun getInstance(context: Context): AudioTrackMemory {
+			return instance ?: synchronized(this) {
+				instance ?: AudioTrackMemory(context).also { instance = it }
+			}
+		}
+	}
 }

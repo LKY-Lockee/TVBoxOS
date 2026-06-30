@@ -6,7 +6,7 @@ import androidx.media3.common.Format
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import com.github.tvbox.osc.util.AudioTrackMemory
-import com.github.tvbox.osc.util.LOG
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import xyz.doikki.videoplayer.exo.ExoMediaPlayer
 import java.util.Locale
 
@@ -67,7 +67,7 @@ class ExoPlayer(context: Context) : ExoMediaPlayer(context) {
 	fun setTrack(groupIndex: Int, trackIndex: Int, playKey: String) {
 		try {
 			val player = mInternalPlayer ?: run {
-				LOG.i("echo-setTrack: Player is null")
+				TVBoxRuntimeLog.i("echo-setTrack: Player is null")
 				return
 			}
 
@@ -87,7 +87,7 @@ class ExoPlayer(context: Context) : ExoMediaPlayer(context) {
 			}
 
 			if (targetGroup == null || trackIndex >= targetGroup.length) {
-				LOG.i("echo-setTrack: Invalid track index - group:$groupIndex, track:$trackIndex")
+				TVBoxRuntimeLog.i("echo-setTrack: Invalid track index - group:$groupIndex, track:$trackIndex")
 				return
 			}
 
@@ -107,7 +107,7 @@ class ExoPlayer(context: Context) : ExoMediaPlayer(context) {
 				memory.save(playKey, groupIndex, trackIndex)
 			}
 		} catch (e: Exception) {
-			LOG.i("echo-setTrack error: " + e.message)
+			TVBoxRuntimeLog.i("echo-setTrack error: " + e.message)
 		}
 	}
 

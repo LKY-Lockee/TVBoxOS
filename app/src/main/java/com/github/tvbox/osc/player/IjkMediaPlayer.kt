@@ -1,15 +1,14 @@
 package com.github.tvbox.osc.player
 
 import android.content.Context
-
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.bean.IJKCode
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.util.AudioTrackMemory
 import com.github.tvbox.osc.util.FileUtils
 import com.github.tvbox.osc.util.HawkConfig
-import com.github.tvbox.osc.util.LOG
 import com.github.tvbox.osc.util.MD5
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.orhanobut.hawk.Hawk
 import tv.danmaku.ijk.media.player.IMediaPlayer
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
@@ -55,13 +54,13 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 		mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "safe", 0)
 
 		if (Hawk.get(HawkConfig.PLAYER_IS_LIVE)) {
-			LOG.i("echo-type-直播")
+			TVBoxRuntimeLog.i("echo-type-直播")
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "max_cached_duration", 300)
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "flush_packets", 1)
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "min-frames", 1)
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_CODEC, "threads", "1")
 		} else {
-			LOG.i("echo-type-点播")
+			TVBoxRuntimeLog.i("echo-type-点播")
 			// 降低延迟
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "max_cached_duration", 3000)
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "infbuf", 0)

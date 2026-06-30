@@ -1,346 +1,304 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.graphics.Bitmap;
+import android.graphics.Bitmap
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.picasso.MyOkhttpDownLoader
+import com.github.tvbox.osc.util.ssl.SSLSocketFactoryCompat
+import com.google.gson.JsonArray
+import com.google.gson.JsonParser
+import com.lzy.okgo.OkGo
+import com.lzy.okgo.https.HttpsUtils
+import com.lzy.okgo.interceptor.HttpLoggingInterceptor
+import com.orhanobut.hawk.Hawk
+import com.squareup.picasso.Picasso
+import okhttp3.Cache
+import okhttp3.Dns
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.dnsoverhttps.DnsOverHttps
+import xyz.doikki.videoplayer.exo.ExoMediaSourceHelper
+import java.io.File
+import java.net.InetAddress
+import java.security.cert.X509Certificate
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+import java.util.logging.Level
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.X509TrustManager
 
-import androidx.annotation.NonNull;
-import androidx.media3.common.util.UnstableApi;
+object OkGoHelper {
+	const val DEFAULT_MILLISECONDS: Long = 10000 // 默认的超时时间
+	val dnsHttpsList: ArrayList<String> = ArrayList()
 
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.App;
-import com.github.tvbox.osc.picasso.MyOkhttpDownLoader;
-import com.github.tvbox.osc.util.ssl.SSLSocketFactoryCompat;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.lzy.okgo.OkGo;
-import com.lzy.okgo.https.HttpsUtils;
-import com.lzy.okgo.interceptor.HttpLoggingInterceptor;
-import com.orhanobut.hawk.Hawk;
-import com.squareup.picasso.Picasso;
+	// 内置doh json
+	private const val DNS_CONFIG_JSON = ("""[{"name": "腾讯", "url": "https://doh.pub/dns-query"},{"name": "阿里", "url": "https://dns.alidns.com/dns-query"},{"name": "360", "url": "https://doh.360.cn/dns-query"}]""")
+	var dnsOverHttps: DnsOverHttps? = null
+	var is_doh: Boolean = false
+	var myHosts: MutableMap<String, String>? = null
+	var ItvClient: OkHttpClient? = null
+	var defaultClient: OkHttpClient? = null
+	var noRedirectClient: OkHttpClient? = null
 
-import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+	@UnstableApi
+	fun initExoOkHttpClient() {
+		val dns = dnsOverHttps ?: return
+		val builder = OkHttpClient.Builder()
+		val loggingInterceptor = HttpLoggingInterceptor("OkExoPlayer")
 
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.X509TrustManager;
+		if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY)
+			loggingInterceptor.setColorLevel(Level.INFO)
+		} else {
+			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.NONE)
+			loggingInterceptor.setColorLevel(Level.OFF)
+		}
+		builder.addInterceptor(loggingInterceptor)
 
-import okhttp3.Cache;
-import okhttp3.Dns;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.dnsoverhttps.DnsOverHttps;
-import androidx.media3.datasource.okhttp.OkHttpDataSource;
-import xyz.doikki.videoplayer.exo.ExoMediaSourceHelper;
+		builder.retryOnConnectionFailure(true)
+		builder.followRedirects(true)
+		builder.followSslRedirects(true)
 
+		try {
+			setOkHttpSsl(builder)
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
 
-public class OkGoHelper {
-    public static final long DEFAULT_MILLISECONDS = 10000;      //默认的超时时间
-    public static final ArrayList<String> dnsHttpsList = new ArrayList<>();
-    // 内置doh json
-    private static final String dnsConfigJson = "["
-            + "{\"name\": \"腾讯\", \"url\": \"https://doh.pub/dns-query\"},"
-            + "{\"name\": \"阿里\", \"url\": \"https://dns.alidns.com/dns-query\"},"
-            + "{\"name\": \"360\", \"url\": \"https://doh.360.cn/dns-query\"}"
-            + "]";
-    public static DnsOverHttps dnsOverHttps = null;
-    public static boolean is_doh = false;
-    public static Map<String, String> myHosts = null;
-    static OkHttpClient ItvClient = null;
-    static OkHttpClient defaultClient = null;
-    static OkHttpClient noRedirectClient = null;
+		// builder.dns(dnsOverHttps);
+		builder.dns(CustomDns(dns))
+		val itvClient = builder.build()
+		ItvClient = itvClient
 
-    @UnstableApi
-    static void initExoOkHttpClient() {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor("OkExoPlayer");
+		ExoMediaSourceHelper.getInstance(App.instance)
+			.setHttpDataSourceFactory(OkHttpDataSource.Factory(itvClient))
+	}
 
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY);
-            loggingInterceptor.setColorLevel(Level.INFO);
-        } else {
-            loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.NONE);
-            loggingInterceptor.setColorLevel(Level.OFF);
-        }
-        builder.addInterceptor(loggingInterceptor);
+	fun getDohUrl(type: Int): String {
+		var json = Hawk.get(HawkConfig.DOH_JSON, "")
+		if (json.isEmpty()) json = DNS_CONFIG_JSON
+		val jsonArray = JsonParser.parseString(json).asJsonArray
+		if (type >= 1 && type < dnsHttpsList.size) {
+			val dnsConfig = jsonArray.get(type - 1).asJsonObject
+			return dnsConfig.get("url").asString // 获取对应的 URL
+		}
+		return ""
+	}
 
-        builder.retryOnConnectionFailure(true);
-        builder.followRedirects(true);
-        builder.followSslRedirects(true);
+	fun setDnsList() {
+		dnsHttpsList.clear()
+		var json = Hawk.get(HawkConfig.DOH_JSON, "")
+		if (json.isEmpty()) json = DNS_CONFIG_JSON
+		val jsonArray = JsonParser.parseString(json).asJsonArray
+		dnsHttpsList.add("关闭")
+		for (i in 0..<jsonArray.size()) {
+			val dnsConfig = jsonArray.get(i).asJsonObject
+			val name = if (dnsConfig.has("name")) dnsConfig.get("name").asString else "Unknown Name"
+			dnsHttpsList.add(name)
+		}
+		if (Hawk.get(HawkConfig.DOH_URL, 0) + 1 > dnsHttpsList.size) Hawk.put(HawkConfig.DOH_URL, 0)
+	}
 
+	private fun dohIps(ips: JsonArray?): List<InetAddress> {
+		val inetAddresses: MutableList<InetAddress> = ArrayList()
+		if (ips != null) {
+			for (j in 0..<ips.size()) {
+				try {
+					val inetAddress = InetAddress.getByName(ips.get(j).asString)
+					inetAddresses.add(inetAddress) // 添加到 List 中
+				} catch (e: Exception) {
+					e.printStackTrace() // 处理无效的 IP 字符串
+				}
+			}
+		}
+		return inetAddresses
+	}
 
-        try {
-            setOkHttpSsl(builder);
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
+	fun initDnsOverHttps() {
+		val dohSelector = Hawk.get(HawkConfig.DOH_URL, 0)
+		var ips: JsonArray? = null
+		try {
+			dnsHttpsList.add("关闭")
+			var json = Hawk.get(HawkConfig.DOH_JSON, "")
+			if (json.isEmpty()) json = DNS_CONFIG_JSON
+			val jsonArray = JsonParser.parseString(json).asJsonArray
+			if (dohSelector + 1 > jsonArray.size()) Hawk.put(HawkConfig.DOH_URL, 0)
+			for (i in 0..<jsonArray.size()) {
+				val dnsConfig = jsonArray.get(i).asJsonObject
+				val name = if (dnsConfig.has("name")) dnsConfig.get("name").asString else "Unknown Name"
+				dnsHttpsList.add(name)
+				if (dohSelector == (i + 1)) ips = if (dnsConfig.has("ips")) dnsConfig.getAsJsonArray("ips") else null
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
 
-//        builder.dns(dnsOverHttps);
-        builder.dns(new CustomDns(dnsOverHttps));
-        ItvClient = builder.build();
+		val builder = OkHttpClient.Builder()
+		val loggingInterceptor = HttpLoggingInterceptor("OkExoPlayer")
+		if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY)
+			loggingInterceptor.setColorLevel(Level.INFO)
+		} else {
+			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.NONE)
+			loggingInterceptor.setColorLevel(Level.OFF)
+		}
+		builder.addInterceptor(loggingInterceptor)
+		try {
+			setOkHttpSsl(builder)
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+		builder.cache(Cache(File(App.instance.cacheDir.absolutePath, "dohcache"), (100 * 1024 * 1024).toLong()))
+		val dohClient = builder.build()
+		val dohUrl = getDohUrl(Hawk.get(HawkConfig.DOH_URL, 0))
+		dnsOverHttps = DnsOverHttps.Builder(dohClient)
+			.url(if (dohUrl.isEmpty()) null else dohUrl.toHttpUrl())
+			.bootstrapDnsHosts(if (ips != null && dohUrl != "https://doh.pub/dns-query") dohIps(ips) else null)
+			.build()
+	}
 
-        ExoMediaSourceHelper.getInstance(App.getInstance())
-                .setHttpDataSourceFactory(new OkHttpDataSource.Factory(ItvClient));
-    }
+	@UnstableApi
+	fun init() {
+		initDnsOverHttps()
 
-    public static String getDohUrl(int type) {
-        String json = Hawk.get(HawkConfig.DOH_JSON, "");
-        if (json.isEmpty()) json = dnsConfigJson;
-        JsonArray jsonArray = JsonParser.parseString(json).getAsJsonArray();
-        if (type >= 1 && type < dnsHttpsList.size()) {
-            JsonObject dnsConfig = jsonArray.get(type - 1).getAsJsonObject();
-            return dnsConfig.get("url").getAsString();  // 获取对应的 URL
-        }
-        return "";
-    }
+		val dns = dnsOverHttps ?: return
+		val builder = OkHttpClient.Builder()
+		val loggingInterceptor = HttpLoggingInterceptor("OkGo")
 
-    public static void setDnsList() {
-        dnsHttpsList.clear();
-        String json = Hawk.get(HawkConfig.DOH_JSON, "");
-        if (json.isEmpty()) json = dnsConfigJson;
-        JsonArray jsonArray = JsonParser.parseString(json).getAsJsonArray();
-        dnsHttpsList.add("关闭");
-        for (int i = 0; i < jsonArray.size(); i++) {
-            JsonObject dnsConfig = jsonArray.get(i).getAsJsonObject();
-            String name = dnsConfig.has("name") ? dnsConfig.get("name").getAsString() : "Unknown Name";
-            dnsHttpsList.add(name);
-        }
-        if (Hawk.get(HawkConfig.DOH_URL, 0) + 1 > dnsHttpsList.size()) Hawk.put(HawkConfig.DOH_URL, 0);
+		if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY)
+			loggingInterceptor.setColorLevel(Level.INFO)
+		} else {
+			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.NONE)
+			loggingInterceptor.setColorLevel(Level.OFF)
+		}
 
-    }
+		// builder.retryOnConnectionFailure(false);
+		builder.addInterceptor(loggingInterceptor)
 
-    private static List<InetAddress> DohIps(JsonArray ips) {
-        List<InetAddress> inetAddresses = new ArrayList<>();
-        if (ips != null) {
-            for (int j = 0; j < ips.size(); j++) {
-                try {
-                    InetAddress inetAddress = InetAddress.getByName(ips.get(j).getAsString());
-                    inetAddresses.add(inetAddress);  // 添加到 List 中
-                } catch (Exception e) {
-                    e.printStackTrace();  // 处理无效的 IP 字符串
-                }
-            }
-        }
-        return inetAddresses;
-    }
+		builder.readTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS)
+		builder.writeTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS)
+		builder.connectTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS)
 
-    static void initDnsOverHttps() {
-        Integer dohSelector = Hawk.get(HawkConfig.DOH_URL, 0);
-        JsonArray ips = null;
-        try {
-            dnsHttpsList.add("关闭");
-            String json = Hawk.get(HawkConfig.DOH_JSON, "");
-            if (json.isEmpty()) json = dnsConfigJson;
-            JsonArray jsonArray = JsonParser.parseString(json).getAsJsonArray();
-            if (dohSelector + 1 > jsonArray.size()) Hawk.put(HawkConfig.DOH_URL, 0);
-            for (int i = 0; i < jsonArray.size(); i++) {
-                JsonObject dnsConfig = jsonArray.get(i).getAsJsonObject();
-                String name = dnsConfig.has("name") ? dnsConfig.get("name").getAsString() : "Unknown Name";
-                dnsHttpsList.add(name);
-                if (dohSelector == (i + 1)) ips = dnsConfig.has("ips") ? dnsConfig.getAsJsonArray("ips") : null;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+		builder.dns(dns)
+		try {
+			setOkHttpSsl(builder)
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
 
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor("OkExoPlayer");
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY);
-            loggingInterceptor.setColorLevel(Level.INFO);
-        } else {
-            loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.NONE);
-            loggingInterceptor.setColorLevel(Level.OFF);
-        }
-        builder.addInterceptor(loggingInterceptor);
-        try {
-            setOkHttpSsl(builder);
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-        builder.cache(new Cache(new File(App.getInstance().getCacheDir().getAbsolutePath(), "dohcache"), 100 * 1024 * 1024));
-        OkHttpClient dohClient = builder.build();
-        String dohUrl = getDohUrl(Hawk.get(HawkConfig.DOH_URL, 0));
-//        if (!dohUrl.isEmpty()) is_doh = true;
-//        LOG.i("echo-initDnsOverHttps dohUrl:"+dohUrl);
-//        LOG.i("echo-initDnsOverHttps ips:"+ips);
-        dnsOverHttps = new DnsOverHttps.Builder().client(dohClient).url(dohUrl.isEmpty() ? null : HttpUrl.get(dohUrl)).bootstrapDnsHosts((ips != null && !dohUrl.equals("https://doh.pub/dns-query")) ? DohIps(ips) : null).build();
-    }
+		val okHttpClient = builder.build()
+		OkGo.getInstance().setOkHttpClient(okHttpClient)
 
-    public static OkHttpClient getDefaultClient() {
-        return defaultClient;
-    }
+		defaultClient = okHttpClient
 
-    public static OkHttpClient getNoRedirectClient() {
-        return noRedirectClient;
-    }
+		builder.followRedirects(false)
+		builder.followSslRedirects(false)
+		noRedirectClient = builder.build()
 
-    public static void init() {
-        initDnsOverHttps();
+		initExoOkHttpClient()
+		initPicasso(okHttpClient)
+	}
 
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor("OkGo");
+	fun initPicasso(client: OkHttpClient) {
+		client.dispatcher.maxRequestsPerHost = 10
+		val downloader = MyOkhttpDownLoader(client)
+		val picasso = Picasso.Builder(App.instance)
+			.downloader(downloader)
+			.defaultBitmapConfig(Bitmap.Config.RGB_565)
+			.build()
+		Picasso.setSingletonInstance(picasso)
+	}
 
-        if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
-            loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY);
-            loggingInterceptor.setColorLevel(Level.INFO);
-        } else {
-            loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.NONE);
-            loggingInterceptor.setColorLevel(Level.OFF);
-        }
+	private fun setOkHttpSsl(builder: OkHttpClient.Builder) {
+		try {
+			// 自定义一个信任所有证书的TrustManager，添加SSLSocketFactory的时候要用到
+			val trustAllCert: X509TrustManager = object : X509TrustManager {
+				override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+				override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+				override fun getAcceptedIssuers(): Array<X509Certificate> {
+					return arrayOf()
+				}
+			}
+			val sslSocketFactory: SSLSocketFactory = SSLSocketFactoryCompat(trustAllCert)
+			builder.sslSocketFactory(sslSocketFactory, trustAllCert)
+			builder.hostnameVerifier(HttpsUtils.UnSafeHostnameVerifier)
+		} catch (e: Exception) {
+			throw RuntimeException(e)
+		}
+	}
 
-        //builder.retryOnConnectionFailure(false);
+	// 自定义 DNS 解析器
+	internal class CustomDns // 接收外部注入的 DoH 实例
+		(private val mDnsOverHttps: DnsOverHttps) : Dns {
+		override fun lookup(hostname: String): List<InetAddress> {
+			var resolvedHost = hostname
+			if (myHosts == null) {
+				myHosts = ApiConfig.instance.myHost // 确保只获取一次减少消耗
+			}
+			val hosts = myHosts
+			if (!hosts.isNullOrEmpty() && hosts.containsKey(resolvedHost)) {
+				resolvedHost = hosts[resolvedHost] ?: resolvedHost
+			}
+			return if (isValidIpAddress(resolvedHost)) {
+				mutableListOf(InetAddress.getByName(resolvedHost))
+			} else {
+				mDnsOverHttps.lookup(resolvedHost)
+			}
+		}
 
-        builder.addInterceptor(loggingInterceptor);
+		fun mapHosts(hosts: Map<String, String>) {
+			val map = ConcurrentHashMap<String, MutableList<InetAddress>>()
+			for ((key, value) in hosts) {
+				if (isValidIpAddress(value)) {
+					map[key] = mutableListOf(InetAddress.getByName(value))
+				} else {
+					map[key] = getAllByName(value)
+				}
+			}
+		}
 
-        builder.readTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS);
-        builder.writeTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS);
-        builder.connectTimeout(DEFAULT_MILLISECONDS, TimeUnit.MILLISECONDS);
+		private fun getAllByName(host: String): MutableList<InetAddress> {
+			return try {
+				// 获取所有与主机名关联的 IP 地址
+				val allAddresses = InetAddress.getAllByName(host)
+				val excludeIps = "2409:8087:6c02:14:100::14,2409:8087:6c02:14:100::18,39.134.108.253,39.134.108.245"
+				// 创建一个列表用于存储有效的 IP 地址
+				val validAddresses: MutableList<InetAddress> = ArrayList()
+				val excludeIpsSet: MutableSet<String> = HashSet()
+				for (ip in excludeIps.split(",")) {
+					excludeIpsSet.add(ip.trim()) // 添加到集合，去除多余的空格
+				}
+				for (address in allAddresses) {
+					if (!address.hostAddress.isNullOrEmpty() && !excludeIpsSet.contains(address.hostAddress.orEmpty())) {
+						validAddresses.add(address)
+					}
+				}
+				validAddresses
+			} catch (e: Exception) {
+				ArrayList()
+			}
+		}
 
-        builder.dns(dnsOverHttps);
-        try {
-            setOkHttpSsl(builder);
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
+		// 简单判断减少开销
+		private fun isValidIpAddress(str: String): Boolean {
+			if (str.indexOf('.') > 0) return isValidIPv4(str)
+			return str.indexOf(':') > 0
+		}
 
-        OkHttpClient okHttpClient = builder.build();
-        OkGo.getInstance().setOkHttpClient(okHttpClient);
-
-        defaultClient = okHttpClient;
-
-        builder.followRedirects(false);
-        builder.followSslRedirects(false);
-        noRedirectClient = builder.build();
-
-        initExoOkHttpClient();
-        initPicasso(okHttpClient);
-    }
-
-    static void initPicasso(OkHttpClient client) {
-        client.dispatcher().setMaxRequestsPerHost(10);
-        MyOkhttpDownLoader downloader = new MyOkhttpDownLoader(client);
-        Picasso picasso = new Picasso.Builder(App.getInstance())
-                .downloader(downloader)
-                .defaultBitmapConfig(Bitmap.Config.RGB_565)
-                .build();
-        Picasso.setSingletonInstance(picasso);
-    }
-
-    private static synchronized void setOkHttpSsl(OkHttpClient.Builder builder) {
-        try {
-            // 自定义一个信任所有证书的TrustManager，添加SSLSocketFactory的时候要用到
-            final X509TrustManager trustAllCert =
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                            return new java.security.cert.X509Certificate[]{};
-                        }
-                    };
-            final SSLSocketFactory sslSocketFactory = new SSLSocketFactoryCompat(trustAllCert);
-            builder.sslSocketFactory(sslSocketFactory, trustAllCert);
-            builder.hostnameVerifier(HttpsUtils.UnSafeHostnameVerifier);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // 自定义 DNS 解析器
-    static class CustomDns implements Dns {
-        private final DnsOverHttps mDnsOverHttps;
-
-        // 接收外部注入的 DoH 实例
-        public CustomDns(DnsOverHttps dnsOverHttps) {
-            this.mDnsOverHttps = dnsOverHttps;
-        }
-
-        @NonNull
-        @Override
-        public List<InetAddress> lookup(@NonNull String hostname) throws UnknownHostException {
-            if (myHosts == null) {
-                myHosts = ApiConfig.get().getMyHost(); //确保只获取一次减少消耗
-            }
-            if (!myHosts.isEmpty() && myHosts.containsKey(hostname)) {
-                hostname = myHosts.get(hostname);
-            }
-            assert hostname != null;
-            if (isValidIpAddress(hostname)) {
-                return Collections.singletonList(InetAddress.getByName(hostname));
-            } else {
-                return mDnsOverHttps.lookup(hostname);
-            }
-        }
-
-        @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-        public synchronized void mapHosts(Map<String, String> hosts) throws UnknownHostException {
-            ConcurrentHashMap<String, List<InetAddress>> map = new ConcurrentHashMap<>();
-            for (Map.Entry<String, String> entry : hosts.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue();
-                if (isValidIpAddress(value)) {
-                    map.put(key, Collections.singletonList(InetAddress.getByName(value)));
-                } else {
-                    map.put(key, getAllByName(value));
-                }
-            }
-        }
-
-        private List<InetAddress> getAllByName(String host) {
-            try {
-                // 获取所有与主机名关联的 IP 地址
-                InetAddress[] allAddresses = InetAddress.getAllByName(host);
-                String excludeIps = "2409:8087:6c02:14:100::14,2409:8087:6c02:14:100::18,39.134.108.253,39.134.108.245";
-                // 创建一个列表用于存储有效的 IP 地址
-                List<InetAddress> validAddresses = new ArrayList<>();
-                Set<String> excludeIpsSet = new HashSet<>();
-                for (String ip : excludeIps.split(",")) {
-                    excludeIpsSet.add(ip.trim());  // 添加到集合，去除多余的空格
-                }
-                for (InetAddress address : allAddresses) {
-                    if (!excludeIpsSet.contains(address.getHostAddress())) {
-                        validAddresses.add(address);
-                    }
-                }
-                return validAddresses;
-            } catch (Exception e) {
-                return new ArrayList<>();
-            }
-        }
-
-        //简单判断减少开销
-        private boolean isValidIpAddress(String str) {
-            if (str.indexOf('.') > 0) return isValidIPv4(str);
-            return str.indexOf(':') > 0;
-        }
-
-        private boolean isValidIPv4(String str) {
-            String[] parts = str.split("\\.");
-            if (parts.length != 4) return false;
-            for (String part : parts) {
-                try {
-                    Integer.parseInt(part);
-                } catch (NumberFormatException e) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
+		private fun isValidIPv4(str: String): Boolean {
+			val parts = str.split("\\.".toRegex()).toTypedArray()
+			if (parts.size != 4) return false
+			for (part in parts) {
+				try {
+					part.toInt()
+				} catch (e: NumberFormatException) {
+					return false
+				}
+			}
+			return true
+		}
+	}
 }

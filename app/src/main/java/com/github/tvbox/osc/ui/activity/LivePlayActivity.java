@@ -57,8 +57,8 @@ import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.EpgUtil;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.PlayerHelper;
+import com.github.tvbox.osc.util.TVBoxRuntimeLog;
 import com.github.tvbox.osc.util.live.TxtSubscribe;
 import com.github.tvbox.osc.util.urlhttp.CallBackUtil;
 import com.github.tvbox.osc.util.urlhttp.UrlHttpUtil;
@@ -605,7 +605,7 @@ public class LivePlayActivity extends BaseActivity {
             }
 
             public void onResponse(String paramString) {
-                LOG.i("echo-epgTagName:" + channelNameReal);
+                TVBoxRuntimeLog.i("echo-epgTagName:" + channelNameReal);
                 ArrayList<Epginfo> arrayList = new ArrayList<>();
                 try {
                     if (paramString.contains("epg_data")) {
@@ -972,7 +972,7 @@ public class LivePlayActivity extends BaseActivity {
 
         if (livesOBJ.has("catchup")) {
             catchup = livesOBJ.getAsJsonObject("catchup");
-            LOG.i("echo-catchup :" + catchup.toString());
+            TVBoxRuntimeLog.i("echo-catchup :" + catchup.toString());
             hasCatchup = true;
         }
         if (livesOBJ.has("logo")) {
@@ -992,7 +992,7 @@ public class LivePlayActivity extends BaseActivity {
                 } else {
                     ext = DefaultConfig.safeJsonString(livesOBJ, "ext", "");
                 }
-                LOG.i("echo-ext:" + ext);
+                TVBoxRuntimeLog.i("echo-ext:" + ext);
                 if (!ext.isEmpty()) py_jar = py_jar + "?extend=" + ext;
             }
             ApiConfig.get().setLiveJar(py_jar);
@@ -1029,7 +1029,7 @@ public class LivePlayActivity extends BaseActivity {
         backcontroller.setVisibility(View.GONE);
         ll_right_top_huikan.setVisibility(View.GONE);
         if (mVideoView != null) {
-            if (liveWebHeader() != null) LOG.i("echo-" + liveWebHeader().toString());
+            if (liveWebHeader() != null) TVBoxRuntimeLog.i("echo-" + liveWebHeader().toString());
             mVideoView.setUrl(currentLiveChannelItem.getUrl(), liveWebHeader());
             mVideoView.start();
         }
@@ -1176,7 +1176,7 @@ public class LivePlayActivity extends BaseActivity {
                                 matcher.appendReplacement(result, replacement);
                             }
                             matcher.appendTail(result);
-                            LOG.i("echo-shiyiurl:" + shiyiUrl);
+                            TVBoxRuntimeLog.i("echo-shiyiurl:" + shiyiUrl);
                             if (shiyiUrl.endsWith("&"))
                                 shiyiUrl = shiyiUrl.substring(0, shiyiUrl.length() - 1);
                             shiyiUrl += result.toString();
@@ -1189,7 +1189,7 @@ public class LivePlayActivity extends BaseActivity {
                                 shiyiUrl += "&playseek=" + shiyi_time;
                             }
                         }
-                        LOG.i("echo-回看地址playUrl :" + shiyiUrl);
+                        TVBoxRuntimeLog.i("echo-回看地址playUrl :" + shiyiUrl);
                         playUrl = shiyiUrl;
 
                         mVideoView.setUrl(playUrl, liveWebHeader());
@@ -1228,8 +1228,8 @@ public class LivePlayActivity extends BaseActivity {
                 Epginfo selectedData = epgListAdapter.getItem(position);
                 String targetDate = dateFormat.format(date);
                 assert selectedData != null;
-                LOG.i("echo-targetDate" + targetDate);
-                LOG.i("echo-targethm" + selectedData.originStart.replace(":", ""));
+                TVBoxRuntimeLog.i("echo-targetDate" + targetDate);
+                TVBoxRuntimeLog.i("echo-targethm" + selectedData.originStart.replace(":", ""));
                 String shiyiStartdate = targetDate + selectedData.originStart.replace(":", "") + "00";
                 String shiyiEnddate = targetDate + selectedData.originEnd.replace(":", "") + "00";
                 Date now = new Date();
@@ -1283,7 +1283,7 @@ public class LivePlayActivity extends BaseActivity {
                                 matcher.appendReplacement(result, replacement);
                             }
                             matcher.appendTail(result);
-                            LOG.i("echo-shiyiurl:" + shiyiUrl);
+                            TVBoxRuntimeLog.i("echo-shiyiurl:" + shiyiUrl);
                             if (shiyiUrl.endsWith("&"))
                                 shiyiUrl = shiyiUrl.substring(0, shiyiUrl.length() - 1);
                             shiyiUrl += result.toString();
@@ -1297,10 +1297,10 @@ public class LivePlayActivity extends BaseActivity {
                             }
                         }
 
-                        LOG.i("echo-回看地址playUrl :" + shiyiUrl);
+                        TVBoxRuntimeLog.i("echo-回看地址playUrl :" + shiyiUrl);
                         playUrl = shiyiUrl;
                         if (liveWebHeader() != null)
-                            LOG.i("echo-liveWebHeader :" + liveWebHeader().toString());
+                            TVBoxRuntimeLog.i("echo-liveWebHeader :" + liveWebHeader().toString());
                         mVideoView.setUrl(playUrl, liveWebHeader());
                         mVideoView.start();
                         epgListAdapter.setShiyiSelection(position, true, timeFormat.format(date));
@@ -1342,7 +1342,7 @@ public class LivePlayActivity extends BaseActivity {
         LiveDayListGroup daylist = new LiveDayListGroup();
         Date newday = new Date((nowday.getTime()));
         String day = formatDate1.format(newday);
-        LOG.i("echo-date" + day);
+        TVBoxRuntimeLog.i("echo-date" + day);
         daylist.setGroupIndex(0);
         daylist.setGroupName(day);
         liveDayList.add(daylist);
@@ -1461,7 +1461,7 @@ public class LivePlayActivity extends BaseActivity {
                         mHandler.postDelayed(mConnectTimeoutChangeSourceRun, (Hawk.get(HawkConfig.LIVE_CONNECT_TIMEOUT, 1) + 1) * 5000L);
                         break;
                     default:
-                        LOG.i("echo-Unexpected live_play state: " + playState);
+                        TVBoxRuntimeLog.i("echo-Unexpected live_play state: " + playState);
                         break;
                 }
             }
@@ -1804,7 +1804,7 @@ public class LivePlayActivity extends BaseActivity {
         }
         showLoading();
 
-        LOG.i("echo-live-url:" + url);
+        TVBoxRuntimeLog.i("echo-live-url:" + url);
 
         if (url.contains(".py")) {
             if (!hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -1817,10 +1817,10 @@ public class LivePlayActivity extends BaseActivity {
             Runnable waitResponse = () -> {
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 Future<String> future = executor.submit(() -> {
-                    LOG.i("echo--loadProxyLives-json--");
+                    TVBoxRuntimeLog.i("echo--loadProxyLives-json--");
                     Spider sp = ApiConfig.get().getPyCSP(finalUrl);
                     String json = sp.liveContent(finalUrl);
-                    LOG.i("echo--loadProxyLives-json--" + json);
+                    TVBoxRuntimeLog.i("echo--loadProxyLives-json--" + json);
                     return json;
                 });
                 String sortJson = null;

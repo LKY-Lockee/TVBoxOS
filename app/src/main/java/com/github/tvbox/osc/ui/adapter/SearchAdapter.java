@@ -53,8 +53,8 @@ public class SearchAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder>
         helper.setText(R.id.tvActor, item.actor);
 
         ImageView ivThumb = helper.getView(R.id.ivThumb);
-        int newWidth = ImgUtil.defaultWidth;
-        int newHeight = ImgUtil.defaultHeight;
+        int newWidth = ImgUtil.DEFAULT_WIDTH;
+        int newHeight = ImgUtil.DEFAULT_HEIGHT;
 
         if (!TextUtils.isEmpty(item.pic)) {
             item.pic = item.pic.trim();

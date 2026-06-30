@@ -1,288 +1,237 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.app.Activity;
-import android.content.Context;
+import android.app.Activity
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.player.ExoMediaPlayerFactory
+import com.github.tvbox.osc.player.IjkMediaPlayer
+import com.github.tvbox.osc.player.render.SurfaceRenderViewFactory
+import com.github.tvbox.osc.player.thirdparty.Kodi
+import com.github.tvbox.osc.player.thirdparty.MXPlayer
+import com.github.tvbox.osc.player.thirdparty.ReexPlayer
+import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
+import com.github.tvbox.osc.player.thirdparty.VlcPlayer
+import com.orhanobut.hawk.Hawk
+import org.json.JSONException
+import org.json.JSONObject
+import xyz.doikki.videoplayer.player.AndroidMediaPlayerFactory
+import xyz.doikki.videoplayer.player.PlayerFactory
+import xyz.doikki.videoplayer.player.VideoView
+import xyz.doikki.videoplayer.render.RenderViewFactory
+import xyz.doikki.videoplayer.render.TextureRenderViewFactory
+import java.text.DecimalFormat
 
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.bean.IJKCode;
-import com.github.tvbox.osc.player.ExoMediaPlayerFactory;
-import com.github.tvbox.osc.player.IjkMediaPlayer;
-import com.github.tvbox.osc.player.render.SurfaceRenderViewFactory;
-import com.github.tvbox.osc.player.thirdparty.Kodi;
-import com.github.tvbox.osc.player.thirdparty.MXPlayer;
-import com.github.tvbox.osc.player.thirdparty.ReexPlayer;
-import com.github.tvbox.osc.player.thirdparty.RemoteTVBox;
-import com.github.tvbox.osc.player.thirdparty.VlcPlayer;
-import com.orhanobut.hawk.Hawk;
+object PlayerHelper {
+	private var mPlayersInfo: HashMap<Int, String>? = null
+	private var mPlayersExistInfo: HashMap<Int, Boolean>? = null
 
-import org.json.JSONException;
-import org.json.JSONObject;
+	fun updateCfg(videoView: VideoView?, playerCfg: JSONObject, forcePlayerType: Int = -1) {
+		var playerType = Hawk.get(HawkConfig.PLAY_TYPE, 0)
+		var renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0)
+		var ijkCode = Hawk.get(HawkConfig.IJK_CODEC, "硬解码")
+		var scale = Hawk.get(HawkConfig.PLAY_SCALE, 0)
+		try {
+			playerType = playerCfg.getInt("pl")
+			renderType = playerCfg.getInt("pr")
+			ijkCode = playerCfg.getString("ijk")
+			scale = playerCfg.getInt("sc")
+		} catch (e: JSONException) {
+			e.printStackTrace()
+		}
+		if (forcePlayerType >= 0) playerType = forcePlayerType
+		val codec = ApiConfig.instance.getIJKCodec(ijkCode)
+		val playerFactory = when (playerType) {
+			1 -> {
+				try {
+					tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce { s: String ->
+						try {
+							System.loadLibrary(s)
+						} catch (th: Throwable) {
+							th.printStackTrace()
+						}
+					}
+				} catch (th: Throwable) {
+					th.printStackTrace()
+				}
+				object : PlayerFactory<IjkMediaPlayer>() {
+					override fun createPlayer(context: android.content.Context): IjkMediaPlayer {
+						return IjkMediaPlayer(context, codec)
+					}
+				}
+			}
+			2 -> ExoMediaPlayerFactory.create()
+			else -> AndroidMediaPlayerFactory.create()
+		}
+		val renderViewFactory: RenderViewFactory = when (renderType) {
+			1 -> SurfaceRenderViewFactory.create()
+			else -> TextureRenderViewFactory.create()
+		}
+		videoView?.apply {
+			@Suppress("UNCHECKED_CAST")
+			setPlayerFactory(playerFactory as PlayerFactory<xyz.doikki.videoplayer.player.AbstractPlayer>)
+			setRenderViewFactory(renderViewFactory)
+			setScreenScaleType(scale)
+		}
+	}
 
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
+	fun updateCfg(videoView: VideoView) {
+		val playType = Hawk.get(HawkConfig.PLAY_TYPE, 0)
+		val playerFactory = when (playType) {
+			1 -> {
+				try {
+					tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce { s: String ->
+						try {
+							System.loadLibrary(s)
+						} catch (th: Throwable) {
+							th.printStackTrace()
+						}
+					}
+				} catch (th: Throwable) {
+					th.printStackTrace()
+				}
+				object : PlayerFactory<IjkMediaPlayer>() {
+					override fun createPlayer(context: android.content.Context): IjkMediaPlayer {
+						return IjkMediaPlayer(context, null)
+					}
+				}
+			}
+			2 -> ExoMediaPlayerFactory.create()
+			else -> AndroidMediaPlayerFactory.create()
+		}
+		val renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0)
+		val renderViewFactory: RenderViewFactory = when (renderType) {
+			1 -> SurfaceRenderViewFactory.create()
+			else -> TextureRenderViewFactory.create()
+		}
+		@Suppress("UNCHECKED_CAST")
+		videoView.setPlayerFactory(playerFactory as PlayerFactory<xyz.doikki.videoplayer.player.AbstractPlayer>)
+		videoView.setRenderViewFactory(renderViewFactory)
+	}
 
-import xyz.doikki.videoplayer.player.AndroidMediaPlayerFactory;
-import xyz.doikki.videoplayer.player.PlayerFactory;
-import xyz.doikki.videoplayer.player.VideoView;
-import xyz.doikki.videoplayer.render.RenderViewFactory;
-import xyz.doikki.videoplayer.render.TextureRenderViewFactory;
+	fun init() {
+		try {
+			tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce { s: String ->
+				try {
+					System.loadLibrary(s)
+				} catch (th: Throwable) {
+					th.printStackTrace()
+				}
+			}
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+	}
 
-public class PlayerHelper {
-    private static HashMap<Integer, String> mPlayersInfo = null;
-    private static HashMap<Integer, Boolean> mPlayersExistInfo = null;
+	fun getPlayerName(playType: Int): String {
+		return playersInfo.getOrDefault(playType, "系统播放器")
+	}
 
-    public static void updateCfg(VideoView videoView, JSONObject playerCfg) {
-        updateCfg(videoView, playerCfg, -1);
-    }
+	val playersInfo: HashMap<Int, String>
+		get() {
+			var info = mPlayersInfo
+			if (info == null) {
+				info = HashMap<Int, String>().apply {
+					this[0] = "系统播放器"
+					this[1] = "IJK播放器"
+					this[2] = "Exo播放器"
+					this[10] = "MX播放器"
+					this[11] = "Reex播放器"
+					this[12] = "Kodi播放器"
+					this[13] = "附近TVBox"
+					this[14] = "VLC播放器"
+				}
+				mPlayersInfo = info
+			}
+			return info
+		}
 
-    public static void updateCfg(VideoView videoView, JSONObject playerCfg, int forcePlayerType) {
-        int playerType = Hawk.get(HawkConfig.PLAY_TYPE, 0);
-        int renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0);
-        String ijkCode = Hawk.get(HawkConfig.IJK_CODEC, "硬解码");
-        int scale = Hawk.get(HawkConfig.PLAY_SCALE, 0);
-        try {
-            playerType = playerCfg.getInt("pl");
-            renderType = playerCfg.getInt("pr");
-            ijkCode = playerCfg.getString("ijk");
-            scale = playerCfg.getInt("sc");
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        if (forcePlayerType >= 0) playerType = forcePlayerType;
-        IJKCode codec = ApiConfig.get().getIJKCodec(ijkCode);
-        PlayerFactory playerFactory;
-        if (playerType == 1) {
-            playerFactory = new PlayerFactory<IjkMediaPlayer>() {
-                @Override
-                public IjkMediaPlayer createPlayer(Context context) {
-                    return new IjkMediaPlayer(context, codec);
-                }
-            };
-            try {
-                tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(s -> {
-                    try {
-                        System.loadLibrary(s);
-                    } catch (Throwable th) {
-                        th.printStackTrace();
-                    }
-                });
-            } catch (Throwable th) {
-                th.printStackTrace();
-            }
-        } else if (playerType == 2) {
-            playerFactory = ExoMediaPlayerFactory.create();
-        } else {
-            playerFactory = AndroidMediaPlayerFactory.create();
-        }
-        RenderViewFactory renderViewFactory;
-        switch (renderType) {
-            case 1:
-                renderViewFactory = SurfaceRenderViewFactory.create();
-                break;
-            case 0:
-            default:
-                renderViewFactory = TextureRenderViewFactory.create();
-                break;
-        }
-        if (videoView != null) {
-            videoView.setPlayerFactory(playerFactory);
-            videoView.setRenderViewFactory(renderViewFactory);
-            videoView.setScreenScaleType(scale);
-        }
-    }
+	val playersExistInfo: HashMap<Int, Boolean>
+		get() {
+			var exist = mPlayersExistInfo
+			if (exist == null) {
+				exist = HashMap<Int, Boolean>().apply {
+					this[0] = true
+					this[1] = true
+					this[2] = true
+					this[10] = MXPlayer.packageInfo != null
+					this[11] = ReexPlayer.packageInfo != null
+					this[12] = Kodi.packageInfo != null
+					this[13] = RemoteTVBox.available != null
+					this[14] = VlcPlayer.packageInfo != null
+				}
+				mPlayersExistInfo = exist
+			}
+			return exist
+		}
 
-    public static void updateCfg(VideoView videoView) {
-        int playType = Hawk.get(HawkConfig.PLAY_TYPE, 0);
-        PlayerFactory playerFactory;
-        if (playType == 1) {
-            playerFactory = new PlayerFactory<IjkMediaPlayer>() {
-                @Override
-                public IjkMediaPlayer createPlayer(Context context) {
-                    return new IjkMediaPlayer(context, null);
-                }
-            };
-            try {
-                tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(s -> {
-                    try {
-                        System.loadLibrary(s);
-                    } catch (Throwable th) {
-                        th.printStackTrace();
-                    }
-                });
-            } catch (Throwable th) {
-                th.printStackTrace();
-            }
-        } else if (playType == 2) {
-            playerFactory = ExoMediaPlayerFactory.create();
-        } else {
-            playerFactory = AndroidMediaPlayerFactory.create();
-        }
-        int renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0);
-        RenderViewFactory renderViewFactory;
-        switch (renderType) {
-            case 1:
-                renderViewFactory = SurfaceRenderViewFactory.create();
-                break;
-            case 0:
-            default:
-                renderViewFactory = TextureRenderViewFactory.create();
-                break;
-        }
-        videoView.setPlayerFactory(playerFactory);
-        videoView.setRenderViewFactory(renderViewFactory);
-    }
+	fun getPlayerExist(playType: Int): Boolean {
+		return playersExistInfo.getOrDefault(playType, false)
+	}
 
-    public static void init() {
-        try {
-            tv.danmaku.ijk.media.player.IjkMediaPlayer.loadLibrariesOnce(s -> {
-                try {
-                    System.loadLibrary(s);
-                } catch (Throwable th) {
-                    th.printStackTrace();
-                }
-            });
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-    }
+	val existPlayerTypes: List<Int>
+		get() {
+			val existPlayers = ArrayList<Int>()
+			for ((playerType, exists) in playersExistInfo) {
+				if (exists) {
+					existPlayers.add(playerType)
+				}
+			}
+			return existPlayers
+		}
 
-    public static String getPlayerName(int playType) {
-        HashMap<Integer, String> playersInfo = getPlayersInfo();
-        return playersInfo.getOrDefault(playType, "系统播放器");
-    }
+	fun runExternalPlayer(
+		playerType: Int,
+		activity: Activity,
+		url: String?,
+		title: String?,
+		subtitle: String?,
+		headers: HashMap<String, String>?,
+		progress: Long = 0
+	): Boolean {
+		return when (playerType) {
+			10 -> MXPlayer.run(activity, url, title, subtitle, headers)
+			11 -> ReexPlayer.run(activity, url, title, subtitle, headers)
+			12 -> Kodi.run(activity, url, title, subtitle, headers)
+			13 -> RemoteTVBox.run(activity, url, title, subtitle, headers)
+			14 -> VlcPlayer.run(activity, url, title, subtitle, progress)
+			else -> false
+		}
+	}
 
-    public static HashMap<Integer, String> getPlayersInfo() {
-        if (mPlayersInfo == null) {
-            HashMap<Integer, String> playersInfo = new HashMap<>();
-            playersInfo.put(0, "系统播放器");
-            playersInfo.put(1, "IJK播放器");
-            playersInfo.put(2, "Exo播放器");
-            playersInfo.put(10, "MX播放器");
-            playersInfo.put(11, "Reex播放器");
-            playersInfo.put(12, "Kodi播放器");
-            playersInfo.put(13, "附近TVBox");
-            playersInfo.put(14, "VLC播放器");
-            mPlayersInfo = playersInfo;
-        }
-        return mPlayersInfo;
-    }
+	fun getRenderName(renderType: Int): String {
+		return if (renderType == 1) "SurfaceView" else "TextureView"
+	}
 
-    public static HashMap<Integer, Boolean> getPlayersExistInfo() {
-        if (mPlayersExistInfo == null) {
-            HashMap<Integer, Boolean> playersExist = new HashMap<>();
-            playersExist.put(0, true);
-            playersExist.put(1, true);
-            playersExist.put(2, true);
-            playersExist.put(10, MXPlayer.getPackageInfo() != null);
-            playersExist.put(11, ReexPlayer.getPackageInfo() != null);
-            playersExist.put(12, Kodi.getPackageInfo() != null);
-            playersExist.put(13, RemoteTVBox.getAvailable() != null);
-            playersExist.put(14, VlcPlayer.getPackageInfo() != null);
-            mPlayersExistInfo = playersExist;
-        }
-        return mPlayersExistInfo;
-    }
+	fun getScaleName(screenScaleType: Int): String {
+		return when (screenScaleType) {
+			VideoView.SCREEN_SCALE_DEFAULT -> "默认"
+			VideoView.SCREEN_SCALE_16_9 -> "16:9"
+			VideoView.SCREEN_SCALE_4_3 -> "4:3"
+			VideoView.SCREEN_SCALE_MATCH_PARENT -> "填充"
+			VideoView.SCREEN_SCALE_ORIGINAL -> "原始"
+			VideoView.SCREEN_SCALE_CENTER_CROP -> "裁剪"
+			else -> "默认"
+		}
+	}
 
-    public static Boolean getPlayerExist(int playType) {
-        HashMap<Integer, Boolean> playersExistInfo = getPlayersExistInfo();
-        return playersExistInfo.getOrDefault(playType, false);
-    }
+	fun getDisplaySpeed(speed: Long, show: Boolean): String {
+		return when {
+			speed > 1048576 -> DecimalFormat("#.00").format(speed / 1048576.0) + "Mb/s"
+			speed > 1024 -> (speed / 1024).toString() + "Kb/s"
+			speed > 0 -> speed.toString() + "B/s"
+			else -> if (show) "0B/s" else ""
+		}
+	}
 
-    public static ArrayList<Integer> getExistPlayerTypes() {
-        HashMap<Integer, Boolean> playersExistInfo = getPlayersExistInfo();
-        ArrayList<Integer> existPlayers = new ArrayList<>();
-        for (Integer playerType : playersExistInfo.keySet()) {
-            if (playersExistInfo.get(playerType)) {
-                existPlayers.add(playerType);
-            }
-        }
-        return existPlayers;
-    }
-
-    public static Boolean runExternalPlayer(int playerType, Activity activity, String url, String title, String subtitle, HashMap<String, String> headers) {
-        return runExternalPlayer(playerType, activity, url, title, subtitle, headers);
-    }
-
-    public static Boolean runExternalPlayer(int playerType, Activity activity, String url, String title, String subtitle, HashMap<String, String> headers, long progress) {
-        boolean callResult = false;
-        switch (playerType) {
-            case 10: {
-                callResult = MXPlayer.run(activity, url, title, subtitle, headers);
-                break;
-            }
-            case 11: {
-                callResult = ReexPlayer.run(activity, url, title, subtitle, headers);
-                break;
-            }
-            case 12: {
-                callResult = Kodi.run(activity, url, title, subtitle, headers);
-                break;
-            }
-            case 13: {
-                callResult = RemoteTVBox.run(activity, url, title, subtitle, headers);
-                break;
-            }
-            case 14: {
-                callResult = VlcPlayer.run(activity, url, title, subtitle, progress);
-                break;
-            }
-        }
-        return callResult;
-    }
-
-    public static String getRenderName(int renderType) {
-        if (renderType == 1) {
-            return "SurfaceView";
-        } else {
-            return "TextureView";
-        }
-    }
-
-    public static String getScaleName(int screenScaleType) {
-        String scaleText = "默认";
-        switch (screenScaleType) {
-            case VideoView.SCREEN_SCALE_DEFAULT:
-                scaleText = "默认";
-                break;
-            case VideoView.SCREEN_SCALE_16_9:
-                scaleText = "16:9";
-                break;
-            case VideoView.SCREEN_SCALE_4_3:
-                scaleText = "4:3";
-                break;
-            case VideoView.SCREEN_SCALE_MATCH_PARENT:
-                scaleText = "填充";
-                break;
-            case VideoView.SCREEN_SCALE_ORIGINAL:
-                scaleText = "原始";
-                break;
-            case VideoView.SCREEN_SCALE_CENTER_CROP:
-                scaleText = "裁剪";
-                break;
-        }
-        return scaleText;
-    }
-
-    public static String getDisplaySpeed(long speed, boolean show) {
-        if (speed > 1048576)
-            return new DecimalFormat("#.00").format(speed / 1048576d) + "Mb/s";
-        else if (speed > 1024)
-            return (speed / 1024) + "Kb/s";
-        else
-            return speed > 0 ? speed + "B/s" : (show ? "0B/s" : "");
-    }
-
-    public static String getDisplaySpeedBps(long speed, boolean show) {
-        long bitSpeed = speed * 8; // 字节转比特
-        if (bitSpeed >= 1_000_000_000) {
-            return new DecimalFormat("0.00").format(bitSpeed / 1_000_000_000d) + "Gbps";
-        } else if (bitSpeed >= 1_000) {
-            double mbps = bitSpeed / 1_000_000d;
-            DecimalFormat df = mbps < 0.1 ? new DecimalFormat("0.00") : new DecimalFormat("0.0");
-            return df.format(mbps) + "Mbps";
-        } else {
-            return show ? "0bps" : "";
-        }
-    }
+	fun getDisplaySpeedBps(speed: Long, show: Boolean): String {
+		val bitSpeed = speed * 8 // 字节转比特
+		return when {
+			bitSpeed >= 1000000000 -> DecimalFormat("0.00").format(bitSpeed / 1000000000.0) + "Gbps"
+			bitSpeed >= 1000 -> {
+				val mbps = bitSpeed / 1000000.0
+				val df = if (mbps < 0.1) DecimalFormat("0.00") else DecimalFormat("0.0")
+				df.format(mbps) + "Mbps"
+			}
+			else -> if (show) "0bps" else ""
+		}
+	}
 }

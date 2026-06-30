@@ -22,7 +22,7 @@ import okhttp3.Response
 import java.util.Random
 
 object Connect {
-	var client: OkHttpClient = OkGoHelper.getDefaultClient()
+	var client: OkHttpClient = OkGoHelper.defaultClient
 
 	fun to(url: String, req: Req): Call {
 		return client.newCall(getRequest(url, req, req.header.toHeaders()))

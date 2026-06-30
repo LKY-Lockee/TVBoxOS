@@ -1,39 +1,32 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import android.app.Activity;
+import android.app.Activity
+import com.github.tvbox.osc.util.ScreenUtils.getSqrt
+import com.orhanobut.hawk.Hawk
 
-import com.orhanobut.hawk.Hawk;
+object SubtitleHelper {
+	fun getSubtitleTextAutoSize(activity: Activity): Int {
+		val screenSqrt = getSqrt(activity)
+		return when {
+			screenSqrt > 50.0 -> 46
+			screenSqrt > 13.0 -> 36
+			screenSqrt > 7.0 -> 24
+			else -> 16
+		}
+	}
 
-public class SubtitleHelper {
+	fun getTextSize(activity: Activity): Int {
+		val autoSize = getSubtitleTextAutoSize(activity)
+		return Hawk.get(HawkConfig.SUBTITLE_TEXT_SIZE, autoSize)
+	}
 
-    public static int getSubtitleTextAutoSize(Activity activity) {
-        double screenSqrt = ScreenUtils.getSqrt(activity);
-        int subtitleTextSize = 16;
-        if (screenSqrt > 7.0 && screenSqrt <= 13.0) {
-            subtitleTextSize = 24;
-        } else if (screenSqrt > 13.0 && screenSqrt <= 50.0) {
-            subtitleTextSize = 36;
-        } else if (screenSqrt > 50.0) {
-            subtitleTextSize = 46;
-        }
-        return subtitleTextSize;
-    }
+	fun setTextSize(size: Int) {
+		Hawk.put(HawkConfig.SUBTITLE_TEXT_SIZE, size)
+	}
 
-    public static int getTextSize(Activity activity) {
-        int autoSize = getSubtitleTextAutoSize(activity);
-        return Hawk.get(HawkConfig.SUBTITLE_TEXT_SIZE, autoSize);
-    }
-
-    public static void setTextSize(int size) {
-        Hawk.put(HawkConfig.SUBTITLE_TEXT_SIZE, size);
-    }
-
-    public static int getTimeDelay() {
-        return Hawk.get(HawkConfig.SUBTITLE_TIME_DELAY, 0);
-    }
-
-    public static void setTimeDelay(int delay) {
-        Hawk.put(HawkConfig.SUBTITLE_TIME_DELAY, delay);
-    }
-
+	var timeDelay: Int
+		get() = Hawk.get(HawkConfig.SUBTITLE_TIME_DELAY, 0)
+		set(delay) {
+			Hawk.put(HawkConfig.SUBTITLE_TIME_DELAY, delay)
+		}
 }

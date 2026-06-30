@@ -79,8 +79,8 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         helper.setText(R.id.tvActor, item.actor);
         ImageView ivThumb = helper.getView(R.id.ivThumb);
 
-        int newWidth = ImgUtil.defaultWidth;
-        int newHeight = ImgUtil.defaultHeight;
+        int newWidth = ImgUtil.DEFAULT_WIDTH;
+        int newHeight = ImgUtil.DEFAULT_HEIGHT;
 
         //由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {

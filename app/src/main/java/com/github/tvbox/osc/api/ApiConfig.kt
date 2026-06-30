@@ -23,11 +23,11 @@ import com.github.tvbox.osc.util.AdBlocker
 import com.github.tvbox.osc.util.DefaultConfig
 import com.github.tvbox.osc.util.FileUtils
 import com.github.tvbox.osc.util.HawkConfig
-import com.github.tvbox.osc.util.LOG
-import com.github.tvbox.osc.util.M3u8
+import com.github.tvbox.osc.util.M3U8
 import com.github.tvbox.osc.util.MD5
 import com.github.tvbox.osc.util.OkGoHelper
 import com.github.tvbox.osc.util.RegexUtils
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.VideoParseRuler
 import com.google.gson.Gson
 import com.google.gson.JsonArray
@@ -127,7 +127,7 @@ class ApiConfig private constructor() {
 				parseLiveJson(liveApiUrl, defaultLiveObjString)
 			} else {
 				val liveCache = File(App.instance.filesDir.absolutePath + "/" + MD5.encode(liveApiUrl))
-				LOG.i("echo-加载独立直播")
+				TVBoxRuntimeLog.i("echo-加载独立直播")
 				if (useCache && liveCache.exists()) {
 					try {
 						parseLiveJson(liveApiUrl, liveCache)
@@ -260,7 +260,7 @@ class ApiConfig private constructor() {
 			}
 		} else {
 			if (jarCache.toBoolean() && cache.exists() && !FileUtils.isWeekAgo(cache)) {
-				LOG.i("echo-load jar jarCache:$jarUrl")
+				TVBoxRuntimeLog.i("echo-load jar jarCache:$jarUrl")
 				if (jarLoader.load(cache.absolutePath)) {
 					callback.success()
 					return
@@ -270,7 +270,7 @@ class ApiConfig private constructor() {
 
 		val isJarInImg = jarUrl.startsWith("img+")
 		jarUrl = jarUrl.replace("img+", "")
-		LOG.i("echo-load jar start:$jarUrl")
+		TVBoxRuntimeLog.i("echo-load jar start:$jarUrl")
 		OkGo.get<File?>(jarUrl)
 			.headers("User-Agent", userAgent)
 			.headers("Accept", requestAccept)
@@ -284,10 +284,10 @@ class ApiConfig private constructor() {
 						FileOutputStream(cache).use { fos ->
 							if (isJarInImg) {
 								val respData = response.body.string()
-								LOG.i("echo---jar Response: $respData")
+								TVBoxRuntimeLog.i("echo---jar Response: $respData")
 								val imgJar: ByteArray? = getImgJar(respData)
 								if (imgJar == null || imgJar.isEmpty()) {
-									LOG.e("echo---Generated JAR data is empty")
+									TVBoxRuntimeLog.e("echo---Generated JAR data is empty")
 									callback.error("JAR 是空的")
 								}
 								fos.write(imgJar)
@@ -313,18 +313,18 @@ class ApiConfig private constructor() {
 					if (file != null && file.exists()) {
 						try {
 							if (jarLoader.load(file.absolutePath)) {
-								LOG.i("echo---load-jar-success")
+								TVBoxRuntimeLog.i("echo---load-jar-success")
 								callback.success()
 							} else {
-								LOG.e("echo---jar Loader returned false")
+								TVBoxRuntimeLog.e("echo---jar Loader returned false")
 								callback.error("JAR加载失败")
 							}
 						} catch (e: Exception) {
-							LOG.e("echo---jar Loader threw exception: " + e.message)
+							TVBoxRuntimeLog.e("echo---jar Loader threw exception: " + e.message)
 							callback.error("JAR加载异常: ")
 						}
 					} else {
-						LOG.e("echo---jar File not found")
+						TVBoxRuntimeLog.e("echo---jar File not found")
 						callback.error("JAR文件不存在")
 					}
 				}
@@ -332,7 +332,7 @@ class ApiConfig private constructor() {
 				override fun onError(response: Response<File?>) {
 					val ex = response.exception
 					if (ex != null) {
-						LOG.i("echo---jar Request failed: " + ex.message)
+						TVBoxRuntimeLog.i("echo---jar Request failed: " + ex.message)
 					}
 					if (cache.exists()) jarLoader.load(cache.absolutePath)
 					callback.error("网络错误")
@@ -420,7 +420,7 @@ class ApiConfig private constructor() {
 		// 直播源
 		val liveApiUrl = Hawk.get(HawkConfig.LIVE_API_URL, "")
 		if (liveApiUrl.isEmpty() || apiUrl == liveApiUrl) {
-			LOG.i("echo-load-config_live")
+			TVBoxRuntimeLog.i("echo-load-config_live")
 			initLiveSettings()
 			if (infoJson.has("lives")) {
 				val livesGroups = infoJson.get("lives").getAsJsonArray()
@@ -498,7 +498,7 @@ class ApiConfig private constructor() {
 					val regexArray = obj.getAsJsonArray("regex")
 					for (one in regexArray) {
 						val regex = one.asString
-						if (M3u8.isAd(regex)) ads.add(regex)
+						if (M3U8.isAd(regex)) ads.add(regex)
 						else rule.add(regex)
 					}
 					val array = obj.getAsJsonArray("hosts")
@@ -534,7 +534,7 @@ class ApiConfig private constructor() {
 			Hawk.put(HawkConfig.DOH_JSON, "")
 		}
 		OkGoHelper.setDnsList()
-		LOG.i("echo-api-config-----------load")
+		TVBoxRuntimeLog.i("echo-api-config-----------load")
 		//追加的广告拦截
 		if (infoJson.has("ads")) {
 			for (host in infoJson.getAsJsonArray("ads")) {
@@ -588,7 +588,7 @@ class ApiConfig private constructor() {
 				ijkCodes[0].selected(true)
 			}
 		}
-		LOG.i("echo-default-config-----------load")
+		TVBoxRuntimeLog.i("echo-default-config-----------load")
 	}
 
 	private fun parseLiveJson(apiUrl: String?, f: File) {
@@ -646,7 +646,7 @@ class ApiConfig private constructor() {
 				}
 			}
 		}
-		LOG.i("echo-api-live-config-----------load")
+		TVBoxRuntimeLog.i("echo-api-live-config-----------load")
 	}
 
 	private fun initLiveSettings() {
@@ -726,7 +726,7 @@ class ApiConfig private constructor() {
 
 	fun loadLiveApi(livesOBJ: JsonObject) {
 		try {
-			LOG.i("echo-loadLiveApi")
+			TVBoxRuntimeLog.i("echo-loadLiveApi")
 			val lives = livesOBJ.toString()
 			val index = lives.indexOf("proxy://")
 			var url: String
@@ -749,7 +749,7 @@ class ApiConfig private constructor() {
 				if (type == "0" || type == "3") {
 					url = if (livesOBJ.has("url")) livesOBJ.get("url").asString else ""
 					if (url.isEmpty()) url = if (livesOBJ.has("api")) livesOBJ.get("api").asString else ""
-					LOG.i("echo-liveurl$url")
+					TVBoxRuntimeLog.i("echo-liveurl$url")
 					if (!url.startsWith("http://127.0.0.1")) {
 						if (url.startsWith("http")) {
 							url = Base64.encodeToString(url.toByteArray(StandardCharsets.UTF_8), Base64.DEFAULT or Base64.URL_SAFE or Base64.NO_WRAP)
@@ -759,9 +759,9 @@ class ApiConfig private constructor() {
 					if (type == "3") {
 						val jarUrl = if (livesOBJ.has("jar")) livesOBJ.get("jar").asString.trim { it <= ' ' } else ""
 						val pyApi = if (livesOBJ.has("api")) livesOBJ.get("api").asString.trim { it <= ' ' } else ""
-						LOG.i("echo-pyApi1$pyApi")
+						TVBoxRuntimeLog.i("echo-pyApi1$pyApi")
 						if (pyApi.contains(".py")) {
-							LOG.i("echo-pyLoader.getSpider")
+							TVBoxRuntimeLog.i("echo-pyLoader.getSpider")
 							val ext: String
 							if (livesOBJ.has("ext") && (livesOBJ.get("ext").isJsonObject || livesOBJ.get("ext").isJsonArray)) {
 								ext = livesOBJ.get("ext").toString()
@@ -899,7 +899,7 @@ class ApiConfig private constructor() {
 
 	fun getSearchSourceBeanList(): List<SourceBean> {
 		if (searchSourceBeanList.isEmpty()) {
-			LOG.i("echo-第一次getSearchSourceBeanList")
+			TVBoxRuntimeLog.i("echo-第一次getSearchSourceBeanList")
 			searchSourceBeanList = sourceBeanList.values.filter { it.isSearchable }.toMutableList()
 		}
 		return searchSourceBeanList
@@ -1009,9 +1009,9 @@ class ApiConfig private constructor() {
 					content = String(AES.toBytes(content)).lowercase(Locale.getDefault())
 					val key = AES.rightPadding(content.substring(content.indexOf("$#") + 2, content.indexOf("#$")), "0", 16)
 					val iv = AES.rightPadding(content.substring(content.length - 13), "0", 16)
-					json = AES.CBC(data, key, iv)
+					json = AES.cbc(data, key, iv)
 				} else if (configKey != null && !AES.isJson(content)) {
-					json = AES.ECB(content, configKey)
+					json = AES.ecb(content, configKey)
 				} else {
 					json = content
 				}

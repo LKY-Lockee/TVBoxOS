@@ -1,217 +1,194 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
+object StringUtils {
+	private val U2028 = String(byteArrayOf(0xE2.toByte(), 0x80.toByte(), 0xA8.toByte()))
+	private val U2029 = String(byteArrayOf(0xE2.toByte(), 0x80.toByte(), 0xA9.toByte()))
 
-import java.lang.reflect.Array;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+	fun isEmpty(str: CharSequence?): Boolean {
+		return str.isNullOrEmpty()
+	}
 
-public class StringUtils {
+	fun isNotEmpty(str: CharSequence?): Boolean {
+		return !str.isNullOrEmpty()
+	}
 
-    private static final String U2028 = new String(new byte[]{(byte) 0xE2, (byte) 0x80, (byte) 0xA8});
-    private static final String U2029 = new String(new byte[]{(byte) 0xE2, (byte) 0x80, (byte) 0xA9});
+	fun isNull(obj: Any?): Boolean {
+		return obj == null
+	}
 
-    public static boolean isEmpty(CharSequence str) {
-        return str == null || str.length() == 0;
-    }
+	fun isNotNull(obj: Any?): Boolean {
+		return obj != null
+	}
 
-    public static boolean isNotEmpty(CharSequence str) {
-        return !isEmpty(str);
-    }
+	fun isEmpty(obj: Any?): Boolean {
+		return when (obj) {
+			null -> true
+			is CharSequence -> obj.isEmpty()
+			is Collection<*> -> obj.isEmpty()
+			is Map<*, *> -> obj.isEmpty()
+			else -> if (obj.javaClass.isArray) java.lang.reflect.Array.getLength(obj) == 0 else false
+		}
+	}
 
-    public static boolean isNull(Object obj) {
-        return obj == null;
-    }
+	fun isNotEmpty(obj: Any?): Boolean {
+		return !isEmpty(obj)
+	}
 
-    public static boolean isNotNull(Object obj) {
-        return !isNull(obj);
-    }
+	/**
+	 * Escape JavaString string
+	 * 
+	 * @param line unescaped string
+	 * @return escaped string
+	 */
+	fun escapeJavaScriptString(line: String): String {
+		val sb = StringBuilder()
+		for (i in line.indices) {
+			when (val c = line[i]) {
+				'"', '\'', '\\' -> {
+					sb.append('\\')
+					sb.append(c)
+				}
 
-    public static boolean isEmpty(Object obj) {
-        if (obj == null) return true;
-        else if (obj instanceof CharSequence) return ((CharSequence) obj).length() == 0;
-        else if (obj instanceof Collection) return ((Collection<?>) obj).isEmpty();
-        else if (obj instanceof Map) return ((Map<?, ?>) obj).isEmpty();
-        else if (obj.getClass().isArray()) return Array.getLength(obj) == 0;
+				'\n' -> sb.append("\\n")
+				'\r' -> sb.append("\\r")
+				else -> sb.append(c)
+			}
+		}
 
-        return false;
-    }
+		return sb.toString()
+			.replace(U2028, "\u2028")
+			.replace(U2029, "\u2029")
+	}
 
-    public static boolean isNotEmpty(Object obj) {
-        return !isEmpty(obj);
-    }
+	fun getBaseUrl(url: String?): String? {
+		if (url.isNullOrEmpty()) {
+			return url
+		}
+		val baseUrls = url.replace("http://", "").replace("https://", "")
+		val baseUrl2 = baseUrls.split("/")[0]
+		return if (url.startsWith("https")) {
+			"https://$baseUrl2"
+		} else {
+			"http://$baseUrl2"
+		}
+	}
 
-    /**
-     * Escape JavaString string
-     *
-     * @param line unescaped string
-     * @return escaped string
-     */
-    public static String escapeJavaScriptString(final String line) {
-        final StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            switch (c) {
-                case '"':
-                case '\'':
-                case '\\':
-                    sb.append('\\');
-                    sb.append(c);
-                    break;
+	fun arrayToString(list: Array<String>?, fromIndex: Int, cha: String?): String {
+		return arrayToString(list, fromIndex, list?.size ?: 0, cha)
+	}
 
-                case '\n':
-                    sb.append("\\n");
-                    break;
+	fun arrayToString(list: Array<String>?, fromIndex: Int, endIndex: Int, cha: String?): String {
+		if (list == null || list.size <= fromIndex) {
+			return ""
+		}
+		if (list.size <= 1) {
+			return list[0]
+		}
+		val builder = StringBuilder()
+		builder.append(list[fromIndex])
+		var i = 1 + fromIndex
+		while (i < list.size && i < endIndex) {
+			builder.append(cha).append(list[i])
+			i++
+		}
+		return builder.toString()
+	}
 
-                case '\r':
-                    sb.append("\\r");
-                    break;
+	fun listToString(list: List<String>?, cha: String = "&&"): String {
+		if (list.isNullOrEmpty()) {
+			return ""
+		}
+		if (list.size == 1) {
+			return list[0]
+		}
+		return list.joinToString(cha)
+	}
 
-                default:
-                    sb.append(c);
-            }
-        }
+	fun listToString(list: List<String>?, fromIndex: Int, cha: String?): String {
+		if (list == null || list.size <= fromIndex) {
+			return ""
+		}
+		if (list.size <= 1) {
+			return list[0]
+		}
+		val builder = StringBuilder()
+		builder.append(list[fromIndex])
+		for (i in fromIndex + 1..<list.size) {
+			builder.append(cha).append(list[i])
+		}
+		return builder.toString()
+	}
 
-        return sb.toString()
-                .replace(U2028, "\u2028")
-                .replace(U2029, "\u2029");
-    }
+	fun isBlank(text: String?): Boolean {
+		return trim(text).isEmpty()
+	}
 
-    public static String getBaseUrl(String url) {
-        if (isEmpty(url)) {
-            return url;
-        }
-        String baseUrls = url.replace("http://", "").replace("https://", "");
-        String baseUrl2 = baseUrls.split("/")[0];
-        String baseUrl;
-        if (url.startsWith("https")) {
-            baseUrl = "https://" + baseUrl2;
-        } else {
-            baseUrl = "http://" + baseUrl2;
-        }
-        return baseUrl;
-    }
+	fun trimBlanks(str: String?): String? {
+		if (str.isNullOrEmpty()) {
+			return str
+		}
+		var len = str.length
+		var st = 0
 
+		while ((st < len) && (str[st] == '\n' || str[st] == '\r' || str[st] == '\u000c' || str[st] == '\t')) {
+			st++
+		}
+		while ((st < len) && (str[len - 1] == '\n' || str[len - 1] == '\r' || str[len - 1] == '\u000c' || str[len - 1] == '\t')) {
+			len--
+		}
+		return if ((st > 0) || (len < str.length)) str.substring(st, len) else str
+	}
 
-    public static String arrayToString(String[] list, int fromIndex, String cha) {
-        return arrayToString(list, fromIndex, list == null ? 0 : list.length, cha);
-    }
+	fun trim(string: String?): String {
+		if (string.isNullOrEmpty() || " " == string) return ""
+		var start = 0
+		val len = string.length
+		var end = len - 1
+		while ((start < end) && ((string[start] <= ' ') || (string[start] == '　'))) {
+			++start
+		}
+		while ((start < end) && ((string[end] <= ' ') || (string[end] == '　'))) {
+			--end
+		}
+		++end
+		return if ((start > 0) || (end < len)) string.substring(start, end) else string
+	}
 
-    public static String arrayToString(String[] list, int fromIndex, int endIndex, String cha) {
-        StringBuilder builder = new StringBuilder();
-        if (list == null || list.length <= fromIndex) {
-            return "";
-        } else if (list.length <= 1) {
-            return list[0];
-        } else {
-            builder.append(list[fromIndex]);
-        }
-        for (int i = 1 + fromIndex; i < list.length && i < endIndex; i++) {
-            builder.append(cha).append(list[i]);
-        }
-        return builder.toString();
-    }
+	fun isJsonType(text: String?): Boolean {
+		var content = text
+		var result = false
+		if (isNotEmpty(content)) {
+			content = trim(content)
+			if (content.startsWith("{") && content.endsWith("}")) {
+				result = true
+			} else if (content.startsWith("[") && content.endsWith("]")) {
+				result = true
+			}
+		}
+		return result
+	}
 
-    public static String listToString(List<String> list, String cha) {
-        StringBuilder builder = new StringBuilder();
-        if (list == null || list.isEmpty()) {
-            return "";
-        } else if (list.size() == 1) {
-            return list.get(0);
-        } else {
-            builder.append(list.get(0));
-        }
-        for (int i = 1; i < list.size(); i++) {
-            builder.append(cha).append(list.get(i));
-        }
-        return builder.toString();
-    }
+	fun isJsonObject(text: String?): Boolean {
+		var content = text
+		var result = false
+		if (isNotEmpty(content)) {
+			content = trim(content)
+			if (content.startsWith("{") && content.endsWith("}")) {
+				result = true
+			}
+		}
+		return result
+	}
 
-    public static String listToString(List<String> list, int fromIndex, String cha) {
-        StringBuilder builder = new StringBuilder();
-        if (list == null || list.size() <= fromIndex) {
-            return "";
-        } else if (list.size() <= 1) {
-            return list.get(0);
-        } else {
-            builder.append(list.get(fromIndex));
-        }
-        for (int i = fromIndex + 1; i < list.size(); i++) {
-            builder.append(cha).append(list.get(i));
-        }
-        return builder.toString();
-    }
-
-    public static String listToString(List<String> list) {
-        return listToString(list, "&&");
-    }
-
-    public static boolean isBlank(String text) {
-        return trim(text).isEmpty();
-    }
-
-    public static String trimBlanks(String str) {
-        if (str == null || str.isEmpty()) {
-            return str;
-        }
-        int len = str.length();
-        int st = 0;
-
-        while ((st < len) && (str.charAt(st) == '\n' || str.charAt(st) == '\r' || str.charAt(st) == '\f' || str.charAt(st) == '\t')) {
-            st++;
-        }
-        while ((st < len) && (str.charAt(len - 1) == '\n' || str.charAt(len - 1) == '\r' || str.charAt(len - 1) == '\f' || str.charAt(len - 1) == '\t')) {
-            len--;
-        }
-        return ((st > 0) || (len < str.length())) ? str.substring(st, len) : str;
-    }
-
-    public static String trim(String string) {
-        if (string == null || string.isEmpty() || " ".equals(string)) return "";
-        int start = 0, len = string.length();
-        int end = len - 1;
-        while ((start < end) && ((string.charAt(start) <= ' ') || (string.charAt(start) == '　'))) {
-            ++start;
-        }
-        while ((start < end) && ((string.charAt(end) <= ' ') || (string.charAt(end) == '　'))) {
-            --end;
-        }
-        ++end;
-        return ((start > 0) || (end < len)) ? string.substring(start, end) : string;
-    }
-
-    public static boolean isJsonType(String text) {
-        boolean result = false;
-        if (isNotEmpty(text)) {
-            text = trim(text);
-            if (text.startsWith("{") && text.endsWith("}")) {
-                result = true;
-            } else if (text.startsWith("[") && text.endsWith("]")) {
-                result = true;
-            }
-        }
-        return result;
-    }
-
-    public static boolean isJsonObject(String text) {
-        boolean result = false;
-        if (isNotEmpty(text)) {
-            text = trim(text);
-            if (text.startsWith("{") && text.endsWith("}")) {
-                result = true;
-            }
-        }
-        return result;
-    }
-
-    public static boolean isJsonArray(String text) {
-        boolean result = false;
-        if (isNotEmpty(text)) {
-            text = trim(text);
-            if (text.startsWith("[") && text.endsWith("]")) {
-                result = true;
-            }
-        }
-        return result;
-    }
+	fun isJsonArray(text: String?): Boolean {
+		var content = text
+		var result = false
+		if (isNotEmpty(content)) {
+			content = trim(content)
+			if (content.startsWith("[") && content.endsWith("]")) {
+				result = true
+			}
+		}
+		return result
+	}
 }

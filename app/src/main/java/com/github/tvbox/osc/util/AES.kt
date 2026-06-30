@@ -1,75 +1,63 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import org.json.JSONObject;
+import org.json.JSONObject
+import java.security.spec.AlgorithmParameterSpec
+import javax.crypto.Cipher
+import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
-import java.security.spec.AlgorithmParameterSpec;
+object AES {
+	private fun rightPadding(key: String, replace: String, length: Int): String {
+		val curLength = key.trim().length
+		return when {
+			curLength > length -> key.trim().substring(0, length)
+			curLength == length -> key.trim()
+			else -> key.trim() + replace.repeat(length - curLength)
+		}
+	}
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
+	fun ecb(data: String, key: String): String? {
+		return try {
+			val paddedKey = rightPadding(key, "0", 16)
+			val data2 = toBytes(data)
+			val keySpec = SecretKeySpec(paddedKey.toByteArray(), "AES")
+			val cipher = Cipher.getInstance("AES/ECB/PKCS7Padding")
+			cipher.init(Cipher.DECRYPT_MODE, keySpec)
+			String(cipher.doFinal(data2))
+		} catch (e: Exception) {
+			e.printStackTrace()
+			null
+		}
+	}
 
-public class AES {
+	fun cbc(data: String, key: String, iv: String): String? {
+		return try {
+			val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+			val keySpec = SecretKeySpec(key.toByteArray(), "AES")
+			val paramSpec: AlgorithmParameterSpec = IvParameterSpec(iv.toByteArray())
+			cipher.init(Cipher.DECRYPT_MODE, keySpec, paramSpec)
+			String(cipher.doFinal(toBytes(data)))
+		} catch (e: Exception) {
+			e.printStackTrace()
+			null
+		}
+	}
 
-    public static String rightPadding(String key, String replace, int Length) {
-        String strReturn;
-        StringBuilder strtemp = new StringBuilder();
-        int curLength = key.trim().length();
-        if (curLength > Length) {
-            strReturn = key.trim().substring(0, Length);
-        } else if (curLength == Length) {
-            strReturn = key.trim();
-        } else {
-            for (int i = 0; i < (Length - curLength); i++) {
-                strtemp.append(replace);
-            }
-            strReturn = key.trim() + strtemp;
-        }
-        return strReturn;
-    }
+	fun isJson(content: String): Boolean {
+		return try {
+			JSONObject(content)
+			true
+		} catch (e: Exception) {
+			false
+		}
+	}
 
-    public static String ECB(String data, String key) {
-        try {
-            key = rightPadding(key, "0", 16);
-            byte[] data2 = toBytes(data);
-            SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(), "AES");
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS7Padding");
-            cipher.init(Cipher.DECRYPT_MODE, keySpec);
-            return new String(cipher.doFinal(data2));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public static String CBC(String data, String key, String iv) {
-        try {
-            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
-            SecretKeySpec keySpec = new SecretKeySpec(key.getBytes(), "AES");
-            AlgorithmParameterSpec paramSpec = new IvParameterSpec(iv.getBytes());
-            cipher.init(Cipher.DECRYPT_MODE, keySpec, paramSpec);
-            return new String(cipher.doFinal(toBytes(data)));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public static boolean isJson(String content) {
-        try {
-            new JSONObject(content);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public static byte[] toBytes(String src) {
-        int l = src.length() / 2;
-        byte[] ret = new byte[l];
-        for (int i = 0; i < l; i++) {
-            ret[i] = Integer.valueOf(src.substring(i * 2, i * 2 + 2), 16).byteValue();
-        }
-        return ret;
-    }
-
+	fun toBytes(src: String): ByteArray {
+		val l = src.length / 2
+		val ret = ByteArray(l)
+		for (i in 0..<l) {
+			ret[i] = src.substring(i * 2, i * 2 + 2).toInt(16).toByte()
+		}
+		return ret
+	}
 }

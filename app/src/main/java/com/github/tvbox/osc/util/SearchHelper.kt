@@ -1,49 +1,48 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.bean.SourceBean;
-import com.orhanobut.hawk.Hawk;
+import com.github.tvbox.osc.api.ApiConfig
+import com.orhanobut.hawk.Hawk
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+object SearchHelper {
+	val sourcesForSearch: HashMap<String, String>?
+		get() {
+			var mCheckSources: HashMap<String, String>?
+			try {
+				val api = Hawk.get(HawkConfig.API_URL, "")
+				if (api.isEmpty()) return null
+				val mCheckSourcesForApi = Hawk.get(
+					HawkConfig.SOURCES_FOR_SEARCH,
+					HashMap<String, HashMap<String, String>>()
+				)
+				mCheckSources = mCheckSourcesForApi[api]
+			} catch (e: Exception) {
+				return null
+			}
+			if (mCheckSources.isNullOrEmpty()) {
+				mCheckSources = sources
+			}
+			return mCheckSources
+		}
 
-public class SearchHelper {
-    public static HashMap<String, String> getSourcesForSearch() {
-        HashMap<String, String> mCheckSources;
-        try {
-            String api = Hawk.get(HawkConfig.API_URL, "");
-            if (api.isEmpty()) return null;
-            HashMap<String, HashMap<String, String>> mCheckSourcesForApi = Hawk.get(HawkConfig.SOURCES_FOR_SEARCH, new HashMap<>());
-            mCheckSources = mCheckSourcesForApi.get(api);
-        } catch (Exception e) {
-            return null;
-        }
-        if (mCheckSources == null || mCheckSources.isEmpty()) {
-            mCheckSources = getSources();
-        }
-        return mCheckSources;
-    }
+	val sources: HashMap<String, String>
+		get() {
+			val mCheckSources = HashMap<String, String>()
+			for (bean in ApiConfig.instance.getSourceBeanList()) {
+				if (!bean.isSearchable) {
+					continue
+				}
+				bean.key?.let { mCheckSources[it] = "1" }
+			}
+			return mCheckSources
+		}
 
-    public static HashMap<String, String> getSources() {
-        HashMap<String, String> mCheckSources = new HashMap<>();
-        for (SourceBean bean : ApiConfig.get().getSourceBeanList()) {
-            if (!bean.isSearchable()) {
-                continue;
-            }
-            mCheckSources.put(bean.getKey(), "1");
-        }
-        return mCheckSources;
-    }
-
-    public static List<String> splitWords(String text) {
-        List<String> result = new ArrayList<>();
-        result.add(text);
-        String[] parts = text.split("\\W+");
-        if (parts.length > 1) {
-            result.addAll(Arrays.asList(parts));
-        }
-        return result;
-    }
+	fun splitWords(text: String): List<String> {
+		val result: MutableList<String> = ArrayList()
+		result.add(text)
+		val parts = text.split("\\W+".toRegex()).filter { it.isNotEmpty() }
+		if (parts.size > 1) {
+			result.addAll(parts)
+		}
+		return result
+	}
 }

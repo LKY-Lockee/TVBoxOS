@@ -40,19 +40,19 @@ object OkHttpUtil {
 	}
 
 	fun stringNoRedirect(url: String, headerMap: Map<String, String>?, respHeaderMap: MutableMap<String, List<String>>?): String? {
-		return string(OkGoHelper.getNoRedirectClient(), url, null, null, headerMap, respHeaderMap)
+		return string(OkGoHelper.noRedirectClient, url, null, null, headerMap, respHeaderMap)
 	}
 
 	fun string(url: String, headerMap: Map<String, String>?, respHeaderMap: MutableMap<String, List<String>>?): String? {
-		return string(OkGoHelper.getDefaultClient(), url, null, null, headerMap, respHeaderMap)
+		return string(OkGoHelper.defaultClient, url, null, null, headerMap, respHeaderMap)
 	}
 
 	fun string(url: String, headerMap: Map<String, String>?): String? {
-		return string(OkGoHelper.getDefaultClient(), url, null, null, headerMap, null)
+		return string(OkGoHelper.defaultClient, url, null, null, headerMap, null)
 	}
 
 	fun string(url: String, tag: String?, headerMap: Map<String, String>?): String? {
-		return string(OkGoHelper.getDefaultClient(), url, tag, null, headerMap, null)
+		return string(OkGoHelper.defaultClient, url, tag, null, headerMap, null)
 	}
 
 	fun get(client: OkHttpClient, url: String, callBack: OKCallBack<*>?) {
@@ -119,13 +119,13 @@ object OkHttpUtil {
 	}
 
 	fun cancel(tag: Any?) {
-		cancel(OkGoHelper.getDefaultClient(), tag)
+		cancel(OkGoHelper.defaultClient, tag)
 	}
 
 	/**
 	 * 取消所有请求请求
 	 */
-	fun cancelAll(client: OkHttpClient? = OkGoHelper.getDefaultClient()) {
+	fun cancelAll(client: OkHttpClient? = OkGoHelper.defaultClient) {
 		if (client == null) return
 		for (call in client.dispatcher.queuedCalls()) {
 			call.cancel()

@@ -6,8 +6,8 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.github.catvod.crawler.python.IPyLoader
 import com.github.tvbox.osc.base.App
-import com.github.tvbox.osc.util.LOG
 import com.github.tvbox.osc.util.MD5
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.undcover.freedom.pyramid.PythonLoader
 import com.undcover.freedom.pyramid.PythonSpider
 import java.util.concurrent.ConcurrentHashMap
@@ -61,12 +61,12 @@ class PyLoader : IPyLoader {
 
 	override fun proxyInvoke(params: Map<String, List<String>>): Array<Any?>? {
 		val pyApi = recentPyApi ?: return null
-		LOG.i("echo-recentPyApi$pyApi")
+		TVBoxRuntimeLog.i("echo-recentPyApi$pyApi")
 		try {
 			val originalSpider = getSpider(MD5.string2MD5(pyApi), pyApi, "") as PythonSpider
 			return originalSpider.proxyLocal(params)
 		} catch (th: Throwable) {
-			LOG.i("echo-proxyInvoke_Throwable:---" + th.message)
+			TVBoxRuntimeLog.i("echo-proxyInvoke_Throwable:---" + th.message)
 			th.printStackTrace()
 		}
 		return null

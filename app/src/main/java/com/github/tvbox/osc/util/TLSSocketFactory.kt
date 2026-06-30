@@ -1,60 +1,47 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.InetAddress
+import java.net.Socket
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
 
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
+class TLSSocketFactory(private val delegate: SSLSocketFactory) : SSLSocketFactory() {
+	override fun getDefaultCipherSuites(): Array<String> {
+		return delegate.defaultCipherSuites
+	}
 
-public class TLSSocketFactory extends SSLSocketFactory {
-    private static final String[] TLS_SUPPORT_VERSION = {"TLSv1.1", "TLSv1.2"};
+	override fun getSupportedCipherSuites(): Array<String> {
+		return delegate.supportedCipherSuites
+	}
 
-    final SSLSocketFactory delegate;
+	override fun createSocket(s: Socket?, host: String?, port: Int, autoClose: Boolean): Socket {
+		return patch(delegate.createSocket(s, host, port, autoClose))
+	}
 
-    public TLSSocketFactory(SSLSocketFactory base) {
-        this.delegate = base;
-    }
+	override fun createSocket(host: String?, port: Int): Socket {
+		return patch(delegate.createSocket(host, port))
+	}
 
-    @Override
-    public String[] getDefaultCipherSuites() {
-        return delegate.getDefaultCipherSuites();
-    }
+	override fun createSocket(host: String?, port: Int, localHost: InetAddress?, localPort: Int): Socket {
+		return patch(delegate.createSocket(host, port, localHost, localPort))
+	}
 
-    @Override
-    public String[] getSupportedCipherSuites() {
-        return delegate.getSupportedCipherSuites();
-    }
+	override fun createSocket(host: InetAddress?, port: Int): Socket {
+		return patch(delegate.createSocket(host, port))
+	}
 
-    @Override
-    public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException {
-        return patch(delegate.createSocket(s, host, port, autoClose));
-    }
+	override fun createSocket(address: InetAddress?, port: Int, localAddress: InetAddress?, localPort: Int): Socket {
+		return patch(delegate.createSocket(address, port, localAddress, localPort))
+	}
 
-    @Override
-    public Socket createSocket(String host, int port) throws IOException {
-        return patch(delegate.createSocket(host, port));
-    }
+	private fun patch(s: Socket): Socket {
+		if (s is SSLSocket) {
+			s.enabledProtocols = TLS_SUPPORT_VERSION
+		}
+		return s
+	}
 
-    @Override
-    public Socket createSocket(String host, int port, InetAddress localHost, int localPort) throws IOException {
-        return patch(delegate.createSocket(host, port, localHost, localPort));
-    }
-
-    @Override
-    public Socket createSocket(InetAddress host, int port) throws IOException {
-        return patch(delegate.createSocket(host, port));
-    }
-
-    @Override
-    public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) throws IOException {
-        return patch(delegate.createSocket(address, port, localAddress, localPort));
-    }
-
-    private Socket patch(Socket s) {
-        if (s instanceof SSLSocket) {
-            ((SSLSocket) s).setEnabledProtocols(TLS_SUPPORT_VERSION);
-        }
-        return s;
-    }
+	companion object {
+		private val TLS_SUPPORT_VERSION = arrayOf("TLSv1.1", "TLSv1.2")
+	}
 }

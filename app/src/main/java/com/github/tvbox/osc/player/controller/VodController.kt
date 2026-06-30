@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.player.controller
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
@@ -37,11 +36,11 @@ import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter.SelectDialogInterface
 import com.github.tvbox.osc.ui.dialog.SelectDialog
 import com.github.tvbox.osc.util.FastClickCheckUtil
 import com.github.tvbox.osc.util.HawkConfig
-import com.github.tvbox.osc.util.LOG
-import com.github.tvbox.osc.util.M3u8
+import com.github.tvbox.osc.util.M3U8
 import com.github.tvbox.osc.util.PlayerHelper
 import com.github.tvbox.osc.util.ScreenUtils
 import com.github.tvbox.osc.util.SubtitleHelper
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.VideoParseRuler
 import com.github.tvbox.osc.util.thunder.JianPian.finish
 import com.github.tvbox.osc.util.thunder.Thunder.stop
@@ -1161,7 +1160,7 @@ class VodController(context: Context) : BaseController(context) {
 					}
 					val forwardUrl = extractForwardUrl(url, content.orEmpty())
 					if (forwardUrl.isEmpty()) {
-						LOG.i("echo-m3u81-to-play")
+						TVBoxRuntimeLog.i("echo-m3u81-to-play")
 						processM3u8Content(url, content, headers)
 					} else {
 						fetchAndProcessForwardUrl(forwardUrl, headers, okGoHeaders, url)
@@ -1174,7 +1173,7 @@ class VodController(context: Context) : BaseController(context) {
 
 				override fun onError(response: Response<String>) {
 					super.onError(response)
-					LOG.e("echo-m3u8请求错误1: " + response.exception)
+					TVBoxRuntimeLog.e("echo-m3u8请求错误1: " + response.exception)
 					listener?.startPlayUrl(url, headers)
 				}
 			})
@@ -1204,13 +1203,13 @@ class VodController(context: Context) : BaseController(context) {
 
 	private fun processM3u8Content(url: String, content: String?, headers: HashMap<String?, String?>?) {
 		val basePath = getBasePath(url)
-		RemoteServer.m3u8Content = M3u8.purify(basePath, content)
-		if (RemoteServer.m3u8Content == null || M3u8.currentAdCount == 0) {
-			LOG.i("echo-m3u8内容解析：未检测到广告")
+		RemoteServer.m3u8Content = M3U8.purify(basePath, content)
+		if (RemoteServer.m3u8Content == null || M3U8.currentAdCount == 0) {
+			TVBoxRuntimeLog.i("echo-m3u8内容解析：未检测到广告")
 			listener?.startPlayUrl(url, headers)
 		} else {
 			listener?.startPlayUrl(ControlManager.instance.getAddress(true) + "proxyM3u8", headers)
-			Toast.makeText(context, "已移除视频广告 " + M3u8.currentAdCount + " 条", Toast.LENGTH_SHORT).show()
+			Toast.makeText(context, "已移除视频广告 " + M3U8.currentAdCount + " 条", Toast.LENGTH_SHORT).show()
 		}
 	}
 
@@ -1224,7 +1223,7 @@ class VodController(context: Context) : BaseController(context) {
 			.execute(object : AbsCallback<String>() {
 				override fun onSuccess(response: Response<String>) {
 					val content = response.body()
-					LOG.i("echo-m3u82-to-play")
+					TVBoxRuntimeLog.i("echo-m3u82-to-play")
 					processM3u8Content(forwardUrl, content, headers)
 				}
 
@@ -1234,7 +1233,7 @@ class VodController(context: Context) : BaseController(context) {
 
 				override fun onError(response: Response<String>) {
 					super.onError(response)
-					LOG.e("echo-重定向 m3u8 请求错误: " + response.exception)
+					TVBoxRuntimeLog.e("echo-重定向 m3u8 请求错误: " + response.exception)
 					listener?.startPlayUrl(fallbackUrl, headers)
 				}
 			})
@@ -1253,7 +1252,7 @@ class VodController(context: Context) : BaseController(context) {
 			return resolved.toString()
 		} catch (e: MalformedURLException) {
 			// 出现异常时可以记录日志，并返回原始 line
-			LOG.e("echo-resolveForwardUrl异常: " + e.message)
+			TVBoxRuntimeLog.e("echo-resolveForwardUrl异常: " + e.message)
 			return line
 		}
 	}
@@ -1291,7 +1290,7 @@ class VodController(context: Context) : BaseController(context) {
 			// 构造点击的 JS 代码
 			val js = selector
 			//            if(!selector.contains("click()"))js+=".click();";
-			LOG.i("echo-javascript:$js")
+			TVBoxRuntimeLog.i("echo-javascript:$js")
 			webView?.evaluateJavascript(js, null)
 		}
 	}

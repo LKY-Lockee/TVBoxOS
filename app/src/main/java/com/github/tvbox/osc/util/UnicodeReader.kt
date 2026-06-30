@@ -1,100 +1,85 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PushbackInputStream;
-import java.io.Reader;
-import java.nio.file.Files;
+import java.io.File
+import java.io.InputStream
+import java.io.InputStreamReader
+import java.io.PushbackInputStream
+import java.io.Reader
+import java.nio.file.Files
 
-public class UnicodeReader extends Reader {
-    private static final int BOM_SIZE = 4;
-    private InputStreamReader internalIn = null;
-    private String encoding;
+open class UnicodeReader(input: InputStream?, defaultEncoding: String? = null) : Reader() {
+	private var internalIn: InputStreamReader? = null
+	var encoding: String? = null
+		private set
 
-    public UnicodeReader(String file)
-            throws IOException, SecurityException {
-        this(new File(file));
-    }
+	constructor(file: String) : this(File(file))
 
-    public UnicodeReader(File file)
-            throws IOException, SecurityException {
-        this(Files.newInputStream(file.toPath()));
-    }
+	constructor(file: File) : this(Files.newInputStream(file.toPath()))
 
-    public UnicodeReader(File file, String defaultEncoding)
-            throws IOException, SecurityException {
-        this(Files.newInputStream(file.toPath()), defaultEncoding);
-    }
+	constructor(file: File, defaultEncoding: String?) : this(Files.newInputStream(file.toPath()), defaultEncoding)
 
-    public UnicodeReader(InputStream in)
-            throws IOException {
-        this(in, null);
-    }
+	init {
+		init(input, defaultEncoding)
+	}
 
-    public UnicodeReader(InputStream in, String defaultEncoding)
-            throws IOException {
-        init(in, defaultEncoding);
-    }
+	override fun close() {
+		internalIn?.close()
+	}
 
-    public void close()
-            throws IOException {
-        this.internalIn.close();
-    }
+	private fun init(input: InputStream?, defaultEncoding: String?) {
+		val tempIn = PushbackInputStream(input, 4)
 
-    public String getEncoding() {
-        return this.encoding;
-    }
+		val bom = ByteArray(4)
 
-    protected void init(InputStream in, String defaultEncoding)
-            throws IOException {
-        PushbackInputStream tempIn = new PushbackInputStream(in, 4);
+		val n = tempIn.read(bom, 0, bom.size)
+		val unread: Int
+		when {
+			bom[0].toInt() == 0 && bom[1].toInt() == 0 &&
+					bom[2].toInt() == -2 && bom[3].toInt() == -1 -> {
+				encoding = "UTF-32BE"
+				unread = n - 4
+			}
 
-        byte[] bom = new byte[4];
+			bom[0].toInt() == -17 && bom[1].toInt() == -69 &&
+					bom[2].toInt() == -65 -> {
+				encoding = "UTF-8"
+				unread = n - 3
+			}
 
-        int n = tempIn.read(bom, 0, bom.length);
-        int unread;
-        if ((bom[0] == 0) && (bom[1] == 0) &&
-                (bom[2] == -2) && (bom[3] == -1)) {
-            this.encoding = "UTF-32BE";
-            unread = n - 4;
-        } else {
-            if ((bom[0] == -17) && (bom[1] == -69) &&
-                    (bom[2] == -65)) {
-                this.encoding = "UTF-8";
-                unread = n - 3;
-            } else {
-                if ((bom[0] == -2) && (bom[1] == -1)) {
-                    this.encoding = "UTF-16BE";
-                    unread = n - 2;
-                } else {
-                    if ((bom[0] == -1) && (bom[1] == -2)) {
-                        this.encoding = "UTF-16LE";
-                        unread = n - 2;
-                    } else {
-                        this.encoding = defaultEncoding;
-                        unread = n;
-                    }
-                }
-            }
-        }
-        if (unread > 0)
-            tempIn.unread(bom, n - unread, unread);
-        else if (unread < -1) {
-            tempIn.unread(bom, 0, 0);
-        }
+			bom[0].toInt() == -2 && bom[1].toInt() == -1 -> {
+				encoding = "UTF-16BE"
+				unread = n - 2
+			}
 
-        if (this.encoding == null) {
-            this.internalIn = new InputStreamReader(tempIn);
-            this.encoding = this.internalIn.getEncoding();
-        } else {
-            this.internalIn = new InputStreamReader(tempIn, this.encoding);
-        }
-    }
+			bom[0].toInt() == -1 && bom[1].toInt() == -2 -> {
+				encoding = "UTF-16LE"
+				unread = n - 2
+			}
 
-    public int read(char[] cbuf, int off, int len)
-            throws IOException {
-        return this.internalIn.read(cbuf, off, len);
-    }
+			else -> {
+				encoding = defaultEncoding
+				unread = n
+			}
+		}
+		if (unread > 0) tempIn.unread(bom, n - unread, unread)
+		else if (unread < -1) {
+			tempIn.unread(bom, 0, 0)
+		}
+
+		internalIn = if (encoding == null) {
+			val reader = InputStreamReader(tempIn)
+			encoding = reader.encoding
+			reader
+		} else {
+			InputStreamReader(tempIn, encoding)
+		}
+	}
+
+	override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+		return internalIn?.read(cbuf, off, len) ?: -1
+	}
+
+	companion object {
+		private const val BOM_SIZE = 4
+	}
 }

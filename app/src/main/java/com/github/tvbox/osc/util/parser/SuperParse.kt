@@ -2,7 +2,7 @@ package com.github.tvbox.osc.util.parser
 
 import android.util.Base64
 import com.github.catvod.crawler.SpiderDebug.log
-import com.github.tvbox.osc.util.LOG
+import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.parser.JsonParallel.cancelTasks
 import com.github.tvbox.osc.util.parser.JsonParallel.parse
 import org.json.JSONObject
@@ -93,18 +93,18 @@ object SuperParse {
 				return webResult
 			}
 		} catch (e: Exception) {
-			LOG.i("echo-result" + e.message)
+			TVBoxRuntimeLog.i("echo-result" + e.message)
 		}
 		return JSONObject()
 	}
 
 	fun doJsonJx(jsonJxs: LinkedHashMap<String, String>, url: String): JSONObject {
-		LOG.i("echo-jsonJx1$jsonJxs")
+		TVBoxRuntimeLog.i("echo-jsonJx1$jsonJxs")
 		return parse(jsonJxs, url)
 	}
 
 	fun doJsonJx(url: String): JSONObject {
-		LOG.i("echo-jsonJx2$jsonJx")
+		TVBoxRuntimeLog.i("echo-jsonJx2$jsonJx")
 		return parse(jsonJx ?: return JSONObject(), url)
 	}
 

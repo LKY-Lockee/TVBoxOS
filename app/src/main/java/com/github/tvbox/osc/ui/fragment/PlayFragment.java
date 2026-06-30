@@ -62,9 +62,9 @@ import com.github.tvbox.osc.util.AdBlocker;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.FileUtils;
 import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.util.MD5;
 import com.github.tvbox.osc.util.PlayerHelper;
+import com.github.tvbox.osc.util.TVBoxRuntimeLog;
 import com.github.tvbox.osc.util.VideoParseRuler;
 import com.github.tvbox.osc.util.parser.SuperParse;
 import com.github.tvbox.osc.util.thunder.Jianpian;
@@ -173,10 +173,10 @@ public class PlayFragment extends BaseLazyFragment {
             try {
                 rec = Long.parseLong((String) theCache);
             } catch (NumberFormatException e) {
-                LOG.i("echo-String value is not a valid long.");
+                TVBoxRuntimeLog.i("echo-String value is not a valid long.");
             }
         } else {
-            LOG.i("echo-Value cannot be converted to long.");
+            TVBoxRuntimeLog.i("echo-Value cannot be converted to long.");
         }
         return Math.max(rec, skip);
     }
@@ -348,7 +348,7 @@ public class PlayFragment extends BaseLazyFragment {
                             @Override
                             public void run() {
                                 String zimuUrl = subtitle.getUrl();
-                                LOG.i("echo-Remote Subtitle Url: " + zimuUrl);
+                                TVBoxRuntimeLog.i("echo-Remote Subtitle Url: " + zimuUrl);
                                 setSubtitle(zimuUrl);//设置字幕
                                 searchSubtitleDialog.dismiss();
                             }
@@ -372,7 +372,7 @@ public class PlayFragment extends BaseLazyFragment {
                         .withChosenListener(new ChooserDialog.Result() {
                             @Override
                             public void onChoosePath(String path, File pathFile) {
-                                LOG.i("echo-Local Subtitle Path: " + path);
+                                TVBoxRuntimeLog.i("echo-Local Subtitle Path: " + path);
                                 setSubtitle(path);//设置字幕
                             }
                         })
@@ -432,7 +432,7 @@ public class PlayFragment extends BaseLazyFragment {
                     }, 200);
                     dialog.dismiss();
                 } catch (Exception e) {
-                    LOG.e("切换音轨出错");
+                    TVBoxRuntimeLog.e("切换音轨出错");
                 }
             }
 
@@ -491,7 +491,7 @@ public class PlayFragment extends BaseLazyFragment {
                     }, 800);
                     dialog.dismiss();
                 } catch (Exception e) {
-                    LOG.e("切换内置字幕出错");
+                    TVBoxRuntimeLog.e("切换内置字幕出错");
                 }
             }
 
@@ -564,12 +564,12 @@ public class PlayFragment extends BaseLazyFragment {
             goPlayUrl(url, headers);
             return;
         }
-        LOG.i("echo-playM3u8:" + url);
+        TVBoxRuntimeLog.i("echo-playM3u8:" + url);
         mController.playM3u8(url, headers);
     }
 
     public void goPlayUrl(String url, HashMap<String, String> headers) {
-        LOG.i("echo-goPlayUrl:" + url);
+        TVBoxRuntimeLog.i("echo-goPlayUrl:" + url);
         if (autoRetryCount == 0) webPlayUrl = url;
         if (mActivity == null) return;
         if (!isAdded()) return;
@@ -929,7 +929,7 @@ public class PlayFragment extends BaseLazyFragment {
     boolean autoRetry() {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastRetryTime > 60_000) {
-            LOG.i("echo-reset-autoRetryCount");
+            TVBoxRuntimeLog.i("echo-reset-autoRetryCount");
             autoRetryCount = 0;
             allowSwitchPlayer = false;
         }
@@ -1602,7 +1602,7 @@ public class PlayFragment extends BaseLazyFragment {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
-            LOG.i("echo-onPageFinished url:" + url);
+            TVBoxRuntimeLog.i("echo-onPageFinished url:" + url);
             if (!url.equals("about:blank")) {
                 mController.evaluateScript(sourceBean, url, view);
             }
@@ -1618,7 +1618,7 @@ public class PlayFragment extends BaseLazyFragment {
 
             boolean isFilter = VideoParseRuler.isFilter(webUrl, url);
             if (isFilter) {
-                LOG.i("shouldInterceptLoadRequest filter:" + url);
+                TVBoxRuntimeLog.i("shouldInterceptLoadRequest filter:" + url);
                 return null;
             }
 
@@ -1634,7 +1634,7 @@ public class PlayFragment extends BaseLazyFragment {
                 if (checkVideoFormat(url)) {
                     loadFoundVideoUrls.add(url);
                     loadFoundVideoUrlsHeader.put(url, headers);
-                    LOG.i("echo-loadFoundVideoUrl:" + url);
+                    TVBoxRuntimeLog.i("echo-loadFoundVideoUrl:" + url);
                     if (loadFoundCount.incrementAndGet() == 1) {
                         stopLoadWebView(false);
                         SuperParse.stopJsonJx();
@@ -1664,7 +1664,7 @@ public class PlayFragment extends BaseLazyFragment {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             String url = request.getUrl().toString();
-            LOG.i("echo-shouldInterceptRequest url:" + url);
+            TVBoxRuntimeLog.i("echo-shouldInterceptRequest url:" + url);
             HashMap<String, String> webHeaders = new HashMap<>();
             Map<String, String> hds = request.getRequestHeaders();
             if (hds != null && hds.size() > 0) {

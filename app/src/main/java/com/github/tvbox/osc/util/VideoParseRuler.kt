@@ -1,188 +1,147 @@
-package com.github.tvbox.osc.util;
+package com.github.tvbox.osc.util
 
-import static com.github.tvbox.osc.util.RegexUtils.getPattern;
+import androidx.core.net.toUri
+import com.github.tvbox.osc.util.DefaultConfig.isVideoFormat
+import com.github.tvbox.osc.util.RegexUtils.getPattern
+import com.github.tvbox.osc.util.TVBoxRuntimeLog.i
 
-import android.net.Uri;
+object VideoParseRuler {
+	private val HOSTS_RULE = HashMap<String, ArrayList<ArrayList<String>?>>()
+	private val HOSTS_FILTER = HashMap<String, ArrayList<ArrayList<String>?>>()
+	val hostsRegex: HashMap<String, ArrayList<String>> = HashMap()
+	private val HOSTS_SCRIPT = HashMap<String, ArrayList<String>>()
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
+	fun clearRule() {
+		HOSTS_RULE.clear()
+		HOSTS_FILTER.clear()
+		hostsRegex.clear()
+		HOSTS_SCRIPT.clear()
+	}
 
-public class VideoParseRuler {
+	fun addHostRule(host: String, rule: ArrayList<String>?) {
+		val rules = HOSTS_RULE.getOrPut(host) { ArrayList() }
+		if (rule != null) {
+			rules.add(rule)
+		}
+	}
 
-    private static final HashMap<String, ArrayList<ArrayList<String>>> HOSTS_RULE = new HashMap<>();
-    private static final HashMap<String, ArrayList<ArrayList<String>>> HOSTS_FILTER = new HashMap<>();
-    private static final HashMap<String, ArrayList<String>> HOSTS_REGEX = new HashMap<>();
-    private static final HashMap<String, ArrayList<String>> HOSTS_SCRIPT = new HashMap<>();
+	fun getHostRules(host: String): ArrayList<ArrayList<String>?>? {
+		return HOSTS_RULE[host]
+	}
 
-    public static void clearRule() {
-        HOSTS_RULE.clear();
-        HOSTS_FILTER.clear();
-        HOSTS_REGEX.clear();
-        HOSTS_SCRIPT.clear();
-    }
+	fun addHostFilter(host: String, rule: ArrayList<String>?) {
+		val filters = HOSTS_FILTER.getOrPut(host) { ArrayList() }
+		if (rule != null) {
+			filters.add(rule)
+		}
+	}
 
-    public static void addHostRule(String host, ArrayList<String> rule) {
-        ArrayList<ArrayList<String>> rules = new ArrayList<>();
-        if (HOSTS_RULE.get(host) != null && !HOSTS_RULE.get(host).isEmpty()) {
-            rules = HOSTS_RULE.get(host);
-        }
-        rules.add(rule);
-        HOSTS_RULE.put(host, rules);
-    }
+	fun getHostFilters(host: String): ArrayList<ArrayList<String>?>? {
+		return HOSTS_FILTER[host]
+	}
 
-    public static ArrayList<ArrayList<String>> getHostRules(String host) {
-        if (HOSTS_RULE.containsKey(host)) {
-            return HOSTS_RULE.get(host);
-        }
-        return null;
-    }
+	fun addHostRegex(host: String, regex: ArrayList<String>?) {
+		if (regex.isNullOrEmpty()) return
+		val temp = hostsRegex.getOrPut(host) { ArrayList() }
+		temp.addAll(regex)
+	}
 
-    public static void addHostFilter(String host, ArrayList<String> rule) {
-        ArrayList<ArrayList<String>> filters = new ArrayList<>();
-        if (HOSTS_FILTER.get(host) != null && !HOSTS_FILTER.get(host).isEmpty()) {
-            filters = HOSTS_FILTER.get(host);
-        }
-        filters.add(rule);
-        HOSTS_FILTER.put(host, filters);
-    }
+	fun checkIsVideoForParse(webUrl: String?, url: String): Boolean {
+		try {
+			var isVideo = isVideoFormat(url)
+			if (HOSTS_RULE.isNotEmpty() && !isVideo && webUrl != null) {
+				val uri = webUrl.toUri()
+				val host = uri.host
+				isVideo = if (host != null && getHostRules(host) != null) {
+					checkVideoForOneHostRules(host, url)
+				} else {
+					checkVideoForOneHostRules("*", url)
+				}
+			}
+			return isVideo
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+		return false
+	}
 
-    public static ArrayList<ArrayList<String>> getHostFilters(String host) {
-        if (HOSTS_FILTER.containsKey(host)) {
-            return HOSTS_FILTER.get(host);
-        }
-        return null;
-    }
+	private fun checkVideoForOneHostRules(host: String, url: String): Boolean {
+		val hostRules = getHostRules(host) ?: return false
+		for (i in hostRules.indices) {
+			val rules = hostRules[i]
+			if (!rules.isNullOrEmpty()) {
+				var checkIsVideo = true
+				for (j in rules.indices) {
+					val rule = rules[j]
+					val onePattern = getPattern(rule)
+					if (!onePattern.matcher(url).find()) {
+						checkIsVideo = false
+						break
+					}
+					i("echo-VIDEO RULE:$rule")
+				}
+				if (checkIsVideo) {
+					return true
+				}
+			}
+		}
+		return false
+	}
 
-    public static void addHostRegex(String host, ArrayList<String> regex) {
-        if (regex == null || regex.isEmpty()) return;
-        ArrayList<String> temp = new ArrayList<>();
-        if (HOSTS_REGEX.get(host) != null && !HOSTS_REGEX.get(host).isEmpty()) temp = HOSTS_REGEX.get(host);
-        temp.addAll(regex);
-        HOSTS_REGEX.put(host, temp);
-    }
+	fun isFilter(webUrl: String?, url: String): Boolean {
+		try {
+			if (HOSTS_FILTER.isNotEmpty() && webUrl != null) {
+				val uri = webUrl.toUri()
+				val host = uri.host
+				if (host != null && getHostFilters(host) != null) {
+					return checkIsFilterForOneHostRules(host, url)
+				}
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+		return false
+	}
 
-    public static HashMap<String, ArrayList<String>> getHostsRegex() {
-        return HOSTS_REGEX;
-    }
+	private fun checkIsFilterForOneHostRules(host: String, url: String): Boolean {
+		val hostFilters = getHostFilters(host) ?: return false
+		for (i in hostFilters.indices) {
+			val filters = hostFilters[i]
+			if (!filters.isNullOrEmpty()) {
+				var checkIsFilter = true
+				for (j in filters.indices) {
+					val rule = filters[j]
+					val onePattern = getPattern(rule)
+					if (!onePattern.matcher(url).find()) {
+						checkIsFilter = false
+						break
+					}
+					i("echo-FILTER RULE:$rule")
+				}
+				if (checkIsFilter) {
+					return true
+				}
+			}
+		}
+		return false
+	}
 
-    public static boolean checkIsVideoForParse(String webUrl, String url) {
-        try {
-            boolean isVideo = DefaultConfig.isVideoFormat(url);
-            if (!HOSTS_RULE.isEmpty() && !isVideo && webUrl != null) {
-                Uri uri = Uri.parse(webUrl);
-                if (getHostRules(uri.getHost()) != null) {
-                    isVideo = checkVideoForOneHostRules(uri.getHost(), url);
-                } else {
-                    isVideo = checkVideoForOneHostRules("*", url);
-                }
-            }
-            return isVideo;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
+	fun addHostScript(host: String, script: ArrayList<String>?) {
+		if (script.isNullOrEmpty()) return
+		val temp = HOSTS_SCRIPT.getOrPut(host) { ArrayList() }
+		temp.addAll(script)
+	}
 
-    private static boolean checkVideoForOneHostRules(String host, String url) {
-        boolean isVideo = false;
-        ArrayList<ArrayList<String>> hostRules = getHostRules(host);
-        if (hostRules != null && !hostRules.isEmpty()) {
-            boolean isVideoRuleCheck = false;
-            for (int i = 0; i < hostRules.size(); i++) {
-                boolean checkIsVideo = true;
-                if (hostRules.get(i) != null && !hostRules.get(i).isEmpty()) {
-                    for (int j = 0; j < hostRules.get(i).size(); j++) {
-                        Pattern onePattern = getPattern(hostRules.get(i).get(j));
-                        if (!onePattern.matcher(url).find()) {
-                            checkIsVideo = false;
-                            break;
-                        }
-                        LOG.i("echo-VIDEO RULE:" + hostRules.get(i).get(j));
-                    }
-                } else {
-                    checkIsVideo = false;
-                }
-                if (checkIsVideo) {
-                    isVideoRuleCheck = true;
-                    break;
-                }
-            }
-            if (isVideoRuleCheck) {
-                isVideo = true;
-            }
-        }
-        return isVideo;
-    }
-
-    public static boolean isFilter(String webUrl, String url) {
-        try {
-            boolean isFilter = false;
-            if (!HOSTS_FILTER.isEmpty() && webUrl != null) {
-                Uri uri = Uri.parse(webUrl);
-                if (getHostFilters(uri.getHost()) != null) {
-                    isFilter = checkIsFilterForOneHostRules(uri.getHost(), url);
-                }
-            }
-            return isFilter;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    private static boolean checkIsFilterForOneHostRules(String host, String url) {
-        boolean isFilter = false;
-        ArrayList<ArrayList<String>> hostFilters = getHostFilters(host);
-        if (hostFilters != null && !hostFilters.isEmpty()) {
-            boolean isFilterRuleCheck = false;
-            for (int i = 0; i < hostFilters.size(); i++) {
-                boolean checkIsFilter = true;
-                if (hostFilters.get(i) != null && !hostFilters.get(i).isEmpty()) {
-                    for (int j = 0; j < hostFilters.get(i).size(); j++) {
-                        Pattern onePattern = getPattern(hostFilters.get(i).get(j));
-                        if (!onePattern.matcher(url).find()) {
-                            checkIsFilter = false;
-                            break;
-                        }
-                        LOG.i("echo-FILTER RULE:" + hostFilters.get(i).get(j));
-                    }
-                } else {
-                    checkIsFilter = false;
-                }
-                if (checkIsFilter) {
-                    isFilterRuleCheck = true;
-                    break;
-                }
-            }
-            if (isFilterRuleCheck) {
-                isFilter = true;
-            }
-        }
-        return isFilter;
-    }
-
-    public static void addHostScript(String host, ArrayList<String> script) {
-        if (script == null || script.isEmpty()) return;
-        ArrayList<String> temp = new ArrayList<>();
-        if (HOSTS_SCRIPT.get(host) != null && !HOSTS_SCRIPT.get(host).isEmpty()) temp = HOSTS_SCRIPT.get(host);
-        assert temp != null;
-        temp.addAll(script);
-        HOSTS_SCRIPT.put(host, temp);
-    }
-
-    public static String getHostScript(String url) {
-        for (Map.Entry<String, ArrayList<String>> entry : HOSTS_SCRIPT.entrySet()) {
-            String host = entry.getKey();
-            if (url.contains(host)) {
-                List<String> list = entry.getValue();
-                if (list != null && !list.isEmpty()) {
-                    return list.get(0);
-                }
-            }
-        }
-        return "";
-    }
+	fun getHostScript(url: String): String {
+		for (entry in HOSTS_SCRIPT.entries) {
+			val host = entry.key
+			if (url.contains(host)) {
+				val list = entry.value
+				if (list.isNotEmpty()) {
+					return list[0]
+				}
+			}
+		}
+		return ""
+	}
 }
