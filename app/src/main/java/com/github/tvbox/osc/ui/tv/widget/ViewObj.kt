@@ -1,54 +1,43 @@
-package com.github.tvbox.osc.ui.tv.widget;
+package com.github.tvbox.osc.ui.tv.widget
 
-import android.view.View;
-import android.view.ViewGroup;
-
-import androidx.annotation.Keep;
+import android.view.View
+import android.view.ViewGroup.MarginLayoutParams
+import androidx.annotation.Keep
 
 /**
- * 描述
- *
  * @author pj567
  * @since 2020/7/28
  */
-public class ViewObj {
-    private final View view;
-    private final ViewGroup.MarginLayoutParams params;
+class ViewObj(private val view: View, private val params: MarginLayoutParams) {
+	@Keep
+	fun setMarginLeft(left: Int) {
+		params.leftMargin = left
+		view.layoutParams = params
+	}
 
-    public ViewObj(View view, ViewGroup.MarginLayoutParams params) {
-        this.view = view;
-        this.params = params;
-    }
+	fun setMarginTop(top: Int) {
+		params.topMargin = top
+		view.layoutParams = params
+	}
 
-    @Keep
-    public void setMarginLeft(int left) {
-        params.leftMargin = left;
-        view.setLayoutParams(params);
-    }
+	@Keep
+	fun setMarginRight(right: Int) {
+		params.rightMargin = right
+		view.layoutParams = params
+	}
 
-    public void setMarginTop(int top) {
-        params.topMargin = top;
-        view.setLayoutParams(params);
-    }
+	fun setMarginBottom(bottom: Int) {
+		params.bottomMargin = bottom
+		view.layoutParams = params
+	}
 
-    @Keep
-    public void setMarginRight(int right) {
-        params.rightMargin = right;
-        view.setLayoutParams(params);
-    }
+	fun setWidth(width: Int) {
+		params.width = width
+		view.layoutParams = params
+	}
 
-    public void setMarginBottom(int bottom) {
-        params.bottomMargin = bottom;
-        view.setLayoutParams(params);
-    }
-
-    public void setWidth(int width) {
-        params.width = width;
-        view.setLayoutParams(params);
-    }
-
-    public void setHeight(int height) {
-        params.height = height;
-        view.setLayoutParams(params);
-    }
+	fun setHeight(height: Int) {
+		params.height = height
+		view.layoutParams = params
+	}
 }

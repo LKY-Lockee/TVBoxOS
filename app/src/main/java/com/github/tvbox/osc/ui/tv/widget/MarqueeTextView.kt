@@ -1,37 +1,24 @@
-package com.github.tvbox.osc.ui.tv.widget;
+package com.github.tvbox.osc.ui.tv.widget
 
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.text.TextUtils;
-import android.util.AttributeSet;
-import android.widget.TextView;
-
-import androidx.annotation.Nullable;
+import android.annotation.SuppressLint
+import android.content.Context
+import android.text.TextUtils
+import android.util.AttributeSet
+import android.widget.TextView
 
 /**
  * Created by acer on 2018/7/13.
  */
-
 @SuppressLint("AppCompatCustomView")
-public class MarqueeTextView extends TextView {
-    public MarqueeTextView(Context context) {
-        this(context, null);
-    }
+class MarqueeTextView @JvmOverloads constructor(context: Context?, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : TextView(context, attrs, defStyleAttr) {
+	init {
+		isSelected = true
+		isSingleLine = true
+		marqueeRepeatLimit = -1
+		ellipsize = TextUtils.TruncateAt.MARQUEE
+	}
 
-    public MarqueeTextView(Context context, @Nullable AttributeSet attrs) {
-        this(context, attrs, 0);
-    }
-
-    public MarqueeTextView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-        setSelected(true);
-        setSingleLine(true);
-        setMarqueeRepeatLimit(-1);
-        setEllipsize(TextUtils.TruncateAt.MARQUEE);
-    }
-
-    @Override
-    public boolean isFocused() {
-        return true;
-    }
+	override fun isFocused(): Boolean {
+		return true
+	}
 }

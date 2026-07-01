@@ -1,63 +1,54 @@
-package com.github.tvbox.osc.ui.tv.widget;
+package com.github.tvbox.osc.ui.tv.widget
 
-import android.content.Context;
-import android.graphics.drawable.Drawable;
-import android.util.AttributeSet;
+import android.content.Context
+import android.graphics.drawable.Drawable
+import android.util.AttributeSet
+import androidx.appcompat.widget.AppCompatImageView
 
-import androidx.appcompat.widget.AppCompatImageView;
+class AspectRatioImageView : AppCompatImageView {
+	private var aspectRatio = 0f // 宽高比 (宽/高)，0表示使用默认或图片实际比例
 
-public class AspectRatioImageView extends AppCompatImageView {
-    private float aspectRatio = 0f; // 宽高比 (宽/高)，0表示使用默认或图片实际比例
+	constructor(context: Context) : super(context)
 
-    public AspectRatioImageView(Context context) {
-        super(context);
-    }
+	constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 
-    public AspectRatioImageView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-    }
+	constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
-    public AspectRatioImageView(Context context, AttributeSet attrs, int defStyleAttr) {
-        super(context, attrs, defStyleAttr);
-    }
+	fun setAspectRatio(ratio: Float) {
+		if (this.aspectRatio != ratio) {
+			this.aspectRatio = ratio
+			requestLayout()
+		}
+	}
 
-    public void setAspectRatio(float ratio) {
-        if (this.aspectRatio != ratio) {
-            this.aspectRatio = ratio;
-            requestLayout();
-        }
-    }
+	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+		super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+		val width = measuredWidth
+		if (width > 0) {
+			val height: Int
 
-        int width = getMeasuredWidth();
-        if (width > 0) {
-            int height;
+			if (aspectRatio > 0) {
+				height = (width / aspectRatio).toInt()
+			} else {
+				val drawable = getDrawable()
+				if (drawable != null && drawable.intrinsicWidth > 0 && drawable.intrinsicHeight > 0) {
+					val imageRatio = drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight
+					height = (width / imageRatio).toInt()
+				} else {
+					val defaultAspectRatio = 214f / 280f
+					height = (width / defaultAspectRatio).toInt()
+				}
+			}
 
-            if (aspectRatio > 0) {
-                height = (int) (width / aspectRatio);
-            } else {
-                Drawable drawable = getDrawable();
-                if (drawable != null && drawable.getIntrinsicWidth() > 0 && drawable.getIntrinsicHeight() > 0) {
-                    float imageRatio = (float) drawable.getIntrinsicWidth() / drawable.getIntrinsicHeight();
-                    height = (int) (width / imageRatio);
-                } else {
-                    float defaultAspectRatio = 214f / 280f;
-                    height = (int) (width / defaultAspectRatio);
-                }
-            }
+			setMeasuredDimension(width, height)
+		}
+	}
 
-            setMeasuredDimension(width, height);
-        }
-    }
-
-    @Override
-    public void setImageDrawable(Drawable drawable) {
-        super.setImageDrawable(drawable);
-        if (aspectRatio == 0) {
-            post(this::requestLayout);
-        }
-    }
+	override fun setImageDrawable(drawable: Drawable?) {
+		super.setImageDrawable(drawable)
+		if (aspectRatio == 0f) {
+			post { this.requestLayout() }
+		}
+	}
 }
