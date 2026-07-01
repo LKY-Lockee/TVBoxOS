@@ -1,92 +1,73 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import android.content.Context;
-import android.graphics.Color;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.TextView;
+import android.content.Context
+import android.graphics.Color
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.BaseAdapter
+import android.widget.TextView
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.EpgInfo
+import com.github.tvbox.osc.ui.tv.widget.AudioWaveView
 
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.Epginfo;
-import com.github.tvbox.osc.ui.tv.widget.AudioWaveView;
+class MyEpgAdapter(private val data: MutableList<EpgInfo?>, private val context: Context?, private var defaultSelection: Int) : BaseAdapter() {
+	fun setSelection(i: Int) {
+		this.defaultSelection = i
+		notifyDataSetChanged()
+	}
 
-import java.util.List;
+	fun setShiyiSelection(i: Int) {
+		notifyDataSetChanged()
+	}
 
-public class MyEpgAdapter extends BaseAdapter {
+	fun setFontSize(f: Float) {
+		fontSize = f
+		notifyDataSetChanged()
+	}
 
-    public static float fontSize = 20;
-    private final List<Epginfo> data;
-    private final Context context;
-    private int defaultSelection;
+	override fun getCount(): Int {
+		return data.size
+	}
 
-    public MyEpgAdapter(List<Epginfo> data, Context context, int i) {
-        this.data = data;
-        this.context = context;
-        this.defaultSelection = i;
-    }
+	override fun getItem(i: Int): Any? {
+		return null
+	}
 
+	override fun getItemId(i: Int): Long {
+		return i.toLong()
+	}
 
-    public void setSelection(int i) {
-        this.defaultSelection = i;
-        notifyDataSetChanged();
-    }
+	override fun getView(i: Int, view: View?, viewGroup: ViewGroup?): View {
+		var view = view
+		if (view == null) {
+			view = LayoutInflater.from(context).inflate(R.layout.epglist_item, viewGroup, false)
+		}
+		val textview = view.findViewById<TextView>(R.id.tv_epg_name)
+		val timeView = view.findViewById<TextView>(R.id.tv_epg_time)
+		val wqddgAudioWaveView = view.findViewById<AudioWaveView>(R.id.wqddg_AudioWaveView)
+		wqddgAudioWaveView.visibility = View.GONE
+		if (i < data.size) {
+			textview.text = data[i]!!.title
+			timeView.text = data[i]!!.start + "--" + data[i]!!.end
+			textview.setTextColor(Color.WHITE)
+			timeView.setTextColor(Color.WHITE)
+			Log.e("roinlong", "getView: $i")
+			if (i == this.defaultSelection) {
+				wqddgAudioWaveView.visibility = View.VISIBLE
+				textview.setTextColor(Color.rgb(0, 153, 255))
+				timeView.setTextColor(Color.rgb(0, 153, 255))
+				textview.freezesText = true
+				timeView.freezesText = true
+			} else {
+				wqddgAudioWaveView.visibility = View.GONE
+			}
+		}
+		return view
+	}
 
-    public void setShiyiSelection(int i) {
-        notifyDataSetChanged();
-    }
-
-    public void setFontSize(float f) {
-        fontSize = f;
-        notifyDataSetChanged();
-    }
-
-    @Override
-    public int getCount() {
-        return data.size();
-    }
-
-    @Override
-    public Object getItem(int i) {
-        return null;
-    }
-
-    @Override
-    public long getItemId(int i) {
-        return i;
-    }
-
-    @Override
-    public View getView(int i, View view, ViewGroup viewGroup) {
-        if (view == null) {
-            view = LayoutInflater.from(context).inflate(R.layout.epglist_item, viewGroup, false);
-        }
-        TextView textview = view.findViewById(R.id.tv_epg_name);
-        TextView timeview = view.findViewById(R.id.tv_epg_time);
-        AudioWaveView wqddg_AudioWaveView = view.findViewById(R.id.wqddg_AudioWaveView);
-        wqddg_AudioWaveView.setVisibility(View.GONE);
-        if (i < data.size()) {
-
-            textview.setText(data.get(i).title);
-            timeview.setText(data.get(i).start + "--" + data.get(i).end);
-            textview.setTextColor(Color.WHITE);
-            timeview.setTextColor(Color.WHITE);
-            Log.e("roinlong", "getView: " + i);
-            if (i == this.defaultSelection) {
-                wqddg_AudioWaveView.setVisibility(View.VISIBLE);
-                textview.setTextColor(Color.rgb(0, 153, 255));
-                timeview.setTextColor(Color.rgb(0, 153, 255));
-                textview.setFreezesText(true);
-                timeview.setFreezesText(true);
-            } else {
-                wqddg_AudioWaveView.setVisibility(View.GONE);
-            }
-
-        }
-        return view;
-    }
+	companion object {
+		var fontSize: Float = 20f
+	}
 }
-
-

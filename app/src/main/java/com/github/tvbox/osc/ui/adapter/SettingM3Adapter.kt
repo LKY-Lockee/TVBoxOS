@@ -1,163 +1,134 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import android.text.TextUtils;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.SettingItem;
-import com.google.android.material.materialswitch.MaterialSwitch;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.text.TextUtils
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.SettingItem
+import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
  * Material 3 风格设置适配器
  */
-public class SettingM3Adapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+class SettingM3Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder?>() {
+	private var items: MutableList<SettingItem> = ArrayList()
 
-    private List<SettingItem> items = new ArrayList<>();
+	fun setItems(items: MutableList<SettingItem>) {
+		this.items = items
+		notifyDataSetChanged()
+	}
 
-    public void setItems(List<SettingItem> items) {
-        this.items = items;
-        notifyDataSetChanged();
-    }
+	fun updateItem(position: Int) {
+		if (position >= 0 && position < items.size) {
+			notifyItemChanged(position)
+		}
+	}
 
-    public void updateItem(int position) {
-        if (position >= 0 && position < items.size()) {
-            notifyItemChanged(position);
-        }
-    }
+	override fun getItemViewType(position: Int): Int {
+		return items[position].type
+	}
 
-    @Override
-    public int getItemViewType(int position) {
-        return items.get(position).getType();
-    }
+	override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+		val inflater = LayoutInflater.from(parent.context)
+		return when (viewType) {
+			SettingItem.TYPE_CATEGORY -> CategoryViewHolder(inflater.inflate(R.layout.item_setting_category, parent, false))
+			SettingItem.TYPE_SWITCH -> SwitchViewHolder(inflater.inflate(R.layout.item_setting_switch, parent, false))
+			SettingItem.TYPE_PREFERENCE -> PreferenceViewHolder(inflater.inflate(R.layout.item_setting_preference, parent, false))
+			else -> PreferenceViewHolder(inflater.inflate(R.layout.item_setting_preference, parent, false))
+		}
+	}
 
-    @NonNull
-    @Override
-    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
-        switch (viewType) {
-            case SettingItem.TYPE_CATEGORY:
-                return new CategoryViewHolder(inflater.inflate(R.layout.item_setting_category, parent, false));
-            case SettingItem.TYPE_SWITCH:
-                return new SwitchViewHolder(inflater.inflate(R.layout.item_setting_switch, parent, false));
-            case SettingItem.TYPE_PREFERENCE:
-            default:
-                return new PreferenceViewHolder(inflater.inflate(R.layout.item_setting_preference, parent, false));
-        }
-    }
+	override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+		val item = items[position]
 
-    @Override
-    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        SettingItem item = items.get(position);
-        
-        if (holder instanceof CategoryViewHolder) {
-            ((CategoryViewHolder) holder).bind(item);
-        } else if (holder instanceof PreferenceViewHolder) {
-            ((PreferenceViewHolder) holder).bind(item);
-        } else if (holder instanceof SwitchViewHolder) {
-            ((SwitchViewHolder) holder).bind(item);
-        }
-    }
+		when (holder) {
+			is CategoryViewHolder -> {
+				holder.bind(item)
+			}
 
-    @Override
-    public int getItemCount() {
-        return items.size();
-    }
+			is PreferenceViewHolder -> {
+				holder.bind(item)
+			}
 
-    // 分类标题 ViewHolder
-    static class CategoryViewHolder extends RecyclerView.ViewHolder {
-        TextView tvCategoryTitle;
+			is SwitchViewHolder -> {
+				holder.bind(item)
+			}
+		}
+	}
 
-        CategoryViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvCategoryTitle = itemView.findViewById(R.id.tvCategoryTitle);
-        }
+	override fun getItemCount(): Int {
+		return items.size
+	}
 
-        void bind(SettingItem item) {
-            tvCategoryTitle.setText(item.getTitle());
-        }
-    }
+	// 分类标题 ViewHolder
+	internal class CategoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+		var tvCategoryTitle: TextView = itemView.findViewById(R.id.tvCategoryTitle)
 
-    // 普通设置项 ViewHolder
-    static class PreferenceViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle;
-        TextView tvSummary;
-        TextView tvValue;
+		fun bind(item: SettingItem) {
+			tvCategoryTitle.text = item.title
+		}
+	}
 
-        PreferenceViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvSummary = itemView.findViewById(R.id.tvSummary);
-            tvValue = itemView.findViewById(R.id.tvValue);
-        }
+	// 普通设置项 ViewHolder
+	internal class PreferenceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+		var tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
+		var tvSummary: TextView = itemView.findViewById(R.id.tvSummary)
+		var tvValue: TextView = itemView.findViewById(R.id.tvValue)
 
-        void bind(SettingItem item) {
-            tvTitle.setText(item.getTitle());
-            
-            if (!TextUtils.isEmpty(item.getSummary())) {
-                tvSummary.setVisibility(View.VISIBLE);
-                tvSummary.setText(item.getSummary());
-            } else {
-                tvSummary.setVisibility(View.GONE);
-            }
+		fun bind(item: SettingItem) {
+			tvTitle.text = item.title
 
-            if (!TextUtils.isEmpty(item.getValue())) {
-                tvValue.setVisibility(View.VISIBLE);
-                tvValue.setText(item.getValue());
-            } else {
-                tvValue.setVisibility(View.GONE);
-            }
+			if (!TextUtils.isEmpty(item.summary)) {
+				tvSummary.visibility = View.VISIBLE
+				tvSummary.text = item.summary
+			} else {
+				tvSummary.visibility = View.GONE
+			}
 
-            itemView.setOnClickListener(v -> {
-                if (item.getOnClickListener() != null) {
-                    item.getOnClickListener().onClick(item);
-                }
-            });
-        }
-    }
+			if (!TextUtils.isEmpty(item.value)) {
+				tvValue.visibility = View.VISIBLE
+				tvValue.text = item.value
+			} else {
+				tvValue.visibility = View.GONE
+			}
 
-    // 开关设置项 ViewHolder
-    static class SwitchViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle;
-        TextView tvSummary;
-        MaterialSwitch switchWidget;
+			itemView.setOnClickListener(View.OnClickListener { v: View? ->
+				if (item.onClickListener != null) {
+					(item.onClickListener ?: return@OnClickListener).onClick(item)
+				}
+			})
+		}
+	}
 
-        SwitchViewHolder(@NonNull View itemView) {
-            super(itemView);
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvSummary = itemView.findViewById(R.id.tvSummary);
-            switchWidget = itemView.findViewById(R.id.switchWidget);
-        }
+	// 开关设置项 ViewHolder
+	internal class SwitchViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+		var tvTitle: TextView = itemView.findViewById(R.id.tvTitle)
+		var tvSummary: TextView = itemView.findViewById(R.id.tvSummary)
+		var switchWidget: MaterialSwitch = itemView.findViewById(R.id.switchWidget)
 
-        void bind(SettingItem item) {
-            tvTitle.setText(item.getTitle());
-            
-            if (!TextUtils.isEmpty(item.getSummary())) {
-                tvSummary.setVisibility(View.VISIBLE);
-                tvSummary.setText(item.getSummary());
-            } else {
-                tvSummary.setVisibility(View.GONE);
-            }
+		fun bind(item: SettingItem) {
+			tvTitle.text = item.title
 
-            switchWidget.setChecked(item.isSwitchState());
+			if (!TextUtils.isEmpty(item.summary)) {
+				tvSummary.visibility = View.VISIBLE
+				tvSummary.text = item.summary
+			} else {
+				tvSummary.visibility = View.GONE
+			}
 
-            itemView.setOnClickListener(v -> {
-                boolean newState = !item.isSwitchState();
-                item.setSwitchState(newState);
-                switchWidget.setChecked(newState);
-                if (item.getOnClickListener() != null) {
-                    item.getOnClickListener().onClick(item);
-                }
-            });
-        }
-    }
+			switchWidget.setChecked(item.switchState)
+
+			itemView.setOnClickListener(View.OnClickListener { v: View? ->
+				val newState = !item.switchState
+				item.switchState = newState
+				switchWidget.setChecked(newState)
+				if (item.onClickListener != null) {
+					(item.onClickListener ?: return@OnClickListener).onClick(item)
+				}
+			})
+		}
+	}
 }
-

@@ -1,57 +1,44 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import android.graphics.Color;
-import android.widget.TextView;
+import android.graphics.Color
+import android.widget.TextView
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.LiveEpgDate
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
-import com.chad.library.adapter.base.BaseViewHolder;
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.LiveEpgDate;
+class LiveEpgDateAdapter : BaseQuickAdapter<LiveEpgDate, BaseViewHolder>(R.layout.item_live_channel_group, ArrayList<LiveEpgDate?>()) {
+	var selectedIndex = -1
+		private set
+	private var focusedIndex = -1
 
-import java.util.ArrayList;
+	override fun convert(p0: BaseViewHolder, p1: LiveEpgDate) {
+		val tvGroupName = p0.getView<TextView>(R.id.tvChannelGroupName)
+		tvGroupName.text = p1.datePresented
+		tvGroupName.setBackgroundColor(Color.TRANSPARENT)
+		if (p1.index == selectedIndex && p1.index != focusedIndex) {
+			tvGroupName.setTextColor(mContext.resources.getColor(R.color.color_1890FF))
+		} else {
+			tvGroupName.setTextColor(mContext.resources.getColor(R.color.color_CCFFFFFF))
+		}
+	}
 
+	fun getSelectedIndex(): Int {
+		return selectedIndex
+	}
 
-public class LiveEpgDateAdapter extends BaseQuickAdapter<LiveEpgDate, BaseViewHolder> {
+	fun setSelectedIndex(selectedIndex: Int) {
+		if (selectedIndex == this.selectedIndex) return
+		val preSelectedIndex = this.selectedIndex
+		this.selectedIndex = selectedIndex
+		if (preSelectedIndex != -1) notifyItemChanged(preSelectedIndex)
+		if (this.selectedIndex != -1) notifyItemChanged(this.selectedIndex)
+	}
 
-    private int selectedIndex = -1;
-    private int focusedIndex = -1;
-
-    public LiveEpgDateAdapter() {
-        super(R.layout.item_live_channel_group, new ArrayList<>());
-    }
-
-    @Override
-    protected void convert(BaseViewHolder holder, LiveEpgDate item) {
-        TextView tvGroupName = holder.getView(R.id.tvChannelGroupName);
-        tvGroupName.setText(item.getDatePresented());
-        tvGroupName.setBackgroundColor(Color.TRANSPARENT);
-        if (item.getIndex() == selectedIndex && item.getIndex() != focusedIndex) {
-            tvGroupName.setTextColor(mContext.getResources().getColor(R.color.color_1890FF));
-        } else {
-            tvGroupName.setTextColor(mContext.getResources().getColor(R.color.color_CCFFFFFF));
-        }
-    }
-
-    public int getSelectedIndex() {
-        return selectedIndex;
-    }
-
-    public void setSelectedIndex(int selectedIndex) {
-        if (selectedIndex == this.selectedIndex) return;
-        int preSelectedIndex = this.selectedIndex;
-        this.selectedIndex = selectedIndex;
-        if (preSelectedIndex != -1)
-            notifyItemChanged(preSelectedIndex);
-        if (this.selectedIndex != -1)
-            notifyItemChanged(this.selectedIndex);
-    }
-
-    public void setFocusedIndex(int focusedIndex) {
-        int preSelectedIndex = this.selectedIndex;
-        this.focusedIndex = focusedIndex;
-        if (preSelectedIndex != -1)
-            notifyItemChanged(preSelectedIndex);
-        if (this.focusedIndex != -1)
-            notifyItemChanged(this.focusedIndex);
-    }
+	fun setFocusedIndex(focusedIndex: Int) {
+		val preSelectedIndex = this.selectedIndex
+		this.focusedIndex = focusedIndex
+		if (preSelectedIndex != -1) notifyItemChanged(preSelectedIndex)
+		if (this.focusedIndex != -1) notifyItemChanged(this.focusedIndex)
+	}
 }

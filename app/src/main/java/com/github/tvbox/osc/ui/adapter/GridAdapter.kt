@@ -1,111 +1,103 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import android.text.TextUtils;
-import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
+import android.text.TextUtils
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.Movie
+import com.github.tvbox.osc.picasso.RoundTransformation
+import com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView
+import com.github.tvbox.osc.util.DefaultConfig
+import com.github.tvbox.osc.util.ImgUtil
+import com.github.tvbox.osc.util.MD5.string2MD5
+import com.squareup.picasso.Picasso
+import me.jessyan.autosize.utils.AutoSizeUtils
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
-import com.chad.library.adapter.base.BaseViewHolder;
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.Movie;
-import com.github.tvbox.osc.picasso.RoundTransformation;
-import com.github.tvbox.osc.ui.tv.widget.AspectRatioImageView;
-import com.github.tvbox.osc.util.DefaultConfig;
-import com.github.tvbox.osc.util.ImgUtil;
-import com.github.tvbox.osc.util.MD5;
-import com.squareup.picasso.Picasso;
+class GridAdapter(private val mShowList: Boolean) : BaseQuickAdapter<Movie.Video, BaseViewHolder>(if (mShowList) R.layout.item_list else R.layout.item_grid, ArrayList<Movie.Video?>()) {
+	override fun convert(p0: BaseViewHolder, p1: Movie.Video) {
+		if (this.mShowList) {
+			p0.setText(R.id.tvNote, p1.note)
+			p0.setText(R.id.tvName, p1.name)
+			val ivThumb = p0.getView<ImageView>(R.id.ivThumb)
+			//由于部分电视机使用glide报错
+			if (!TextUtils.isEmpty(p1.pic)) {
+				p1.pic = (p1.pic ?: return).trim { it <= ' ' }
+				if (ImgUtil.isBase64Image(p1.pic ?: return)) {
+					// 如果是 Base64 图片，解码并设置
+					ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(p1.pic ?: return))
+				} else {
+					Picasso.get()
+						.load(DefaultConfig.checkReplaceProxy(p1.pic ?: return))
+						.transform(
+							RoundTransformation(string2MD5(p1.pic))
+								.centerCorp(true)
+								.override(AutoSizeUtils.mm2px(mContext, 240f), AutoSizeUtils.mm2px(mContext, 336f))
+								.roundRadius(AutoSizeUtils.mm2px(mContext, 10f), RoundTransformation.RoundType.ALL)
+						)
+						.placeholder(R.drawable.img_loading_placeholder)
+						.noFade()
+						.error(ImgUtil.createTextDrawable(p1.name ?: return))
+						.into(ivThumb)
+				}
+			} else {
+				ivThumb.setImageDrawable(ImgUtil.createTextDrawable(p1.name ?: return))
+			}
+			return
+		}
 
-import java.util.ArrayList;
+		val tvYear = p0.getView<TextView>(R.id.tvYear)
+		if (p1.year <= 0) {
+			tvYear.visibility = View.GONE
+		} else {
+			tvYear.text = p1.year.toString()
+			tvYear.visibility = View.VISIBLE
+		}
+		val tvLang = p0.getView<TextView>(R.id.tvLang)
+		tvLang.visibility = View.GONE
+		val tvArea = p0.getView<TextView>(R.id.tvArea)
+		tvArea.visibility = View.GONE
+		if (TextUtils.isEmpty(p1.note)) {
+			p0.setVisible(R.id.tvNote, false)
+		} else {
+			p0.setVisible(R.id.tvNote, true)
+			p0.setText(R.id.tvNote, p1.note)
+		}
+		p0.setText(R.id.tvName, p1.name)
+		p0.setText(R.id.tvActor, p1.actor)
+		val ivThumb = p0.getView<ImageView>(R.id.ivThumb)
 
-import me.jessyan.autosize.utils.AutoSizeUtils;
+		val newWidth = ImgUtil.DEFAULT_WIDTH
+		val newHeight = ImgUtil.DEFAULT_HEIGHT
 
-public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
-    private final boolean mShowList;
-
-    public GridAdapter(boolean showList) {
-        super(showList ? R.layout.item_list : R.layout.item_grid, new ArrayList<>());
-        this.mShowList = showList;
-    }
-
-    @Override
-    protected void convert(BaseViewHolder helper, Movie.Video item) {
-        if (this.mShowList) {
-            helper.setText(R.id.tvNote, item.note);
-            helper.setText(R.id.tvName, item.name);
-            ImageView ivThumb = helper.getView(R.id.ivThumb);
-            //由于部分电视机使用glide报错
-            if (!TextUtils.isEmpty(item.pic)) {
-                item.pic = item.pic.trim();
-                if (ImgUtil.isBase64Image(item.pic)) {
-                    // 如果是 Base64 图片，解码并设置
-                    ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(item.pic));
-                } else {
-                    Picasso.get()
-                            .load(DefaultConfig.checkReplaceProxy(item.pic))
-                            .transform(new RoundTransformation(MD5.string2MD5(item.pic))
-                                    .centerCorp(true)
-                                    .override(AutoSizeUtils.mm2px(mContext, 240), AutoSizeUtils.mm2px(mContext, 336))
-                                    .roundRadius(AutoSizeUtils.mm2px(mContext, 10), RoundTransformation.RoundType.ALL))
-                            .placeholder(R.drawable.img_loading_placeholder)
-                            .noFade()
-                            .error(ImgUtil.createTextDrawable(item.name))
-                            .into(ivThumb);
-                }
-            } else {
-                ivThumb.setImageDrawable(ImgUtil.createTextDrawable(item.name));
-            }
-            return;
-        }
-
-        TextView tvYear = helper.getView(R.id.tvYear);
-        if (item.year <= 0) {
-            tvYear.setVisibility(View.GONE);
-        } else {
-            tvYear.setText(String.valueOf(item.year));
-            tvYear.setVisibility(View.VISIBLE);
-        }
-        TextView tvLang = helper.getView(R.id.tvLang);
-        tvLang.setVisibility(View.GONE);
-        TextView tvArea = helper.getView(R.id.tvArea);
-        tvArea.setVisibility(View.GONE);
-        if (TextUtils.isEmpty(item.note)) {
-            helper.setVisible(R.id.tvNote, false);
-        } else {
-            helper.setVisible(R.id.tvNote, true);
-            helper.setText(R.id.tvNote, item.note);
-        }
-        helper.setText(R.id.tvName, item.name);
-        helper.setText(R.id.tvActor, item.actor);
-        ImageView ivThumb = helper.getView(R.id.ivThumb);
-
-        int newWidth = ImgUtil.DEFAULT_WIDTH;
-        int newHeight = ImgUtil.DEFAULT_HEIGHT;
-
-        //由于部分电视机使用glide报错
-        if (!TextUtils.isEmpty(item.pic)) {
-            item.pic = item.pic.trim();
-            if (ImgUtil.isBase64Image(item.pic)) {
-                // 如果是 Base64 图片，解码并设置
-                ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(item.pic));
-            } else {
-                Picasso.get()
-                        .load(DefaultConfig.checkReplaceProxy(item.pic))
-                        .transform(new RoundTransformation(MD5.string2MD5(item.pic))
-                                .centerCorp(true)
-                                .override(AutoSizeUtils.mm2px(mContext, newWidth), AutoSizeUtils.mm2px(mContext, newHeight))
-                                .roundRadius(AutoSizeUtils.mm2px(mContext, 10), RoundTransformation.RoundType.ALL))
-                        .placeholder(R.drawable.img_loading_placeholder)
-                        .noFade()
-                        .error(ImgUtil.createTextDrawable(item.name))
-                        .into(ivThumb);
-            }
-        } else {
-            ivThumb.setImageDrawable(ImgUtil.createTextDrawable(item.name));
-        }
-        // 动态设置宽高
-        if (ivThumb instanceof AspectRatioImageView aspectRatioImageView) {
-            aspectRatioImageView.setAspectRatio(214f / 280f);
-        }
-    }
+		//由于部分电视机使用glide报错
+		if (!TextUtils.isEmpty(p1.pic)) {
+			p1.pic = (p1.pic ?: return).trim { it <= ' ' }
+			if (ImgUtil.isBase64Image(p1.pic ?: return)) {
+				// 如果是 Base64 图片，解码并设置
+				ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(p1.pic ?: return))
+			} else {
+				Picasso.get()
+					.load(DefaultConfig.checkReplaceProxy(p1.pic ?: return))
+					.transform(
+						RoundTransformation(string2MD5(p1.pic))
+							.centerCorp(true)
+							.override(AutoSizeUtils.mm2px(mContext, newWidth.toFloat()), AutoSizeUtils.mm2px(mContext, newHeight.toFloat()))
+							.roundRadius(AutoSizeUtils.mm2px(mContext, 10f), RoundTransformation.RoundType.ALL)
+					)
+					.placeholder(R.drawable.img_loading_placeholder)
+					.noFade()
+					.error(ImgUtil.createTextDrawable(p1.name ?: return))
+					.into(ivThumb)
+			}
+		} else {
+			ivThumb.setImageDrawable(ImgUtil.createTextDrawable(p1.name ?: return))
+		}
+		// 动态设置宽高
+		if (ivThumb is AspectRatioImageView) {
+			ivThumb.setAspectRatio(214f / 280f)
+		}
+	}
 }

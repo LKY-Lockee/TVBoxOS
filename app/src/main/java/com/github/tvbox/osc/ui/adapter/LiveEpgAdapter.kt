@@ -1,135 +1,119 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import android.annotation.SuppressLint;
-import android.graphics.Color;
-import android.view.View;
-import android.widget.TextView;
+import android.graphics.Color
+import android.view.View
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.EpgInfo
+import com.github.tvbox.osc.ui.tv.widget.AudioWaveView
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-import androidx.core.content.ContextCompat;
+class LiveEpgAdapter : BaseQuickAdapter<EpgInfo, BaseViewHolder>(R.layout.epglist_item, ArrayList<EpgInfo?>()) {
+	val timeFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+	private val defaultShiyiSelection = 0
+	private val currentEpgDate: String? = null
+	private val focusSelection = -1
+	var selectedIndex: Int = -1
+		private set
+	private var focusedEpgIndex = -1
+	private var shiyiSelection = false
+	private var shiyiDate: String? = null
+	private var sourceIncludeBack = false
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
-import com.chad.library.adapter.base.BaseViewHolder;
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.EpgInfo;
-import com.github.tvbox.osc.ui.tv.widget.AudioWaveView;
+	fun canBack(sourceIncludeBack: Boolean) {
+		this.sourceIncludeBack = sourceIncludeBack
+	}
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Locale;
-
-public class LiveEpgAdapter extends BaseQuickAdapter<EpgInfo, BaseViewHolder> {
-    public static float fontSize = 20;
-    final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
-    private final int defaultShiyiSelection = 0;
-    private final String currentEpgDate = null;
-    private final int focusSelection = -1;
-    private int selectedEpgIndex = -1;
-    private int focusedEpgIndex = -1;
-    private boolean ShiyiSelection = false;
-    private String shiyiDate = null;
-    private boolean source_include_back = false;
-
-    public LiveEpgAdapter() {
-        super(R.layout.epglist_item, new ArrayList<>());
-    }
-
-    public void CanBack(Boolean source_include_back) {
-        this.source_include_back = source_include_back;
-    }
-
-    @SuppressLint("SetTextI18n")
-    @Override
-    protected void convert(BaseViewHolder holder, EpgInfo value) {
-        TextView textview = holder.getView(R.id.tv_epg_name);
-        TextView timeview = holder.getView(R.id.tv_epg_time);
-        TextView shiyi = holder.getView(R.id.shiyi);
-        AudioWaveView wqddg_AudioWaveView = holder.getView(R.id.wqddg_AudioWaveView);
-        wqddg_AudioWaveView.setVisibility(View.GONE);
-        if (value.getIndex() == selectedEpgIndex && value.getIndex() != focusedEpgIndex && (value.getCurrentEpgDate().equals(shiyiDate) || value.getCurrentEpgDate().equals(timeFormat.format(new Date())))) {
-            textview.setTextColor(ContextCompat.getColor(mContext, R.color.color_1890FF));
-            timeview.setTextColor(ContextCompat.getColor(mContext, R.color.color_1890FF));
-        } else {
-            textview.setTextColor(Color.WHITE);
-            timeview.setTextColor(Color.WHITE);
-        }
-        if (new Date().compareTo(value.getStartDateTime()) >= 0 && new Date().compareTo(value.getEndDateTime()) <= 0) {
-            shiyi.setVisibility(View.VISIBLE);
-            shiyi.setBackgroundColor(Color.YELLOW);
-            shiyi.setText("直播中");
-            shiyi.setTextColor(Color.RED);
-        } else if (new Date().compareTo(value.getEndDateTime()) > 0 && source_include_back) {
-            shiyi.setVisibility(View.VISIBLE);
-            shiyi.setBackgroundColor(Color.BLUE);
-            shiyi.setTextColor(Color.WHITE);
-            shiyi.setText("回看");
-        } else if (new Date().compareTo(value.getStartDateTime()) < 0) {
-            shiyi.setVisibility(View.GONE);
-//            shiyi.setBackgroundColor(Color.GRAY);
+	override fun convert(p0: BaseViewHolder, p1: EpgInfo) {
+		val textview = p0.getView<TextView>(R.id.tv_epg_name)
+		val timeview = p0.getView<TextView>(R.id.tv_epg_time)
+		val shiyi = p0.getView<TextView>(R.id.shiyi)
+		val wqddgAudioWaveView = p0.getView<AudioWaveView>(R.id.wqddg_AudioWaveView)
+		wqddgAudioWaveView.visibility = View.GONE
+		if (p1.index == this.selectedIndex && p1.index != focusedEpgIndex && (p1.currentEpgDate == shiyiDate || p1.currentEpgDate == timeFormat.format(Date()))) {
+			textview.setTextColor(ContextCompat.getColor(mContext, R.color.color_1890FF))
+			timeview.setTextColor(ContextCompat.getColor(mContext, R.color.color_1890FF))
+		} else {
+			textview.setTextColor(Color.WHITE)
+			timeview.setTextColor(Color.WHITE)
+		}
+		if (Date() >= p1.startDateTime && Date() <= p1.endDateTime) {
+			shiyi.visibility = View.VISIBLE
+			shiyi.setBackgroundColor(Color.YELLOW)
+			shiyi.text = "直播中"
+			shiyi.setTextColor(Color.RED)
+		} else if (Date() > p1.endDateTime && sourceIncludeBack) {
+			shiyi.visibility = View.VISIBLE
+			shiyi.setBackgroundColor(Color.BLUE)
+			shiyi.setTextColor(Color.WHITE)
+			shiyi.text = "回看"
+		} else if (Date() < p1.startDateTime) {
+			shiyi.visibility = View.GONE
+			//            shiyi.setBackgroundColor(Color.GRAY);
 //            shiyi.setTextColor(Color.BLACK);
 //            shiyi.setText("");
-        } else {
-            shiyi.setVisibility(View.GONE);
-        }
-        textview.setText(value.getTitle());
-        timeview.setText(value.getStart() + "--" + value.getEnd());
-        if (!ShiyiSelection) {
-            Date now = new Date();
-            if (now.compareTo(value.getStartDateTime()) >= 0 && now.compareTo(value.getEndDateTime()) <= 0) {
-                wqddg_AudioWaveView.setVisibility(View.VISIBLE);
-                textview.setFreezesText(true);
-                timeview.setFreezesText(true);
-            } else {
-                wqddg_AudioWaveView.setVisibility(View.GONE);
-            }
-        } else {
-            if (value.getIndex() == this.selectedEpgIndex && value.getCurrentEpgDate().equals(shiyiDate)) {
-                wqddg_AudioWaveView.setVisibility(View.VISIBLE);
-                textview.setFreezesText(true);
-                timeview.setFreezesText(true);
-                shiyi.setText("回看中");
-                shiyi.setTextColor(Color.RED);
-                shiyi.setBackgroundColor(Color.rgb(12, 255, 0));
-                if (new Date().compareTo(value.getStartDateTime()) >= 0 && new Date().compareTo(value.getEndDateTime()) <= 0) {
-                    shiyi.setVisibility(View.VISIBLE);
-                    shiyi.setBackgroundColor(Color.YELLOW);
-                    shiyi.setText("直播中");
-                    shiyi.setTextColor(Color.RED);
-                }
-            } else {
-                wqddg_AudioWaveView.setVisibility(View.GONE);
-            }
-        }
+		} else {
+			shiyi.visibility = View.GONE
+		}
+		textview.text = p1.title
+		timeview.text = p1.start + "--" + p1.end
+		if (!shiyiSelection) {
+			val now = Date()
+			if (now >= p1.startDateTime && now <= p1.endDateTime) {
+				wqddgAudioWaveView.visibility = View.VISIBLE
+				textview.freezesText = true
+				timeview.freezesText = true
+			} else {
+				wqddgAudioWaveView.visibility = View.GONE
+			}
+		} else {
+			if (p1.index == this.selectedIndex && p1.currentEpgDate == shiyiDate) {
+				wqddgAudioWaveView.visibility = View.VISIBLE
+				textview.freezesText = true
+				timeview.freezesText = true
+				shiyi.text = "回看中"
+				shiyi.setTextColor(Color.RED)
+				shiyi.setBackgroundColor(Color.rgb(12, 255, 0))
+				if (Date() >= p1.startDateTime && Date() <= p1.endDateTime) {
+					shiyi.visibility = View.VISIBLE
+					shiyi.setBackgroundColor(Color.YELLOW)
+					shiyi.text = "直播中"
+					shiyi.setTextColor(Color.RED)
+				}
+			} else {
+				wqddgAudioWaveView.visibility = View.GONE
+			}
+		}
+	}
 
-    }
+	fun setShiyiSelection(i: Int, t: Boolean, currentEpgDate: String?) {
+		this.selectedIndex = i
+		this.shiyiDate = if (t) currentEpgDate else null
+		shiyiSelection = t
+		notifyItemChanged(this.selectedIndex)
+	}
 
-    public void setShiyiSelection(int i, boolean t, String currentEpgDate) {
-        this.selectedEpgIndex = i;
-        this.shiyiDate = t ? currentEpgDate : null;
-        ShiyiSelection = t;
-        notifyItemChanged(this.selectedEpgIndex);
+	fun setSelectedEpgIndex(selectedEpgIndex: Int) {
+		if (selectedEpgIndex == this.selectedIndex) return
+		this.selectedIndex = selectedEpgIndex
+		if (this.selectedIndex != -1) notifyItemChanged(this.selectedIndex)
+	}
 
-    }
+	fun getFocusedEpgIndex(): Int {
+		return focusedEpgIndex
+	}
 
-    public int getSelectedIndex() {
-        return selectedEpgIndex;
-    }
+	fun setFocusedEpgIndex(focusedEpgIndex: Int) {
+		this.focusedEpgIndex = focusedEpgIndex
+		if (this.focusedEpgIndex != -1) notifyItemChanged(this.focusedEpgIndex)
+	}
 
-    public void setSelectedEpgIndex(int selectedEpgIndex) {
-        if (selectedEpgIndex == this.selectedEpgIndex) return;
-        this.selectedEpgIndex = selectedEpgIndex;
-        if (this.selectedEpgIndex != -1)
-            notifyItemChanged(this.selectedEpgIndex);
-    }
-
-
-    public int getFocusedEpgIndex() {
-        return focusedEpgIndex;
-    }
-
-    public void setFocusedEpgIndex(int focusedEpgIndex) {
-        this.focusedEpgIndex = focusedEpgIndex;
-        if (this.focusedEpgIndex != -1)
-            notifyItemChanged(this.focusedEpgIndex);
-    }
+	companion object {
+		var fontSize: Float = 20f
+	}
 }

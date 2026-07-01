@@ -1,57 +1,51 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
-import com.chad.library.adapter.base.BaseViewHolder;
-import com.github.tvbox.osc.R;
+import android.view.View
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.ui.adapter.PinyinAdapter.SearchItem
 
-import java.util.ArrayList;
+class PinyinAdapter : BaseQuickAdapter<SearchItem, BaseViewHolder>(R.layout.item_search_word, ArrayList<SearchItem?>()) {
+	private var onItemLongClickListener: OnItemLongClickListener? = null
 
-public class PinyinAdapter extends BaseQuickAdapter<PinyinAdapter.SearchItem, BaseViewHolder> {
-    private OnItemLongClickListener onItemLongClickListener;
+	override fun convert(p0: BaseViewHolder, p1: SearchItem) {
+		p0.setText(R.id.tvSearchWord, p1.title)
+		val iconRes = when (p1.type) {
+			0 -> R.drawable.icon_history
+			1 -> R.drawable.icon_hot
+			else -> R.drawable.icon_search
+		}
+		p0.setImageResource(R.id.iv_icon, iconRes)
 
-    public PinyinAdapter() {
-        super(R.layout.item_search_word, new ArrayList<>());
-    }
+		// 设置长按监听器（仅对历史记录生效）
+		if (p1.type == 0) {
+			p0.itemView.setOnLongClickListener { v: View? ->
+				if (onItemLongClickListener != null) {
+					onItemLongClickListener!!.onItemLongClick(p0.layoutPosition, p1)
+					return@setOnLongClickListener true
+				}
+				false
+			}
+		} else {
+			p0.itemView.setOnLongClickListener(null)
+		}
+	}
 
-    @Override
-    protected void convert(BaseViewHolder helper, SearchItem item) {
-        helper.setText(R.id.tvSearchWord, item.title);
-        int iconRes = switch (item.type) {
-            case 0 -> R.drawable.icon_history;
-            case 1 -> R.drawable.icon_hot;
-            default -> R.drawable.icon_search;
-        };
-        helper.setImageResource(R.id.iv_icon, iconRes);
+	fun setOnItemLongClickListener(listener: OnItemLongClickListener?) {
+		this.onItemLongClickListener = listener
+	}
 
-        // 设置长按监听器（仅对历史记录生效）
-        if (item.type == 0) {
-            helper.itemView.setOnLongClickListener(v -> {
-                if (onItemLongClickListener != null) {
-                    onItemLongClickListener.onItemLongClick(helper.getLayoutPosition(), item);
-                    return true;
-                }
-                return false;
-            });
-        } else {
-            helper.itemView.setOnLongClickListener(null);
-        }
-    }
+	interface OnItemLongClickListener {
+		fun onItemLongClick(position: Int, item: SearchItem?)
+	}
 
-    public void setOnItemLongClickListener(OnItemLongClickListener listener) {
-        this.onItemLongClickListener = listener;
-    }
-
-    public interface OnItemLongClickListener {
-        void onItemLongClick(int position, SearchItem item);
-    }
-
-    public static class SearchItem {
-        public String title;
-        public int type; // 0: 历史, 1: 热搜, 2: 搜索建议
-
-        public SearchItem(String title, int type) {
-            this.title = title;
-            this.type = type;
-        }
-    }
+	class SearchItem(
+		@JvmField var title: String?, // 0: 历史, 1: 热搜, 2: 搜索建议
+		@JvmField var type: Int
+	) {
+		init {
+			this.type = type
+		}
+	}
 }

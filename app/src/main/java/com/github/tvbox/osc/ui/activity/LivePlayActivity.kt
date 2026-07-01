@@ -466,7 +466,7 @@ class LivePlayActivity : BaseActivity() {
 	private fun showEpg(date: Date?, arrayList: List<EpgInfo>?) {
 		if (!arrayList.isNullOrEmpty()) {
 			//获取EPG并存储 // 百川epg  DIYP epg   51zmt epg ------- 自建EPG格式输出格式请参考 51zmt
-			(epgListAdapter ?: return).CanBack((currentLiveChannelItem ?: return).includeBack)
+			(epgListAdapter ?: return).canBack((currentLiveChannelItem ?: return).includeBack)
 			(epgListAdapter ?: return).setNewData(arrayList)
 
 			val i: Int
@@ -517,7 +517,7 @@ class LivePlayActivity : BaseActivity() {
 			val logo = (logoUrl ?: return).replace("{name}", epgTagName)
 			updateChannelIcon(channelName, logo)
 		}
-		(epgListAdapter ?: return).CanBack((currentLiveChannelItem ?: return).includeBack)
+		(epgListAdapter ?: return).canBack((currentLiveChannelItem ?: return).includeBack)
 		val url = if ((epgStringAddress ?: return).contains("{name}") && (epgStringAddress ?: return).contains("{date}")) {
 			(epgStringAddress ?: return).replace("{name}", URLEncoder.encode(epgTagName, StandardCharsets.UTF_8.name())).replace("{date}", timeFormat.format(date))
 		} else {
@@ -617,7 +617,7 @@ class LivePlayActivity : BaseActivity() {
 						tvNextProgramName.text = arrayList[0].title
 					}
 				}
-				(epgListAdapter ?: return).CanBack((currentLiveChannelItem ?: return).includeBack)
+				(epgListAdapter ?: return).canBack((currentLiveChannelItem ?: return).includeBack)
 				(epgListAdapter ?: return).setNewData(arrayList)
 			} else {
 				val selectedIndex = (liveEpgDateAdapter ?: return).selectedIndex
@@ -1484,11 +1484,11 @@ class LivePlayActivity : BaseActivity() {
 		(liveSettingItemAdapter ?: return).setNewData(liveSettingGroupList[position].liveSettingItems)
 
 		when (position) {
-			0 -> (liveSettingItemAdapter ?: return).selectItem((currentLiveChannelItem ?: return).sourceIndex, true, false)
-			1 -> (liveSettingItemAdapter ?: return).selectItem(livePlayerManager.livePlayerScale, true, true)
-			2 -> (liveSettingItemAdapter ?: return).selectItem(livePlayerManager.livePlayerType, true, true)
+			0 -> (liveSettingItemAdapter ?: return).selectItem((currentLiveChannelItem ?: return).sourceIndex, select = true, unselectPreItemIndex = false)
+			1 -> (liveSettingItemAdapter ?: return).selectItem(livePlayerManager.livePlayerScale, select = true, unselectPreItemIndex = true)
+			2 -> (liveSettingItemAdapter ?: return).selectItem(livePlayerManager.livePlayerType, select = true, unselectPreItemIndex = true)
 		}
-		var scrollToPosition = (liveSettingItemAdapter ?: return).getSelectedItemIndex()
+		var scrollToPosition = (liveSettingItemAdapter ?: return).selectedItemIndex
 		if (scrollToPosition < 0) scrollToPosition = 0
 		(mSettingItemView ?: return).scrollToPosition(scrollToPosition)
 		mHandler.removeCallbacks(mHideSettingLayoutRun)
@@ -1537,8 +1537,8 @@ class LivePlayActivity : BaseActivity() {
 	private fun clickSettingItem(position: Int) {
 		val settingGroupIndex = (liveSettingGroupAdapter ?: return).selectedGroupIndex
 		if (settingGroupIndex < 4) {
-			if (position == (liveSettingItemAdapter ?: return).getSelectedItemIndex()) return
-			(liveSettingItemAdapter ?: return).selectItem(position, true, true)
+			if (position == (liveSettingItemAdapter ?: return).selectedItemIndex) return
+			(liveSettingItemAdapter ?: return).selectItem(position, select = true, unselectPreItemIndex = true)
 		}
 		when (settingGroupIndex) {
 			0 -> {
@@ -1594,7 +1594,7 @@ class LivePlayActivity : BaseActivity() {
 				if (position == Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)) return
 				val liveGroups = Hawk.get(HawkConfig.LIVE_GROUP_LIST, JsonArray())
 				val livesOBJ = liveGroups.get(position).getAsJsonObject()
-				(liveSettingItemAdapter ?: return).selectItem(position, true, true)
+				(liveSettingItemAdapter ?: return).selectItem(position, select = true, unselectPreItemIndex = true)
 				Hawk.put(HawkConfig.LIVE_GROUP_INDEX, position)
 				ApiConfig.instance.loadLiveApi(livesOBJ)
 				recreate()

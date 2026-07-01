@@ -1,34 +1,20 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.viewpager2.adapter.FragmentStateAdapter;
-
-import com.github.tvbox.osc.base.BaseLazyFragment;
-
-import java.util.List;
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.github.tvbox.osc.base.BaseLazyFragment
 
 /**
  * @author acer
  * @date 2018/12/4
  */
-public class HomePageAdapter extends FragmentStateAdapter {
-    public List<BaseLazyFragment> list;
+class HomePageAdapter(fragmentActivity: FragmentActivity, var list: MutableList<BaseLazyFragment>) : FragmentStateAdapter(fragmentActivity) {
+	override fun createFragment(position: Int): Fragment {
+		return list[position]
+	}
 
-    public HomePageAdapter(@NonNull FragmentActivity fragmentActivity, List<BaseLazyFragment> list) {
-        super(fragmentActivity);
-        this.list = list;
-    }
-
-    @NonNull
-    @Override
-    public Fragment createFragment(int position) {
-        return list.get(position);
-    }
-
-    @Override
-    public int getItemCount() {
-        return list != null ? list.size() : 0;
-    }
+	override fun getItemCount(): Int {
+		return list.size
+	}
 }

@@ -1,21 +1,13 @@
-package com.github.tvbox.osc.ui.adapter;
+package com.github.tvbox.osc.ui.adapter
 
-import com.chad.library.adapter.base.BaseQuickAdapter;
-import com.chad.library.adapter.base.BaseViewHolder;
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.Subtitle;
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.chad.library.adapter.base.BaseViewHolder
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.Subtitle
 
-import java.util.ArrayList;
-
-public class SearchSubtitleAdapter extends BaseQuickAdapter<Subtitle, BaseViewHolder> {
-
-    public SearchSubtitleAdapter() {
-        super(R.layout.item_search_subtitle_result, new ArrayList<>());
-    }
-
-    @Override
-    protected void convert(BaseViewHolder helper, Subtitle item) {
-        helper.setText(R.id.subtitleName, item.getName());
-        helper.setText(R.id.subtitleNameInfo, item.getIsZip() ? "压缩包" : "文件");
-    }
+class SearchSubtitleAdapter : BaseQuickAdapter<Subtitle, BaseViewHolder>(R.layout.item_search_subtitle_result, ArrayList<Subtitle?>()) {
+	override fun convert(p0: BaseViewHolder, p1: Subtitle) {
+		p0.setText(R.id.subtitleName, p1.name)
+		p0.setText(R.id.subtitleNameInfo, if (p1.isZip) "压缩包" else "文件")
+	}
 }
