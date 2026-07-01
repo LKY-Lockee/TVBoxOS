@@ -36,7 +36,7 @@ class PinyinAdapter : BaseQuickAdapter<SearchItem, BaseViewHolder>(R.layout.item
 		this.onItemLongClickListener = listener
 	}
 
-	interface OnItemLongClickListener {
+	fun interface OnItemLongClickListener {
 		fun onItemLongClick(position: Int, item: SearchItem?)
 	}
 

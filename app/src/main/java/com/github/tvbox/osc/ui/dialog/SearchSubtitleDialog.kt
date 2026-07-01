@@ -175,6 +175,6 @@ open class SearchSubtitleDialog(private val mContext: Context) : BaseDialog(mCon
 	}
 
 	interface SubtitleLoader {
-		fun loadSubtitle(subtitle: Subtitle?)
+		fun loadSubtitle(subtitle: Subtitle)
 	}
 }

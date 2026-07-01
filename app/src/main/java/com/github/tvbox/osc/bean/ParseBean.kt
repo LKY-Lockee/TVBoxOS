@@ -8,7 +8,7 @@ import com.github.tvbox.osc.util.DefaultConfig
  * @date 2021/3/8
  */
 class ParseBean {
-	var name: String? = null
+	var name: String = ""
 
 	/**
 	 * 0 普通嗅探
@@ -21,14 +21,14 @@ class ParseBean {
 	 */
 	var type: Int = 0
 	var isDefault: Boolean = false
-	var ext: String? = null
+	var ext: String = ""
 
-	var url: String? = null
-		get() = DefaultConfig.checkReplaceProxy(field.orEmpty())
+	var url: String = ""
+		get() = DefaultConfig.checkReplaceProxy(field)
 
-	fun mixUrl(): String? {
-		val currentExt = ext ?: return null
-		val currentUrl = url ?: return null
+	fun mixUrl(): String {
+		val currentExt = ext
+		val currentUrl = url
 
 		if (currentExt.isEmpty()) return currentUrl
 

@@ -120,7 +120,7 @@ class Movie : Serializable {
 				var urls: String? = null // <![CDATA[第01集$http://video.zuidajiexi.com/20170825/txpkmcnK/index.m3u8#第02集$http://video.zuidajiexi.com/20170825/YOApVCHc/index.m3u8]]
 				var beanList: MutableList<InfoBean>? = null
 
-				class InfoBean(var name: String?, val url: String?) : Serializable
+				class InfoBean(var name: String, val url: String) : Serializable
 			}
 		}
 	}

@@ -42,17 +42,17 @@ object RoomDataManger {
 		AppDataManager.get().vodRecordDao.insert(record)
 	}
 
-	fun insertVodCollect(sourceKey: String, vodInfo: VodInfo) {
-		val existing = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodInfo.id.orEmpty())
+	fun insertVodCollect(sourceKey: String, vodInfo: VodInfo?) {
+		val existing = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodInfo?.id.orEmpty())
 		if (existing != null) {
 			return
 		}
 		val record = VodCollect()
 		record.sourceKey = sourceKey
-		record.vodId = vodInfo.id.orEmpty()
+		record.vodId = vodInfo?.id.orEmpty()
 		record.updateTime = System.currentTimeMillis()
-		record.name = vodInfo.name.orEmpty()
-		record.pic = vodInfo.pic.orEmpty()
+		record.name = vodInfo?.name.orEmpty()
+		record.pic = vodInfo?.pic.orEmpty()
 		AppDataManager.get().vodCollectDao.insert(record)
 	}
 
@@ -67,8 +67,8 @@ object RoomDataManger {
 		AppDataManager.get().vodCollectDao.delete(id)
 	}
 
-	fun deleteVodCollect(sourceKey: String, vodInfo: VodInfo) {
-		val record = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodInfo.id.orEmpty())
+	fun deleteVodCollect(sourceKey: String, vodInfo: VodInfo?) {
+		val record = AppDataManager.get().vodCollectDao.getVodCollect(sourceKey, vodInfo?.id.orEmpty())
 		if (record != null) {
 			AppDataManager.get().vodCollectDao.delete(record)
 		}

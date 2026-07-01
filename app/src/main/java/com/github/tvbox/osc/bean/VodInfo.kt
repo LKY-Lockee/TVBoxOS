@@ -111,7 +111,7 @@ class VodInfo : Serializable {
 			if (beanList.isEmpty()) continue
 
 			val seriesList = beanList.map { infoBean ->
-				VodSeries(infoBean.name.orEmpty(), infoBean.url)
+				VodSeries(infoBean.name, infoBean.url)
 			}.toMutableList()
 
 			urlInfo.flag?.let { flag ->
@@ -147,8 +147,8 @@ class VodInfo : Serializable {
 		// 比较最多前 6 个相邻元素对
 		val limit = min(list.size - 1, 6)
 		for (i in 0..<limit) {
-			val currentName = list[i].name ?: continue
-			val nextName = list[i + 1].name ?: continue
+			val currentName = list[i].name
+			val nextName = list[i + 1].name
 			val current = extractNumber(currentName)
 			val next = extractNumber(nextName)
 			if (current < next) {
@@ -177,16 +177,7 @@ class VodInfo : Serializable {
 		}
 	}
 
-	class VodSeries : Serializable {
-		var name: String? = null
-		var url: String? = null
+	data class VodSeries(var name: String, var url: String) : Serializable {
 		var selected: Boolean = false
-
-		constructor()
-
-		constructor(name: String, url: String?) {
-			this.name = name
-			this.url = url
-		}
 	}
 }

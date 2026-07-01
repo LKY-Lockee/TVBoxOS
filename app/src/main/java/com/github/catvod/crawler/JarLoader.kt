@@ -103,7 +103,7 @@ class JarLoader {
 		flag: String?,
 		key: String,
 		name: String?,
-		jxs: LinkedHashMap<String, HashMap<String, String>?>?,
+		jxs: LinkedHashMap<String, HashMap<String, String>>,
 		url: String?
 	): JSONObject? {
 		try {

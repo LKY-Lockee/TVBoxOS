@@ -863,7 +863,7 @@ class ApiConfig private constructor() {
 		return jarLoader.jsonExt(key, jxs, url)
 	}
 
-	fun jsonExtMix(flag: String?, key: String, name: String?, jxs: LinkedHashMap<String, HashMap<String, String>?>?, url: String?): JSONObject? {
+	fun jsonExtMix(flag: String?, key: String, name: String?, jxs: LinkedHashMap<String, HashMap<String, String>>, url: String?): JSONObject? {
 		return jarLoader.jsonExtMix(flag, key, name, jxs, url)
 	}
 

@@ -28,9 +28,9 @@ class SelectDialog<T> : BaseDialog {
 	}
 
 	fun setAdapter(
-		sourceBeanSelectDialogInterface: SelectDialogInterface<T?>,
-		sourceBeanItemCallback: DiffUtil.ItemCallback<T?>,
-		data: MutableList<T?>, select: Int
+		sourceBeanSelectDialogInterface: SelectDialogInterface<T>,
+		sourceBeanItemCallback: DiffUtil.ItemCallback<T>,
+		data: List<T>, select: Int
 	) {
 		val adapter = SelectDialogAdapter(sourceBeanSelectDialogInterface, sourceBeanItemCallback)
 		adapter.setData(data, select)

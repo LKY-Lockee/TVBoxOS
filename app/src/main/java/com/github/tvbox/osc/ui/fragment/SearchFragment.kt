@@ -1,818 +1,805 @@
-package com.github.tvbox.osc.ui.fragment;
-
-import android.text.Editable;
-import android.text.TextUtils;
-import android.text.TextWatcher;
-import android.view.KeyEvent;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
-import android.widget.LinearLayout;
-import android.widget.Toast;
-
-import androidx.coordinatorlayout.widget.CoordinatorLayout;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-import com.github.catvod.crawler.JsLoader;
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BackPressProvider;
-import com.github.tvbox.osc.base.BaseLazyFragment;
-import com.github.tvbox.osc.base.ToolbarMenuProvider;
-import com.github.tvbox.osc.bean.AbsXml;
-import com.github.tvbox.osc.bean.Movie;
-import com.github.tvbox.osc.bean.SourceBean;
-import com.github.tvbox.osc.event.RefreshEvent;
-import com.github.tvbox.osc.event.ServerEvent;
-import com.github.tvbox.osc.ui.activity.HomeActivity;
-import com.github.tvbox.osc.ui.adapter.PinyinAdapter;
-import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.util.HawkConfig;
-import com.github.tvbox.osc.util.HistoryHelper;
-import com.github.tvbox.osc.util.SearchHelper;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.progressindicator.LinearProgressIndicator;
-import com.google.android.material.search.SearchBar;
-import com.google.android.material.search.SearchView;
-import com.google.android.material.tabs.TabLayout;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.lzy.okgo.OkGo;
-import com.lzy.okgo.callback.AbsCallback;
-import com.lzy.okgo.model.Response;
-import com.orhanobut.hawk.Hawk;
-
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-
-public class SearchFragment extends BaseLazyFragment implements BackPressProvider, ToolbarMenuProvider {
-    private TabLayout mTabLayout;
-    private SearchBar searchBar;
-    private MaterialButton btnStopSearch;
-    private CoordinatorLayout searchBarContainer;
-    private SearchView searchView;
-    private RecyclerView rvSearchWords;
-    private PinyinAdapter wordAdapter;
-    private static ArrayList<String> hots;
-    private LinearProgressIndicator searchProgressIndicator;
-
-    private SearchResultFragment resultFragment;
-    private String currentSourceFilter = "all";
-
-    private String searchTitle = "";
-    private final HashMap<String, ArrayList<Movie.Video>> searchResults = new HashMap<>();
-    private List<Runnable> pauseRunnable = null;
-    private ExecutorService searchExecutorService = null;
-    private final AtomicInteger allRunCount = new AtomicInteger(0);
-    private int totalSourceCount = 0;
-    private android.view.ViewTreeObserver.OnPreDrawListener preDrawListener = null;
-
-    // --- BackPressProvider ---
-    @Override
-    public boolean handleBackPress() {
-        if (!currentSourceFilter.equals("all")) {
-            mTabLayout.selectTab(mTabLayout.getTabAt(0));
-            return true;
-        }
-        return false;
-    }
-    // ----------------
-
-    // --- BaseLazyFragment ---
-    @Override
-    protected int getLayoutResID() {
-        return R.layout.fragment_search;
-    }
-
-    @Override
-    protected void init() {
-        EventBus.getDefault().register(this);
-
-        mTabLayout = rootView.findViewById(R.id.mTabLayout);
-        searchBar = rootView.findViewById(R.id.search_bar);
-        btnStopSearch = rootView.findViewById(R.id.btn_stop_search);
-        searchBarContainer = rootView.findViewById(R.id.search_bar_container);
-        searchView = rootView.findViewById(R.id.search_view);
-        searchProgressIndicator = rootView.findViewById(R.id.search_progress);
-
-        // 设置停止搜索按钮点击事件
-        btnStopSearch.setOnClickListener(v -> cancel());
-
-        // 动态定位搜索框到底部导航栏上方
-        updateSearchBarPosition();
-
-        searchView.addTransitionListener((searchView, previousState, newState) -> {
-            if (getActivity() == null) return;
-
-            if (mActivity instanceof HomeActivity homeActivity) {
-                if (newState == SearchView.TransitionState.SHOWING) {
-                    homeActivity.collapseBottomNav();
-                } else if (newState == SearchView.TransitionState.HIDDEN) {
-                    homeActivity.expandBottomNav();
-                }
-            }
-
-            View spacerView = searchView.findViewById(R.id.open_search_view_status_bar_spacer);
-            if (spacerView != null) {
-                ViewGroup parent = (ViewGroup) spacerView.getParent();
-                if (parent != null) {
-                    parent.removeView(spacerView);
-                }
-            }
-        });
-
-        rvSearchWords = rootView.findViewById(R.id.rv_search_words);
-        LinearLayout llSearchResult = rootView.findViewById(R.id.ll_search_result);
-
-        initSearchViews();
-
-        resultFragment = new SearchResultFragment();
-        resultFragment.setOnRefreshListener(() -> {
-            if (!TextUtils.isEmpty(searchTitle)) {
-                search(searchTitle);
-            }
-        });
-        getChildFragmentManager().beginTransaction()
-                .replace(R.id.searchResultContainer, resultFragment)
-                .commit();
-
-        mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                String sourceKey = (String) tab.getTag();
-                if (sourceKey != null) {
-                    filterBySource(sourceKey);
-                }
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {
-            }
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {
-            }
-        });
-        mTabLayout.removeAllTabs();
-        mTabLayout.setVisibility(View.GONE);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        cancel();
-        try {
-            if (searchExecutorService != null) {
-                searchExecutorService.shutdownNow();
-                searchExecutorService = null;
-                JsLoader.stopAll();
-            }
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-
-        // 移除监听器
-        if (rootView != null && preDrawListener != null) {
-            if (rootView.getViewTreeObserver().isAlive()) {
-                rootView.getViewTreeObserver().removeOnPreDrawListener(preDrawListener);
-            }
-            preDrawListener = null;
-        }
-
-        EventBus.getDefault().unregister(this);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (pauseRunnable != null && !pauseRunnable.isEmpty()) {
-            searchExecutorService = Executors.newFixedThreadPool(5);
-            for (Runnable runnable : pauseRunnable) {
-                searchExecutorService.execute(runnable);
-            }
-            pauseRunnable.clear();
-            pauseRunnable = null;
-        }
-        // 确保搜索框位置正确
-        updateSearchBarPosition();
-    }
-    // ----------------
-
-    // --- ToolbarMenuProvider ---
-    @Override
-    public int getMenuResId() {
-        return R.menu.search_fragment_menu;
-    }
-
-    @Override
-    public boolean onMenuItemClick(int itemId) {
-        if (itemId == R.id.action_clear_search_history) {
-            showClearHistoryDialog();
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public String getToolbarTitle() {
-        return "搜索";
-    }
-
-    @Override
-    public boolean enableAppBarScroll() {
-        return true;
-    }
-    // ----------------
-
-    private void initSearchViews() {
-        rvSearchWords.setHasFixedSize(true);
-        rvSearchWords.setLayoutManager(new LinearLayoutManager(mContext, LinearLayoutManager.VERTICAL, false));
-        wordAdapter = new PinyinAdapter();
-        rvSearchWords.setAdapter(wordAdapter);
-
-        wordAdapter.setOnItemClickListener((adapter, view, position) -> {
-            FastClickCheckUtil.check(view);
-            PinyinAdapter.SearchItem item = wordAdapter.getItem(position);
-            if (item == null) return;
-            String keyword = item.title;
-            searchView.setText(keyword);
-            searchView.hide();
-            search(keyword);
-        });
-
-        // 设置长按监听器（仅对历史记录生效）
-        wordAdapter.setOnItemLongClickListener((position, item) -> {
-            if (item.type == 0) {
-                showDeleteHistoryItemDialog(item.title, position);
-            }
-        });
-
-        searchView.setupWithSearchBar(searchBar);
-        searchView.getEditText().setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEARCH ||
-                    (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
-                String keyword = searchView.getText().toString().trim();
-                searchView.hide();
-                search(keyword);
-                return true;
-            }
-            return false;
-        });
-
-        searchView.getEditText().addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                String text = s.toString().trim();
-                if (!text.isEmpty()) {
-                    loadSearchSuggestions(text);
-                } else {
-                    loadHistoryAndHotWords();
-                }
-            }
-        });
-
-        searchView.addTransitionListener((searchView, previousState, newState) -> {
-            if (newState == SearchView.TransitionState.SHOWING) {
-                loadHistoryAndHotWords();
-            }
-        });
-    }
-
-    private void loadHistoryAndHotWords() {
-        ArrayList<String> historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, new ArrayList<>());
-
-        ArrayList<PinyinAdapter.SearchItem> combinedList = new ArrayList<>();
-        for (String s : historyList) {
-            combinedList.add(new PinyinAdapter.SearchItem(s, 0));
-        }
-
-        if (hots != null && !hots.isEmpty()) {
-            for (String s : hots) {
-                combinedList.add(new PinyinAdapter.SearchItem(s, 1));
-            }
-            wordAdapter.setNewData(combinedList);
-            return;
-        }
-
-        wordAdapter.setNewData(combinedList);
-
-        //noinspection SpellCheckingInspection
-        OkGo.<String>get("https://node.video.qq.com/x/api/hot_search")
-                .params("channdlId", "0")
-                .params("_", System.currentTimeMillis())
-                .execute(new AbsCallback<>() {
-                    @Override
-                    public void onSuccess(Response<String> response) {
-                        try {
-                            hots = new ArrayList<>();
-                            JsonArray itemList = JsonParser.parseString(response.body())
-                                    .getAsJsonObject().get("data").getAsJsonObject()
-                                    .get("mapResult").getAsJsonObject()
-                                    .get("0").getAsJsonObject()
-                                    .get("listInfo").getAsJsonArray();
-                            for (JsonElement ele : itemList) {
-                                JsonObject obj = (JsonObject) ele;
-                                hots.add(obj.get("title").getAsString().trim()
-                                        .replaceAll("[<>《》\\-]", "").split(" ")[0]);
-                            }
-                            ArrayList<PinyinAdapter.SearchItem> updatedList = new ArrayList<>();
-                            for (String s : historyList) {
-                                updatedList.add(new PinyinAdapter.SearchItem(s, 0));
-                            }
-                            for (String s : hots) {
-                                updatedList.add(new PinyinAdapter.SearchItem(s, 1));
-                            }
-                            wordAdapter.setNewData(updatedList);
-                        } catch (Throwable th) {
-                            th.printStackTrace();
-                        }
-                    }
-
-                    @Override
-                    public String convertResponse(okhttp3.Response response) throws Throwable {
-                        return Objects.requireNonNull(response.body()).string();
-                    }
-                });
-    }
-
-    private void loadSearchSuggestions(String key) {
-        OkGo.get("https://tv.aiseet.atianqi.com/i-tvbin/qtv_video/search/get_search_smart_box")
-                .params("format", "json")
-                .params("page_num", 0)
-                .params("page_size", 20)
-                .params("key", key)
-                .execute(new AbsCallback<>() {
-                    @Override
-                    public void onSuccess(Response response) {
-                        try {
-                            ArrayList<PinyinAdapter.SearchItem> suggestions = new ArrayList<>();
-                            String result = (String) response.body();
-                            Gson gson = new Gson();
-                            JsonElement json = gson.fromJson(result, JsonElement.class);
-                            JsonArray groupDataArr = json.getAsJsonObject()
-                                    .get("data").getAsJsonObject()
-                                    .get("search_data").getAsJsonObject()
-                                    .get("vecGroupData").getAsJsonArray()
-                                    .get(0).getAsJsonObject()
-                                    .get("group_data").getAsJsonArray();
-                            for (JsonElement groupDataElement : groupDataArr) {
-                                JsonObject groupData = groupDataElement.getAsJsonObject();
-                                String keywordTxt = groupData.getAsJsonObject("dtReportInfo")
-                                        .getAsJsonObject("reportData")
-                                        .get("keyword_txt").getAsString();
-                                suggestions.add(new PinyinAdapter.SearchItem(keywordTxt.trim(), 2));
-                            }
-                            wordAdapter.setNewData(suggestions);
-                            rvSearchWords.smoothScrollToPosition(0);
-                        } catch (Throwable th) {
-                            th.printStackTrace();
-                        }
-                    }
-
-                    @Override
-                    public String convertResponse(okhttp3.Response response) throws Throwable {
-                        return Objects.requireNonNull(response.body()).string();
-                    }
-                });
-    }
-
-    private void updateSearchBarPosition() {
-        if (rootView == null || getActivity() == null) return;
-        rootView.post(() -> {
-            if (getActivity() == null || searchBarContainer == null) return;
-
-            View bottomNav = getActivity().findViewById(R.id.bottom_navigation);
-
-            CoordinatorLayout.LayoutParams params = (CoordinatorLayout.LayoutParams) searchBarContainer.getLayoutParams();
-            params.gravity = android.view.Gravity.NO_GRAVITY;
-            params.setMargins(params.leftMargin, 0, params.rightMargin, 0);
-            searchBarContainer.setLayoutParams(params);
-
-            if (preDrawListener != null) {
-                rootView.getViewTreeObserver().removeOnPreDrawListener(preDrawListener);
-            }
-
-            // 使用 OnPreDrawListener 监听每一帧
-            preDrawListener = () -> {
-                if (searchBarContainer == null || getActivity() == null) return true;
-                if (rootView != null) {
-                    int targetY;
-
-                    if (bottomNav != null && bottomNav.getVisibility() == View.VISIBLE) {
-                        // 有底部导航栏时，定位在导航栏上方
-                        int[] navLocation = new int[2];
-                        bottomNav.getLocationInWindow(navLocation);
-                        int navTopInScreen = navLocation[1];
-
-                        int[] rootLocation = new int[2];
-                        rootView.getLocationInWindow(rootLocation);
-                        int rootTopInScreen = rootLocation[1];
-
-                        int searchBarHeight = searchBarContainer.getHeight();
-                        targetY = navTopInScreen - rootTopInScreen - searchBarHeight;
-                    } else {
-                        // 没有底部导航栏时，定位在屏幕底部
-                        int[] rootLocation = new int[2];
-                        rootView.getLocationInWindow(rootLocation);
-                        int rootTopInScreen = rootLocation[1];
-
-                        int screenHeight = getResources().getDisplayMetrics().heightPixels;
-                        int searchBarHeight = searchBarContainer.getHeight();
-                        targetY = screenHeight - rootTopInScreen - searchBarHeight;
-                    }
-
-                    // 使用setY设置绝对位置
-                    if (Math.abs(searchBarContainer.getY() - targetY) > 0.5f) {
-                        searchBarContainer.setY(targetY);
-                    }
-                }
-                return true;
-            };
-            rootView.getViewTreeObserver().addOnPreDrawListener(preDrawListener);
-        });
-    }
-
-    private void showEmptyState() {
-        mTabLayout.removeAllTabs();
-        mTabLayout.setVisibility(View.GONE);
-        currentSourceFilter = "all";
-        if (searchProgressIndicator != null) {
-            searchProgressIndicator.setVisibility(View.GONE);
-        }
-        if (resultFragment != null && resultFragment.isAdded()) {
-            resultFragment.updateData(new ArrayList<>());
-        }
-    }
-
-    private void showStopSearchButton() {
-        if (btnStopSearch == null) return;
-
-        btnStopSearch.setVisibility(View.VISIBLE);
-        btnStopSearch.animate()
-                .alpha(1f)
-                .setDuration(200)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator())
-                .start();
-    }
-
-    private void hideStopSearchButton() {
-        if (btnStopSearch == null) return;
-
-        btnStopSearch.animate()
-                .alpha(0f)
-                .setDuration(200)
-                .setInterpolator(new android.view.animation.AccelerateInterpolator())
-                .withEndAction(() -> {
-                    if (btnStopSearch != null) {
-                        btnStopSearch.setVisibility(View.GONE);
-                    }
-                })
-                .start();
-    }
-
-    public void search(String keyword) {
-        if (TextUtils.isEmpty(keyword)) {
-            if (mContext != null && isAdded()) {
-                Toast.makeText(mContext, "输入内容不能为空", Toast.LENGTH_SHORT).show();
-            }
-            return;
-        }
-
-        if (!isAdded() || mContext == null || searchBar == null) {
-            return;
-        }
-
-        this.searchTitle = keyword;
-        searchBar.setText(keyword);
-
-        HistoryHelper.setSearchHistory(keyword);
-
-        searchResults.clear();
-        showEmptyState();
-
-        hideSoftInput();
-
-        searchResult();
-    }
-
-    private void cancel() {
-        OkGo.getInstance().cancelTag("search");
-
-        try {
-            if (searchExecutorService != null) {
-                searchExecutorService.shutdownNow();
-                searchExecutorService = null;
-                JsLoader.stopAll();
-            }
-        } catch (Throwable th) {
-            th.printStackTrace();
-        }
-
-        allRunCount.set(0);
-
-        if (searchProgressIndicator != null) {
-            searchProgressIndicator.setVisibility(View.GONE);
-        }
-
-        hideStopSearchButton();
-    }
-
-    private void searchResult() {
-        try {
-            if (searchExecutorService != null) {
-                searchExecutorService.shutdownNow();
-                searchExecutorService = null;
-                JsLoader.stopAll();
-            }
-        } catch (Throwable th) {
-            th.printStackTrace();
-        } finally {
-            allRunCount.set(0);
-        }
-
-        searchExecutorService = Executors.newFixedThreadPool(5);
-        List<SourceBean> searchRequestList = new ArrayList<>(ApiConfig.get().getSourceBeanList());
-        SourceBean home = ApiConfig.get().getHomeSourceBean();
-        searchRequestList.remove(home);
-        searchRequestList.add(0, home);
-
-        HashMap<String, String> mCheckSources = SearchHelper.getSourcesForSearch();
-        ArrayList<String> siteKey = new ArrayList<>();
-        for (SourceBean bean : searchRequestList) {
-            if (!bean.isSearchable()) {
-                continue;
-            }
-            if (mCheckSources != null && !mCheckSources.containsKey(bean.getKey())) {
-                continue;
-            }
-            siteKey.add(bean.getKey());
-            allRunCount.incrementAndGet();
-        }
-
-        if (siteKey.isEmpty()) {
-            Toast.makeText(mContext, "没有指定搜索源", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        totalSourceCount = siteKey.size();
-        if (searchProgressIndicator != null) {
-            searchProgressIndicator.setMax(totalSourceCount);
-            searchProgressIndicator.setProgress(0);
-            searchProgressIndicator.setVisibility(View.VISIBLE);
-        }
-
-        showStopSearchButton();
-
-        com.github.tvbox.osc.viewmodel.SourceViewModel sourceViewModel =
-                new androidx.lifecycle.ViewModelProvider(requireActivity()).get(com.github.tvbox.osc.viewmodel.SourceViewModel.class);
-
-        for (String key : siteKey) {
-            searchExecutorService.execute(() -> sourceViewModel.getSearch(key, searchTitle));
-        }
-    }
-
-    private void searchData(AbsXml absXml) {
-        boolean hasNewResults = false;
-
-        if (absXml != null && absXml.movie != null && absXml.movie.videoList != null && !absXml.movie.videoList.isEmpty()) {
-            String sourceKey = absXml.movie.videoList.get(0).sourceKey;
-            ArrayList<Movie.Video> sourceResults = searchResults.computeIfAbsent(sourceKey, k -> new ArrayList<>());
-
-            int oldSize = sourceResults.size();
-            for (Movie.Video video : absXml.movie.videoList) {
-                if (matchSearchResult(video.name, searchTitle)) {
-                    sourceResults.add(video);
-                }
-            }
-
-            hasNewResults = sourceResults.size() > oldSize;
-        }
-
-        int count = allRunCount.decrementAndGet();
-
-        if (searchProgressIndicator != null && totalSourceCount > 0) {
-            int searchedCount = totalSourceCount - count;
-            searchProgressIndicator.setProgress(searchedCount);
-        }
-
-        if (hasNewResults) {
-            if (mTabLayout.getTabCount() <= 0) {
-                createTabsFromResults();
-            } else {
-                updateTabsWithNewResults();
-            }
-        }
-
-        if (count <= 0) {
-            if (searchProgressIndicator != null) {
-                searchProgressIndicator.setVisibility(View.GONE);
-            }
-
-            hideStopSearchButton();
-
-            if (mTabLayout.getTabCount() <= 0) {
-                createTabsFromResults();
-            }
-            cancel();
-        }
-    }
-
-    private void filterBySource(String sourceKey) {
-        currentSourceFilter = sourceKey;
-
-        ArrayList<Movie.Video> filteredResults;
-        if ("all".equals(sourceKey)) {
-            filteredResults = new ArrayList<>();
-            for (ArrayList<Movie.Video> videos : searchResults.values()) {
-                filteredResults.addAll(videos);
-            }
-        } else {
-            filteredResults = searchResults.get(sourceKey);
-            if (filteredResults == null) {
-                filteredResults = new ArrayList<>();
-            }
-        }
-
-        if (resultFragment != null && resultFragment.isAdded()) {
-            resultFragment.updateData(filteredResults);
-        }
-    }
-
-    private boolean matchSearchResult(String name, String searchTitle) {
-        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(searchTitle)) return false;
-        searchTitle = searchTitle.trim();
-        String[] arr = searchTitle.split("\\s+");
-        int matchNum = 0;
-        for (String one : arr) {
-            if (name.contains(one)) matchNum++;
-        }
-        return matchNum == arr.length;
-    }
-
-    private void createTabsFromResults() {
-        mTabLayout.removeAllTabs();
-
-        for (String sourceKey : searchResults.keySet()) {
-            ArrayList<Movie.Video> videos = searchResults.get(sourceKey);
-            if (videos != null && !videos.isEmpty()) {
-                SourceBean source = ApiConfig.get().getSource(sourceKey);
-                if (source != null) {
-                    TabLayout.Tab tab = mTabLayout.newTab();
-                    tab.setText(source.getName() + " (" + videos.size() + ")");
-                    tab.setTag(sourceKey);
-                    mTabLayout.addTab(tab);
-                }
-            }
-        }
-
-        if (mTabLayout.getTabCount() > 0) {
-            TabLayout.Tab allTab = mTabLayout.newTab();
-            allTab.setText("全部");
-            allTab.setTag("all");
-            mTabLayout.addTab(allTab, 0);
-            mTabLayout.setVisibility(View.VISIBLE);
-
-            TabLayout.Tab firstTab = mTabLayout.getTabAt(0);
-            if (firstTab != null) {
-                firstTab.select();
-            }
-            filterBySource("all");
-        } else {
-            mTabLayout.setVisibility(View.GONE);
-        }
-    }
-
-    private void updateTabsWithNewResults() {
-        for (String sourceKey : searchResults.keySet()) {
-            boolean tabExists = false;
-            for (int i = 0; i < mTabLayout.getTabCount(); i++) {
-                TabLayout.Tab tab = mTabLayout.getTabAt(i);
-                if (tab != null && sourceKey.equals(tab.getTag())) {
-                    ArrayList<Movie.Video> videos = searchResults.get(sourceKey);
-                    if (videos != null) {
-                        SourceBean source = ApiConfig.get().getSource(sourceKey);
-                        if (source != null) {
-                            tab.setText(source.getName() + " (" + videos.size() + ")");
-                        }
-                    }
-                    tabExists = true;
-                    break;
-                }
-            }
-
-            if (!tabExists) {
-                ArrayList<Movie.Video> videos = searchResults.get(sourceKey);
-                if (videos != null && !videos.isEmpty()) {
-                    SourceBean source = ApiConfig.get().getSource(sourceKey);
-                    if (source != null) {
-                        TabLayout.Tab tab = mTabLayout.newTab();
-                        tab.setText(source.getName() + " (" + videos.size() + ")");
-                        tab.setTag(sourceKey);
-                        mTabLayout.addTab(tab);
-                    }
-                }
-            }
-        }
-
-        filterBySource(currentSourceFilter);
-    }
-
-    private void showDeleteHistoryItemDialog(String keyword, int position) {
-        if (getActivity() == null) return;
-
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
-                .setTitle("删除搜索记录")
-                .setMessage("确定要删除「" + keyword + "」吗？")
-                .setPositiveButton("删除", (dialog, which) -> {
-                    // 从 Hawk 中获取历史记录
-                    ArrayList<String> historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, new ArrayList<>());
-                    historyList.remove(keyword);
-                    Hawk.put(HawkConfig.SEARCH_HISTORY, historyList);
-
-                    // 从 Adapter 中移除
-                    wordAdapter.remove(position);
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
-
-    private void showClearHistoryDialog() {
-        if (getActivity() == null) return;
-
-        ArrayList<String> historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, new ArrayList<>());
-        if (historyList.isEmpty()) {
-            Toast.makeText(mContext, "暂无搜索记录", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
-                .setTitle("清空搜索记录")
-                .setMessage("确定要清空所有搜索记录吗？")
-                .setPositiveButton("清空", (dialog, which) -> {
-                    Hawk.delete(HawkConfig.SEARCH_HISTORY);
-
-                    ArrayList<PinyinAdapter.SearchItem> newList = new ArrayList<>();
-                    if (hots != null && !hots.isEmpty()) {
-                        for (String s : hots) {
-                            newList.add(new PinyinAdapter.SearchItem(s, 1));
-                        }
-                    }
-                    wordAdapter.setNewData(newList);
-
-                    android.widget.Toast.makeText(mContext, "已清空搜索记录", android.widget.Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
-
-    private void hideSoftInput() {
-        try {
-            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) mContext.getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-            if (imm != null && searchView != null) {
-                imm.hideSoftInputFromWindow(searchView.getWindowToken(), 0);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void server(ServerEvent event) {
-        if (event.type == ServerEvent.SERVER_SEARCH) {
-            String title = (String) event.obj;
-            search(title);
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void refresh(RefreshEvent event) {
-        if (event.type == RefreshEvent.TYPE_SEARCH_RESULT) {
-            try {
-                searchData(event.obj == null ? null : (AbsXml) event.obj);
-            } catch (Exception e) {
-                searchData(null);
-            }
-        }
-    }
+package com.github.tvbox.osc.ui.fragment
+
+import android.content.Context
+import android.content.DialogInterface
+import android.text.Editable
+import android.text.TextUtils
+import android.text.TextWatcher
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
+import android.widget.Toast
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.isVisible
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.github.catvod.crawler.JsLoader
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.base.BackPressProvider
+import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ToolbarMenuProvider
+import com.github.tvbox.osc.bean.AbsXml
+import com.github.tvbox.osc.bean.Movie
+import com.github.tvbox.osc.bean.SourceBean
+import com.github.tvbox.osc.event.RefreshEvent
+import com.github.tvbox.osc.event.ServerEvent
+import com.github.tvbox.osc.ui.activity.HomeActivity
+import com.github.tvbox.osc.ui.adapter.PinyinAdapter
+import com.github.tvbox.osc.ui.adapter.PinyinAdapter.SearchItem
+import com.github.tvbox.osc.util.FastClickCheckUtil
+import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.util.HistoryHelper.setSearchHistory
+import com.github.tvbox.osc.util.SearchHelper.sourcesForSearch
+import com.github.tvbox.osc.viewmodel.SourceViewModel
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.LinearProgressIndicator
+import com.google.android.material.search.SearchBar
+import com.google.android.material.search.SearchView
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayout.OnTabSelectedListener
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.lzy.okgo.OkGo
+import com.lzy.okgo.callback.AbsCallback
+import com.lzy.okgo.model.Response
+import com.orhanobut.hawk.Hawk
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
+import java.util.Objects
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
+
+class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvider {
+	private var mTabLayout: TabLayout? = null
+	private var searchBar: SearchBar? = null
+	private var btnStopSearch: MaterialButton? = null
+	private var searchBarContainer: CoordinatorLayout? = null
+	private var searchView: SearchView? = null
+	private var rvSearchWords: RecyclerView? = null
+	private var wordAdapter: PinyinAdapter? = null
+	private var searchProgressIndicator: LinearProgressIndicator? = null
+
+	private var resultFragment: SearchResultFragment? = null
+	private var currentSourceFilter = "all"
+
+	private var searchTitle = ""
+	private val searchResults = HashMap<String, ArrayList<Movie.Video?>>()
+	private var pauseRunnable: MutableList<Runnable?>? = null
+	private var searchExecutorService: ExecutorService? = null
+	private val allRunCount = AtomicInteger(0)
+	private var totalSourceCount = 0
+	private var preDrawListener: ViewTreeObserver.OnPreDrawListener? = null
+
+	// --- BackPressProvider ---
+	override fun handleBackPress(): Boolean {
+		if (currentSourceFilter != "all") {
+			mTabLayout?.selectTab(mTabLayout?.getTabAt(0))
+			return true
+		}
+		return false
+	}
+
+	override val layoutResID: Int
+		// ----------------
+		get() = R.layout.fragment_search
+
+	override fun init() {
+		EventBus.getDefault().register(this)
+
+		mTabLayout = rootView?.findViewById(R.id.mTabLayout)
+		searchBar = rootView?.findViewById(R.id.search_bar)
+		btnStopSearch = rootView?.findViewById(R.id.btn_stop_search)
+		searchBarContainer = rootView?.findViewById(R.id.search_bar_container)
+		searchView = rootView?.findViewById(R.id.search_view)
+		searchProgressIndicator = rootView?.findViewById(R.id.search_progress)
+
+		// 设置停止搜索按钮点击事件
+		btnStopSearch?.setOnClickListener { v: View? -> cancel() }
+
+		// 动态定位搜索框到底部导航栏上方
+		updateSearchBarPosition()
+
+		searchView?.addTransitionListener { searchView: SearchView?, previousState: SearchView.TransitionState?, newState: SearchView.TransitionState? ->
+			if (activity == null) return@addTransitionListener
+			if (newState == SearchView.TransitionState.SHOWING) {
+				(mActivity as? HomeActivity)?.collapseBottomNav()
+			} else if (newState == SearchView.TransitionState.HIDDEN) {
+				(mActivity as? HomeActivity)?.expandBottomNav()
+			}
+
+			val spacerView = searchView?.findViewById<View?>(R.id.open_search_view_status_bar_spacer)
+			if (spacerView != null) {
+				val parent = spacerView.parent as ViewGroup?
+				parent?.removeView(spacerView)
+			}
+		}
+
+		rvSearchWords = rootView?.findViewById(R.id.rv_search_words)
+
+		initSearchViews()
+
+		resultFragment = SearchResultFragment()
+		resultFragment?.let {
+			it.setOnRefreshListener {
+				if (!TextUtils.isEmpty(searchTitle)) {
+					search(searchTitle)
+				}
+			}
+			getChildFragmentManager().beginTransaction()
+				.replace(R.id.searchResultContainer, it)
+				.commit()
+		}
+
+		mTabLayout?.addOnTabSelectedListener(object : OnTabSelectedListener {
+			override fun onTabSelected(tab: TabLayout.Tab) {
+				val sourceKey = tab.tag as String?
+				if (sourceKey != null) {
+					filterBySource(sourceKey)
+				}
+			}
+
+			override fun onTabUnselected(tab: TabLayout.Tab?) {
+			}
+
+			override fun onTabReselected(tab: TabLayout.Tab?) {
+			}
+		})
+		mTabLayout?.removeAllTabs()
+		mTabLayout?.visibility = View.GONE
+	}
+
+	override fun onDestroy() {
+		super.onDestroy()
+		cancel()
+		try {
+			if (searchExecutorService != null) {
+				searchExecutorService?.shutdownNow()
+				searchExecutorService = null
+				JsLoader.stopAll()
+			}
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+
+		// 移除监听器
+		if (rootView != null && preDrawListener != null) {
+			if (rootView?.viewTreeObserver?.isAlive == true) {
+				rootView?.viewTreeObserver?.removeOnPreDrawListener(preDrawListener)
+			}
+			preDrawListener = null
+		}
+
+		EventBus.getDefault().unregister(this)
+	}
+
+	override fun onResume() {
+		super.onResume()
+		if (pauseRunnable != null && pauseRunnable?.isEmpty() != true) {
+			searchExecutorService = Executors.newFixedThreadPool(5)
+			for (runnable in pauseRunnable) {
+				searchExecutorService?.execute(runnable)
+			}
+			pauseRunnable?.clear()
+			pauseRunnable = null
+		}
+		// 确保搜索框位置正确
+		updateSearchBarPosition()
+	}
+
+	override val menuResId: Int
+		// ----------------
+		get() = R.menu.search_fragment_menu
+
+	override fun onMenuItemClick(itemId: Int): Boolean {
+		if (itemId == R.id.action_clear_search_history) {
+			showClearHistoryDialog()
+			return true
+		}
+		return false
+	}
+
+	override val toolbarTitle: String
+		get() = "搜索"
+
+	override fun enableAppBarScroll(): Boolean {
+		return true
+	}
+
+	// ----------------
+	private fun initSearchViews() {
+		rvSearchWords?.setHasFixedSize(true)
+		rvSearchWords?.setLayoutManager(LinearLayoutManager(mContext, LinearLayoutManager.VERTICAL, false))
+		wordAdapter = PinyinAdapter()
+		rvSearchWords?.setAdapter(wordAdapter)
+
+		wordAdapter?.setOnItemClickListener { adapter: BaseQuickAdapter<*, *>?, view: View?, position: Int ->
+			FastClickCheckUtil.check(requireView())
+			val item = wordAdapter?.getItem(position) ?: return@setOnItemClickListener
+			val keyword = item.title
+			searchView?.setText(keyword)
+			searchView?.hide()
+			search(keyword ?: return@setOnItemClickListener)
+		}
+
+		// 设置长按监听器（仅对历史记录生效）
+		wordAdapter?.setOnItemLongClickListener { position: Int, item: SearchItem? ->
+			if (item?.type == 0) {
+				showDeleteHistoryItemDialog(item.title, position)
+			}
+		}
+
+		searchView?.setupWithSearchBar(searchBar)
+		searchView?.getEditText()?.setOnEditorActionListener { v: TextView?, actionId: Int, event: KeyEvent? ->
+			if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+				(event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
+			) {
+				val keyword = searchView?.text.toString().trim { it <= ' ' }
+				searchView?.hide()
+				search(keyword)
+				return@setOnEditorActionListener true
+			}
+			false
+		}
+
+		searchView?.getEditText()?.addTextChangedListener(object : TextWatcher {
+			override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
+			}
+
+			override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+			}
+
+			override fun afterTextChanged(s: Editable) {
+				val text = s.toString().trim { it <= ' ' }
+				if (!text.isEmpty()) {
+					loadSearchSuggestions(text)
+				} else {
+					loadHistoryAndHotWords()
+				}
+			}
+		})
+
+		searchView?.addTransitionListener { searchView: SearchView?, previousState: SearchView.TransitionState?, newState: SearchView.TransitionState? ->
+			if (newState == SearchView.TransitionState.SHOWING) {
+				loadHistoryAndHotWords()
+			}
+		}
+	}
+
+	private fun loadHistoryAndHotWords() {
+		val historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, ArrayList<String?>())
+
+		val combinedList = ArrayList<SearchItem?>()
+		for (s in historyList) {
+			combinedList.add(SearchItem(s, 0))
+		}
+
+		if (hots != null && hots?.isEmpty() != true) {
+			for (s in hots) {
+				combinedList.add(SearchItem(s, 1))
+			}
+			wordAdapter?.setNewData(combinedList)
+			return
+		}
+
+		wordAdapter?.setNewData(combinedList)
+
+		OkGo.get<String?>("https://node.video.qq.com/x/api/hot_search")
+			.params("channdlId", "0")
+			.params("_", System.currentTimeMillis())
+			.execute(object : AbsCallback<String?>() {
+				override fun onSuccess(response: Response<String?>) {
+					try {
+						hots = ArrayList()
+						val itemList = JsonParser.parseString(response.body())
+							.getAsJsonObject().get("data").getAsJsonObject()
+							.get("mapResult").getAsJsonObject()
+							.get("0").getAsJsonObject()
+							.get("listInfo").getAsJsonArray()
+						for (ele in itemList) {
+							val obj = ele as JsonObject
+							hots?.add(obj.get("title").asString.trim { it <= ' ' }
+								.replace("[<>《》\\-]".toRegex(), "").split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0])
+						}
+						val updatedList = ArrayList<SearchItem?>()
+						for (s in historyList) {
+							updatedList.add(SearchItem(s, 0))
+						}
+						for (s in hots ?: return) {
+							updatedList.add(SearchItem(s, 1))
+						}
+						wordAdapter?.setNewData(updatedList)
+					} catch (th: Throwable) {
+						th.printStackTrace()
+					}
+				}
+
+				@Throws(Throwable::class)
+				override fun convertResponse(response: okhttp3.Response): String {
+					return Objects.requireNonNull(response.body).string()
+				}
+			})
+	}
+
+	private fun loadSearchSuggestions(key: String?) {
+		OkGo.get<Any?>("https://tv.aiseet.atianqi.com/i-tvbin/qtv_video/search/get_search_smart_box")
+			.params("format", "json")
+			.params("page_num", 0)
+			.params("page_size", 20)
+			.params("key", key)
+			.execute(object : AbsCallback<Any?>() {
+				override fun onSuccess(response: Response<Any?>) {
+					try {
+						val suggestions = ArrayList<SearchItem?>()
+						val result = response.body() as String?
+						val gson = Gson()
+						val json = gson.fromJson(result, JsonElement::class.java)
+						val groupDataArr = json.getAsJsonObject()
+							.get("data").getAsJsonObject()
+							.get("search_data").getAsJsonObject()
+							.get("vecGroupData").getAsJsonArray()
+							.get(0).getAsJsonObject()
+							.get("group_data").getAsJsonArray()
+						for (groupDataElement in groupDataArr) {
+							val groupData = groupDataElement.getAsJsonObject()
+							val keywordTxt = groupData.getAsJsonObject("dtReportInfo")
+								.getAsJsonObject("reportData")
+								.get("keyword_txt").asString
+							suggestions.add(SearchItem(keywordTxt.trim { it <= ' ' }, 2))
+						}
+						wordAdapter?.setNewData(suggestions)
+						rvSearchWords?.smoothScrollToPosition(0)
+					} catch (th: Throwable) {
+						th.printStackTrace()
+					}
+				}
+
+				@Throws(Throwable::class)
+				override fun convertResponse(response: okhttp3.Response): String {
+					return Objects.requireNonNull(response.body).string()
+				}
+			})
+	}
+
+	private fun updateSearchBarPosition() {
+		if (rootView == null || activity == null) return
+		rootView?.post {
+			if (activity == null || searchBarContainer == null) return@post
+			val bottomNav = requireActivity().findViewById<View?>(R.id.bottom_navigation)
+
+			searchBarContainer?.let {
+				val params = it.layoutParams as CoordinatorLayout.LayoutParams
+				params.gravity = Gravity.NO_GRAVITY
+				params.setMargins(params.leftMargin, 0, params.rightMargin, 0)
+				it.layoutParams = params
+			}
+
+			if (preDrawListener != null) {
+				rootView?.viewTreeObserver?.removeOnPreDrawListener(preDrawListener)
+			}
+
+			// 使用 OnPreDrawListener 监听每一帧
+			preDrawListener = ViewTreeObserver.OnPreDrawListener {
+				if (activity == null) return@OnPreDrawListener true
+				searchBarContainer?.let {
+					if (rootView != null) {
+						val targetY: Int
+
+						if (bottomNav != null && bottomNav.isVisible) {
+							// 有底部导航栏时，定位在导航栏上方
+							val navLocation = IntArray(2)
+							bottomNav.getLocationInWindow(navLocation)
+							val navTopInScreen = navLocation[1]
+
+							val rootLocation = IntArray(2)
+							rootView?.getLocationInWindow(rootLocation)
+							val rootTopInScreen = rootLocation[1]
+
+							val searchBarHeight = it.height
+							targetY = navTopInScreen - rootTopInScreen - searchBarHeight
+						} else {
+							// 没有底部导航栏时，定位在屏幕底部
+							val rootLocation = IntArray(2)
+							rootView?.getLocationInWindow(rootLocation)
+							val rootTopInScreen = rootLocation[1]
+
+							val screenHeight = resources.displayMetrics.heightPixels
+							val searchBarHeight = it.height
+							targetY = screenHeight - rootTopInScreen - searchBarHeight
+						}
+
+						// 使用setY设置绝对位置
+						if (abs(it.y - targetY) > 0.5f) {
+							it.y = targetY.toFloat()
+						}
+					}
+				}
+				true
+			}
+			rootView?.viewTreeObserver?.addOnPreDrawListener(preDrawListener)
+		}
+	}
+
+	private fun showEmptyState() {
+		mTabLayout?.removeAllTabs()
+		mTabLayout?.visibility = View.GONE
+		currentSourceFilter = "all"
+		if (searchProgressIndicator != null) {
+			searchProgressIndicator?.visibility = View.GONE
+		}
+		if (resultFragment != null && resultFragment?.isAdded == true) {
+			resultFragment?.updateData(ArrayList())
+		}
+	}
+
+	private fun showStopSearchButton() {
+		if (btnStopSearch == null) return
+
+		btnStopSearch?.visibility = View.VISIBLE
+		btnStopSearch?.animate()
+			?.alpha(1f)
+			?.setDuration(200)
+			?.setInterpolator(DecelerateInterpolator())
+			?.start()
+	}
+
+	private fun hideStopSearchButton() {
+		if (btnStopSearch == null) return
+
+		btnStopSearch?.animate()
+			?.alpha(0f)
+			?.setDuration(200)
+			?.setInterpolator(AccelerateInterpolator())
+			?.withEndAction {
+				if (btnStopSearch != null) {
+					(btnStopSearch ?: return@withEndAction).visibility = View.GONE
+				}
+			}
+			?.start()
+	}
+
+	fun search(keyword: String) {
+		if (TextUtils.isEmpty(keyword)) {
+			if (isAdded) {
+				Toast.makeText(mContext, "输入内容不能为空", Toast.LENGTH_SHORT).show()
+			}
+			return
+		}
+
+		if (!isAdded || searchBar == null) {
+			return
+		}
+
+		this.searchTitle = keyword
+		searchBar?.setText(keyword)
+
+		setSearchHistory(keyword)
+
+		searchResults.clear()
+		showEmptyState()
+
+		hideSoftInput()
+
+		searchResult()
+	}
+
+	private fun cancel() {
+		OkGo.getInstance().cancelTag("search")
+
+		try {
+			if (searchExecutorService != null) {
+				searchExecutorService?.shutdownNow()
+				searchExecutorService = null
+				JsLoader.stopAll()
+			}
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		}
+
+		allRunCount.set(0)
+
+		if (searchProgressIndicator != null) {
+			searchProgressIndicator?.visibility = View.GONE
+		}
+
+		hideStopSearchButton()
+	}
+
+	private fun searchResult() {
+		try {
+			if (searchExecutorService != null) {
+				searchExecutorService?.shutdownNow()
+				searchExecutorService = null
+				JsLoader.stopAll()
+			}
+		} catch (th: Throwable) {
+			th.printStackTrace()
+		} finally {
+			allRunCount.set(0)
+		}
+
+		searchExecutorService = Executors.newFixedThreadPool(5)
+		val searchRequestList = ApiConfig.instance.getSourceBeanList().toMutableList()
+		val home: SourceBean = ApiConfig.instance.homeSourceBean
+		searchRequestList.remove(home)
+		searchRequestList.add(0, home)
+
+		val mCheckSources = sourcesForSearch
+		val siteKey = ArrayList<String?>()
+		for (bean in searchRequestList) {
+			if (!bean.isSearchable) {
+				continue
+			}
+			if (mCheckSources != null && !mCheckSources.containsKey(bean.key)) {
+				continue
+			}
+			siteKey.add(bean.key)
+			allRunCount.incrementAndGet()
+		}
+
+		if (siteKey.isEmpty()) {
+			Toast.makeText(mContext, "没有指定搜索源", Toast.LENGTH_SHORT).show()
+			return
+		}
+
+		totalSourceCount = siteKey.size
+		if (searchProgressIndicator != null) {
+			searchProgressIndicator?.max = totalSourceCount
+			searchProgressIndicator?.progress = 0
+			searchProgressIndicator?.visibility = View.VISIBLE
+		}
+
+		showStopSearchButton()
+
+		val sourceViewModel =
+			ViewModelProvider(requireActivity())[SourceViewModel::class.java]
+
+		for (key in siteKey) {
+			searchExecutorService?.execute { sourceViewModel.getSearch(key, searchTitle) }
+		}
+	}
+
+	private fun searchData(absXml: AbsXml?) {
+		var hasNewResults = false
+
+		if (absXml != null && absXml.movie != null && absXml.movie?.videoList != null && absXml.movie?.videoList?.isEmpty() != true) {
+			val sourceKey = ((absXml.movie ?: return).videoList ?: return)[0].sourceKey
+			val sourceResults = searchResults.computeIfAbsent(sourceKey ?: return) { k: String? -> ArrayList() }
+
+			val oldSize = sourceResults.size
+			for (video in (absXml.movie ?: return).videoList ?: return) {
+				if (matchSearchResult(video.name, searchTitle)) {
+					sourceResults.add(video)
+				}
+			}
+
+			hasNewResults = sourceResults.size > oldSize
+		}
+
+		val count = allRunCount.decrementAndGet()
+
+		if (searchProgressIndicator != null && totalSourceCount > 0) {
+			val searchedCount = totalSourceCount - count
+			searchProgressIndicator?.progress = searchedCount
+		}
+
+		if (hasNewResults) {
+			if ((mTabLayout ?: return).tabCount <= 0) {
+				createTabsFromResults()
+			} else {
+				updateTabsWithNewResults()
+			}
+		}
+
+		if (count <= 0) {
+			if (searchProgressIndicator != null) {
+				searchProgressIndicator?.visibility = View.GONE
+			}
+
+			hideStopSearchButton()
+
+			if ((mTabLayout ?: return).tabCount <= 0) {
+				createTabsFromResults()
+			}
+			cancel()
+		}
+	}
+
+	private fun filterBySource(sourceKey: String) {
+		currentSourceFilter = sourceKey
+
+		var filteredResults: ArrayList<Movie.Video?>?
+		if ("all" == sourceKey) {
+			filteredResults = ArrayList()
+			for (videos in searchResults.values) {
+				filteredResults.addAll(videos)
+			}
+		} else {
+			filteredResults = searchResults[sourceKey]
+			if (filteredResults == null) {
+				filteredResults = ArrayList()
+			}
+		}
+
+		if (resultFragment != null && resultFragment?.isAdded == true) {
+			resultFragment?.updateData(filteredResults)
+		}
+	}
+
+	private fun matchSearchResult(name: String?, searchTitle: String?): Boolean {
+		var searchTitle = searchTitle
+		if (TextUtils.isEmpty(name) || TextUtils.isEmpty(searchTitle)) return false
+		searchTitle = searchTitle?.trim { it <= ' ' }
+		val arr = searchTitle!!.split("\\s+".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+		var matchNum = 0
+		for (one in arr) {
+			if (name?.contains(one) == true) matchNum++
+		}
+		return matchNum == arr.size
+	}
+
+	private fun createTabsFromResults() {
+		mTabLayout?.removeAllTabs()
+
+		for (sourceKey in searchResults.keys) {
+			val videos = searchResults[sourceKey]
+			if (!videos.isNullOrEmpty()) {
+				val source: SourceBean? = ApiConfig.instance.getSource(sourceKey)
+				if (source != null) {
+					val tab = mTabLayout?.newTab()
+					tab?.let {
+						it.text = source.name + " (" + videos.size + ")"
+						it.tag = sourceKey
+						mTabLayout?.addTab(tab)
+					}
+				}
+			}
+		}
+
+		if ((mTabLayout ?: return).tabCount > 0) {
+			val allTab = mTabLayout?.newTab()
+			allTab?.let {
+				allTab.text = "全部"
+				allTab.tag = "all"
+				mTabLayout?.addTab(allTab, 0)
+				mTabLayout?.visibility = View.VISIBLE
+			}
+
+			val firstTab = mTabLayout?.getTabAt(0)
+			firstTab?.select()
+			filterBySource("all")
+		} else {
+			mTabLayout?.visibility = View.GONE
+		}
+	}
+
+	private fun updateTabsWithNewResults() {
+		for (sourceKey in searchResults.keys) {
+			var tabExists = false
+			for (i in 0..<(mTabLayout ?: return).tabCount) {
+				val tab = mTabLayout?.getTabAt(i)
+				if (tab != null && sourceKey == tab.tag) {
+					val videos = searchResults[sourceKey]
+					if (videos != null) {
+						val source: SourceBean? = ApiConfig.instance.getSource(sourceKey)
+						if (source != null) {
+							tab.text = source.name + " (" + videos.size + ")"
+						}
+					}
+					tabExists = true
+					break
+				}
+			}
+
+			if (!tabExists) {
+				val videos = searchResults[sourceKey]
+				if (!videos.isNullOrEmpty()) {
+					val source: SourceBean? = ApiConfig.instance.getSource(sourceKey)
+					if (source != null) {
+						val tab = (mTabLayout ?: return).newTab()
+						tab.text = source.name + " (" + videos.size + ")"
+						tab.tag = sourceKey
+						mTabLayout?.addTab(tab)
+					}
+				}
+			}
+		}
+
+		filterBySource(currentSourceFilter)
+	}
+
+	private fun showDeleteHistoryItemDialog(keyword: String?, position: Int) {
+		if (activity == null) return
+
+		MaterialAlertDialogBuilder(requireActivity())
+			.setTitle("删除搜索记录")
+			.setMessage("确定要删除「$keyword」吗？")
+			.setPositiveButton("删除") { dialog: DialogInterface?, which: Int ->
+				// 从 Hawk 中获取历史记录
+				val historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, ArrayList<String?>())
+				historyList.remove(keyword)
+				Hawk.put(HawkConfig.SEARCH_HISTORY, historyList)
+
+				// 从 Adapter 中移除
+				wordAdapter?.remove(position)
+			}
+			.setNegativeButton("取消", null)
+			.show()
+	}
+
+	private fun showClearHistoryDialog() {
+		if (activity == null) return
+
+		val historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, ArrayList<String?>())
+		if (historyList.isEmpty()) {
+			Toast.makeText(mContext, "暂无搜索记录", Toast.LENGTH_SHORT).show()
+			return
+		}
+
+		MaterialAlertDialogBuilder(requireActivity())
+			.setTitle("清空搜索记录")
+			.setMessage("确定要清空所有搜索记录吗？")
+			.setPositiveButton("清空") { dialog: DialogInterface?, which: Int ->
+				Hawk.delete(HawkConfig.SEARCH_HISTORY)
+				val newList = ArrayList<SearchItem?>()
+				if (hots != null && hots?.isEmpty() != false) {
+					for (s in hots) {
+						newList.add(SearchItem(s, 1))
+					}
+				}
+				wordAdapter?.setNewData(newList)
+				Toast.makeText(mContext, "已清空搜索记录", Toast.LENGTH_SHORT).show()
+			}
+			.setNegativeButton("取消", null)
+			.show()
+	}
+
+	private fun hideSoftInput() {
+		try {
+			val imm = mContext.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
+			if (imm != null && searchView != null) {
+				imm.hideSoftInputFromWindow(searchView?.windowToken, 0)
+			}
+		} catch (e: Exception) {
+			e.printStackTrace()
+		}
+	}
+
+	@Subscribe(threadMode = ThreadMode.MAIN)
+	fun server(event: ServerEvent) {
+		if (event.type == ServerEvent.SERVER_SEARCH) {
+			val title = event.obj as String?
+			search(title ?: return)
+		}
+	}
+
+	@Subscribe(threadMode = ThreadMode.MAIN)
+	fun refresh(event: RefreshEvent) {
+		if (event.type == RefreshEvent.TYPE_SEARCH_RESULT) {
+			try {
+				searchData(if (event.obj == null) null else event.obj as AbsXml)
+			} catch (e: Exception) {
+				searchData(null)
+			}
+		}
+	}
+
+	companion object {
+		private var hots: ArrayList<String?>? = null
+	}
 }

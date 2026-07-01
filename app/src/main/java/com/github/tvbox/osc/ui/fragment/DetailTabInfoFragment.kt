@@ -1,188 +1,184 @@
-package com.github.tvbox.osc.ui.fragment;
+package com.github.tvbox.osc.ui.fragment
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
-import android.os.Bundle;
-import android.text.TextUtils;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Bundle
+import android.text.TextUtils
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.bean.Movie
+import com.github.tvbox.osc.cache.RoomDataManger
+import com.github.tvbox.osc.picasso.RoundTransformation
+import com.github.tvbox.osc.util.DefaultConfig
+import com.github.tvbox.osc.util.MD5.string2MD5
+import com.google.android.material.button.MaterialButton
+import com.squareup.picasso.Picasso
+import me.jessyan.autosize.utils.AutoSizeUtils
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
+class DetailTabInfoFragment : Fragment() {
+	private var contentView: View? = null
+	private var ivThumb: ImageView? = null
+	private var tvName: TextView? = null
+	private var tvYear: TextView? = null
+	private var tvSite: TextView? = null
+	private var tvArea: TextView? = null
+	private var tvLang: TextView? = null
+	private var tvType: TextView? = null
+	private var tvActor: TextView? = null
+	private var tvDirector: TextView? = null
+	private var tvPlayUrl: TextView? = null
+	private var tvDes: TextView? = null
+	private var tvCollect: MaterialButton? = null
 
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.bean.Movie;
-import com.github.tvbox.osc.cache.RoomDataManger;
-import com.github.tvbox.osc.picasso.RoundTransformation;
-import com.github.tvbox.osc.util.DefaultConfig;
-import com.github.tvbox.osc.util.MD5;
-import com.google.android.material.button.MaterialButton;
-import com.squareup.picasso.Picasso;
+	private var sourceKey: String? = null
+	private var vodId: String? = null
 
-import me.jessyan.autosize.utils.AutoSizeUtils;
+	fun setContentView(view: View?) {
+		this.contentView = view
+	}
 
-public class DetailTabInfoFragment extends Fragment {
-    private View contentView;
-    private ImageView ivThumb;
-    private TextView tvName;
-    private TextView tvYear;
-    private TextView tvSite;
-    private TextView tvArea;
-    private TextView tvLang;
-    private TextView tvType;
-    private TextView tvActor;
-    private TextView tvDirector;
-    private TextView tvPlayUrl;
-    private TextView tvDes;
-    private MaterialButton tvCollect;
+	override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+		if (contentView != null) {
+			if ((contentView ?: return null).parent != null) {
+				((contentView ?: return null).parent as ViewGroup).removeView(contentView)
+			}
+			initViews(contentView ?: return null)
+			return contentView
+		}
+		val view = inflater.inflate(R.layout.fragment_detail_tab_info, container, false)
+		initViews(view)
+		return view
+	}
 
-    private String sourceKey;
-    private String vodId;
+	private fun initViews(view: View) {
+		ivThumb = view.findViewById(R.id.ivThumb)
+		tvName = view.findViewById(R.id.tvName)
+		tvYear = view.findViewById(R.id.tvYear)
+		tvSite = view.findViewById(R.id.tvSite)
+		tvArea = view.findViewById(R.id.tvArea)
+		tvLang = view.findViewById(R.id.tvLang)
+		tvType = view.findViewById(R.id.tvType)
+		tvActor = view.findViewById(R.id.tvActor)
+		tvDirector = view.findViewById(R.id.tvDirector)
+		tvPlayUrl = view.findViewById(R.id.tvPlayUrl)
+		tvDes = view.findViewById(R.id.tvDes)
+		tvCollect = view.findViewById(R.id.tvCollect)
 
-    public void setContentView(View view) {
-        this.contentView = view;
-    }
+		(tvCollect ?: return).setOnClickListener { v: View? -> onCollectClick() }
+		(tvPlayUrl ?: return).setOnClickListener { v: View? -> onPlayUrlClick() }
+	}
 
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        if (contentView != null) {
-            if (contentView.getParent() != null) {
-                ((ViewGroup) contentView.getParent()).removeView(contentView);
-            }
-            initViews(contentView);
-            return contentView;
-        }
-        View view = inflater.inflate(R.layout.fragment_detail_tab_info, container, false);
-        initViews(view);
-        return view;
-    }
+	fun setVideoInfo(video: Movie.Video?, sourceKey: String?, firstSourceKey: String, vodId: String?) {
+		if (video == null) return
 
-    private void initViews(View view) {
-        ivThumb = view.findViewById(R.id.ivThumb);
-        tvName = view.findViewById(R.id.tvName);
-        tvYear = view.findViewById(R.id.tvYear);
-        tvSite = view.findViewById(R.id.tvSite);
-        tvArea = view.findViewById(R.id.tvArea);
-        tvLang = view.findViewById(R.id.tvLang);
-        tvType = view.findViewById(R.id.tvType);
-        tvActor = view.findViewById(R.id.tvActor);
-        tvDirector = view.findViewById(R.id.tvDirector);
-        tvPlayUrl = view.findViewById(R.id.tvPlayUrl);
-        tvDes = view.findViewById(R.id.tvDes);
-        tvCollect = view.findViewById(R.id.tvCollect);
+		this.sourceKey = sourceKey
+		this.vodId = vodId
 
-        tvCollect.setOnClickListener(v -> onCollectClick());
-        tvPlayUrl.setOnClickListener(v -> onPlayUrlClick());
-    }
+		if (tvName != null) (tvName ?: return).text = video.name
+		setTextShow(tvSite, "来源：", ApiConfig.instance.getSource(firstSourceKey)?.name)
+		setTextShow(tvYear, "年份：", if (video.year == 0) "" else video.year.toString())
+		setTextShow(tvArea, "地区：", video.area)
+		setTextShow(tvLang, "语言：", video.lang)
 
-    public void setVideoInfo(Movie.Video video, String sourceKey, String firstSourceKey, String vodId) {
-        if (video == null) return;
+		if (firstSourceKey != sourceKey) {
+			setTextShow(tvType, "类型：", "[" + ApiConfig.instance.getSource(sourceKey)?.name + "] 解析")
+		} else {
+			setTextShow(tvType, "类型：", video.type)
+		}
 
-        this.sourceKey = sourceKey;
-        this.vodId = vodId;
+		setTextShow(tvActor, "演员：", video.actor)
+		setTextShow(tvDirector, "导演：", video.director)
+		setTextShow(tvDes, "简介：", removeHtmlTag(video.des))
 
-        if (tvName != null) tvName.setText(video.name);
-        setTextShow(tvSite, "来源：", ApiConfig.get().getSource(firstSourceKey).getName());
-        setTextShow(tvYear, "年份：", video.year == 0 ? "" : String.valueOf(video.year));
-        setTextShow(tvArea, "地区：", video.area);
-        setTextShow(tvLang, "语言：", video.lang);
+		if (!TextUtils.isEmpty(video.pic) && ivThumb != null) {
+			Picasso.get()
+				.load(DefaultConfig.checkReplaceProxy(video.pic ?: return))
+				.transform(
+					RoundTransformation(string2MD5(video.pic))
+						.centerCorp(true)
+						.override(AutoSizeUtils.mm2px(requireContext(), 300f), AutoSizeUtils.mm2px(requireContext(), 400f))
+						.roundRadius(AutoSizeUtils.mm2px(requireContext(), 10f), RoundTransformation.RoundType.ALL)
+				)
+				.placeholder(R.drawable.img_loading_placeholder)
+				.noFade()
+				.error(R.drawable.img_loading_placeholder)
+				.into(ivThumb)
+		} else if (ivThumb != null) {
+			(ivThumb ?: return).setImageResource(R.drawable.img_loading_placeholder)
+		}
 
-        if (!firstSourceKey.equals(sourceKey)) {
-            setTextShow(tvType, "类型：", "[" + ApiConfig.get().getSource(sourceKey).getName() + "] 解析");
-        } else {
-            setTextShow(tvType, "类型：", video.type);
-        }
+		updateCollectButton()
+	}
 
-        setTextShow(tvActor, "演员：", video.actor);
-        setTextShow(tvDirector, "导演：", video.director);
-        setTextShow(tvDes, "简介：", removeHtmlTag(video.des));
+	fun setPlayUrl(url: String?) {
+		setTextShow(tvPlayUrl, "地址：", url)
+	}
 
-        if (!TextUtils.isEmpty(video.pic) && ivThumb != null) {
-            Picasso.get()
-                    .load(DefaultConfig.checkReplaceProxy(video.pic))
-                    .transform(new RoundTransformation(MD5.string2MD5(video.pic))
-                            .centerCorp(true)
-                            .override(AutoSizeUtils.mm2px(requireContext(), 300), AutoSizeUtils.mm2px(requireContext(), 400))
-                            .roundRadius(AutoSizeUtils.mm2px(requireContext(), 10), RoundTransformation.RoundType.ALL))
-                    .placeholder(R.drawable.img_loading_placeholder)
-                    .noFade()
-                    .error(R.drawable.img_loading_placeholder)
-                    .into(ivThumb);
-        } else if (ivThumb != null) {
-            ivThumb.setImageResource(R.drawable.img_loading_placeholder);
-        }
+	fun updateCollectButton() {
+		if (tvCollect == null || sourceKey == null || vodId == null) return
 
-        updateCollectButton();
-    }
+		val isVodCollect = RoomDataManger.isVodCollect(sourceKey ?: return, vodId ?: return)
+		if (isVodCollect) {
+			(tvCollect ?: return).setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect_filled))
+		} else {
+			(tvCollect ?: return).setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect))
+		}
+	}
 
-    public void setPlayUrl(String url) {
-        setTextShow(tvPlayUrl, "地址：", url);
-    }
+	private fun onCollectClick() {
+		if (sourceKey == null || vodId == null) return
 
-    public void updateCollectButton() {
-        if (tvCollect == null || sourceKey == null || vodId == null) return;
+		val isVodCollect = RoomDataManger.isVodCollect(sourceKey ?: return, vodId ?: return)
+		if (isVodCollect) {
+			RoomDataManger.deleteVodCollect(sourceKey ?: return, null)
+			(tvCollect ?: return).setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect))
+			Toast.makeText(requireContext(), "已取消收藏", Toast.LENGTH_SHORT).show()
+		} else {
+			RoomDataManger.insertVodCollect(sourceKey ?: return, null)
+			(tvCollect ?: return).setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect_filled))
+			Toast.makeText(requireContext(), "已加入收藏夹", Toast.LENGTH_SHORT).show()
+		}
+	}
 
-        boolean isVodCollect = RoomDataManger.isVodCollect(sourceKey, vodId);
-        if (isVodCollect) {
-            tvCollect.setIcon(androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect_filled));
-        } else {
-            tvCollect.setIcon(androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect));
-        }
-    }
+	private fun onPlayUrlClick() {
+		if (tvPlayUrl == null) return
 
-    private void onCollectClick() {
-        if (sourceKey == null || vodId == null) return;
+		val cm = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+		cm.setPrimaryClip(ClipData.newPlainText(null, (tvPlayUrl ?: return).text.toString().replace("播放地址：", "")))
+		Toast.makeText(requireContext(), "已复制", Toast.LENGTH_SHORT).show()
+	}
 
-        boolean isVodCollect = RoomDataManger.isVodCollect(sourceKey, vodId);
-        if (isVodCollect) {
-            RoomDataManger.deleteVodCollect(sourceKey, null);
-            tvCollect.setIcon(androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect));
-            Toast.makeText(requireContext(), "已取消收藏", Toast.LENGTH_SHORT).show();
-        } else {
-            RoomDataManger.insertVodCollect(sourceKey, null);
-            tvCollect.setIcon(androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.icon_collect_filled));
-            Toast.makeText(requireContext(), "已加入收藏夹", Toast.LENGTH_SHORT).show();
-        }
-    }
+	private fun setTextShow(view: TextView?, tag: String?, info: String?) {
+		if (view == null) return
 
-    private void onPlayUrlClick() {
-        if (tvPlayUrl == null) return;
+		if (info == null || info.trim { it <= ' ' }.isEmpty()) {
+			view.visibility = View.GONE
+			return
+		}
+		view.visibility = View.VISIBLE
+		view.text = getHtml(tag, info)
+	}
 
-        ClipboardManager cm = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText(null, tvPlayUrl.getText().toString().replace("播放地址：", "")));
-        Toast.makeText(requireContext(), "已复制", Toast.LENGTH_SHORT).show();
-    }
+	private fun getHtml(label: String?, content: String?): String {
+		var content = content
+		if (content == null) {
+			content = ""
+		}
+		return label + content
+	}
 
-    private void setTextShow(TextView view, String tag, String info) {
-        if (view == null) return;
-
-        if (info == null || info.trim().isEmpty()) {
-            view.setVisibility(View.GONE);
-            return;
-        }
-        view.setVisibility(View.VISIBLE);
-        view.setText(getHtml(tag, info));
-    }
-
-    private String getHtml(String label, String content) {
-        if (content == null) {
-            content = "";
-        }
-        return label + content;
-    }
-
-    private String removeHtmlTag(String info) {
-        if (info == null)
-            return "";
-        return info.replaceAll("<.*?>", "").replaceAll("\\s", "");
-    }
+	private fun removeHtmlTag(info: String?): String {
+		if (info == null) return ""
+		return info.replace("<.*?>".toRegex(), "").replace("\\s".toRegex(), "")
+	}
 }
 

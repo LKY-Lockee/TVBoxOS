@@ -1,188 +1,177 @@
-package com.github.tvbox.osc.ui.fragment;
+package com.github.tvbox.osc.ui.fragment
 
-import android.os.Bundle;
-
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BaseLazyFragment;
-import com.github.tvbox.osc.base.ToolbarMenuProvider;
-import com.github.tvbox.osc.bean.SourceBean;
-import com.github.tvbox.osc.bean.VodInfo;
-import com.github.tvbox.osc.cache.RoomDataManger;
-import com.github.tvbox.osc.event.RefreshEvent;
-import com.github.tvbox.osc.ui.activity.DetailActivity;
-import com.github.tvbox.osc.ui.activity.HomeActivity;
-import com.github.tvbox.osc.ui.adapter.HistoryAdapter;
-import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager;
-import com.github.tvbox.osc.util.FastClickCheckUtil;
-
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.content.DialogInterface
+import android.os.Bundle
+import android.view.View
+import android.widget.Toast
+import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.base.BaseLazyFragment
+import com.github.tvbox.osc.base.ToolbarMenuProvider
+import com.github.tvbox.osc.bean.SourceBean
+import com.github.tvbox.osc.bean.VodInfo
+import com.github.tvbox.osc.cache.RoomDataManger
+import com.github.tvbox.osc.cache.RoomDataManger.deleteVodRecordAll
+import com.github.tvbox.osc.cache.RoomDataManger.getAllVodRecord
+import com.github.tvbox.osc.event.RefreshEvent
+import com.github.tvbox.osc.ui.activity.DetailActivity
+import com.github.tvbox.osc.ui.activity.HomeActivity
+import com.github.tvbox.osc.ui.adapter.HistoryAdapter
+import com.github.tvbox.osc.ui.tv.widget.AutoFitGridLayoutManager
+import com.github.tvbox.osc.util.FastClickCheckUtil
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 
 /**
  * @author pj567
  * @date :2021/1/7
  * @description:
  */
-public class HistoryFragment extends BaseLazyFragment implements ToolbarMenuProvider {
-    public static HistoryAdapter historyAdapter;
-    private SwipeRefreshLayout mSwipe;
+class HistoryFragment : BaseLazyFragment(), ToolbarMenuProvider {
+	private var mSwipe: SwipeRefreshLayout? = null
 
-    // --- BaseLazyFragment ---
-    @Override
-    protected int getLayoutResID() {
-        return R.layout.fragment_grid;
-    }
+	override val layoutResID: Int
+		// --- BaseLazyFragment ---
+		get() = R.layout.fragment_grid
 
-    @Override
-    protected void init() {
-        initView();
-        initData();
-    }
-    // ----------------
+	override fun init() {
+		initView()
+		initData()
+	}
 
-    // --- Fragment ---
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        EventBus.getDefault().unregister(this);
-    }
-    // ----------------
+	// ----------------
+	// --- Fragment ---
+	override fun onDestroy() {
+		super.onDestroy()
+		EventBus.getDefault().unregister(this)
+	}
 
-    // --- ToolbarMenuProvider ---
-    @Override
-    public int getMenuResId() {
-        return R.menu.history_fragment_menu;
-    }
+	override val menuResId: Int
+		// ----------------
+		get() = R.menu.history_fragment_menu
 
-    @Override
-    public String getToolbarTitle() {
-        return "历史记录";
-    }
+	override val toolbarTitle: String
+		get() = "历史记录"
 
-    @Override
-    public boolean onMenuItemClick(int itemId) {
-        if (itemId == R.id.action_clear) {
-            showClearDialog();
-            return true;
-        }
-        return false;
-    }
-    // ----------------
+	override fun onMenuItemClick(itemId: Int): Boolean {
+		if (itemId == R.id.action_clear) {
+			showClearDialog()
+			return true
+		}
+		return false
+	}
 
-    private void initView() {
-        EventBus.getDefault().register(this);
+	// ----------------
+	private fun initView() {
+		EventBus.getDefault().register(this)
 
-        mSwipe = rootView.findViewById(R.id.mSwipe);
-        RecyclerView mGridView = rootView.findViewById(R.id.mGridView);
-        mGridView.setLayoutManager(new AutoFitGridLayoutManager(mContext, 150));
-        historyAdapter = new HistoryAdapter();
-        mGridView.setAdapter(historyAdapter);
+		mSwipe = rootView?.findViewById(R.id.mSwipe)
+		val mGridView = rootView?.findViewById<RecyclerView>(R.id.mGridView)
+		mGridView?.setLayoutManager(AutoFitGridLayoutManager(mContext, 150))
+		historyAdapter = HistoryAdapter()
+		mGridView?.setAdapter(historyAdapter)
 
-        setLoadSir2(mGridView);
+		setLoadSir2(mGridView)
 
-        mSwipe.setOnRefreshListener(this::initData);
-        mSwipe.setOnChildScrollUpCallback((parent, child) -> mGridView.canScrollVertically(-1));
+		mSwipe?.setOnRefreshListener { this.initData() }
+		mSwipe?.setOnChildScrollUpCallback { parent: SwipeRefreshLayout?, child: View? -> mGridView?.canScrollVertically(-1) == true }
 
-        historyAdapter.setOnItemClickListener((adapter, view, position) -> {
-            FastClickCheckUtil.check(view);
-            if (position == -1) return;
-            VodInfo vodInfo = historyAdapter.getData().get(position);
+		historyAdapter?.setOnItemClickListener { adapter: BaseQuickAdapter<*, *>?, view: View?, position: Int ->
+			FastClickCheckUtil.check(requireView())
+			if (position == -1) return@setOnItemClickListener
+			val vodInfo = historyAdapter?.data[position]
+			if (vodInfo != null) {
+				val bundle = Bundle()
+				bundle.putString("id", vodInfo.id)
+				bundle.putString("sourceKey", vodInfo.sourceKey)
+				val sourceBean: SourceBean? = ApiConfig.instance.getSource(vodInfo.sourceKey)
+				if (sourceBean != null) {
+					bundle.putString("picture", vodInfo.pic)
+					jumpActivity(DetailActivity::class.java, bundle)
+				} else {
+					(mActivity as? HomeActivity)?.switchToSearchAndSearch(vodInfo.name)
+				}
+			}
+		}
+		historyAdapter?.setOnItemLongClickListener { adapter: BaseQuickAdapter<*, *>?, view: View?, position: Int ->
+			val vodInfo = historyAdapter?.data[position]
+			if (vodInfo != null) {
+				showDeleteHistoryItemDialog(vodInfo, position)
+			}
+			true
+		}
+	}
 
-            if (vodInfo != null) {
-                Bundle bundle = new Bundle();
-                bundle.putString("id", vodInfo.id);
-                bundle.putString("sourceKey", vodInfo.sourceKey);
-                SourceBean sourceBean = ApiConfig.get().getSource(vodInfo.sourceKey);
-                if (sourceBean != null) {
-                    bundle.putString("picture", vodInfo.pic);
-                    jumpActivity(DetailActivity.class, bundle);
-                } else {
-                    if (mActivity instanceof HomeActivity homeActivity) {
-                        homeActivity.switchToSearchAndSearch(vodInfo.name);
-                    }
-                }
-            }
-        });
-        historyAdapter.setOnItemLongClickListener((adapter, view, position) -> {
-            VodInfo vodInfo = historyAdapter.getData().get(position);
-            if (vodInfo != null) {
-                showDeleteHistoryItemDialog(vodInfo, position);
-            }
-            return true;
-        });
-    }
+	private fun initData() {
+		val allVodRecord = getAllVodRecord(100)
+		val vodInfoList: MutableList<VodInfo?> = ArrayList()
+		for (vodInfo in allVodRecord) {
+			if (!vodInfo.playNote.isEmpty()) vodInfo.note = "上次看到" + vodInfo.playNote
+			vodInfoList.add(vodInfo)
+		}
+		historyAdapter?.setNewData(vodInfoList)
 
-    private void initData() {
-        List<VodInfo> allVodRecord = RoomDataManger.getAllVodRecord(100);
-        List<VodInfo> vodInfoList = new ArrayList<>();
-        for (VodInfo vodInfo : allVodRecord) {
-            if (vodInfo.playNote != null && !vodInfo.playNote.isEmpty()) vodInfo.note = "上次看到" + vodInfo.playNote;
-            vodInfoList.add(vodInfo);
-        }
-        historyAdapter.setNewData(vodInfoList);
+		if (vodInfoList.isEmpty()) {
+			showEmpty()
+		} else {
+			showSuccess()
+		}
 
-        if (vodInfoList.isEmpty()) {
-            showEmpty();
-        } else {
-            showSuccess();
-        }
+		mSwipe?.isRefreshing = false
+	}
 
-        if (mSwipe != null) {
-            mSwipe.setRefreshing(false);
-        }
-    }
+	private fun showDeleteHistoryItemDialog(vodInfo: VodInfo?, position: Int) {
+		if (activity == null || vodInfo == null) return
 
-    private void showDeleteHistoryItemDialog(VodInfo vodInfo, int position) {
-        if (getActivity() == null || vodInfo == null) return;
+		MaterialAlertDialogBuilder(requireActivity())
+			.setTitle("删除历史记录")
+			.setMessage("确定要删除「" + vodInfo.name + "」的观看记录吗？")
+			.setPositiveButton("删除") { dialog: DialogInterface?, which: Int ->
+				historyAdapter?.remove(position)
+				RoomDataManger.deleteVodRecord(vodInfo.sourceKey ?: return@setPositiveButton, vodInfo)
+				if (historyAdapter?.data?.isEmpty() == true) {
+					showEmpty()
+				}
+				Toast.makeText(mContext, "已删除", Toast.LENGTH_SHORT).show()
+			}
+			.setNegativeButton("取消", null)
+			.show()
+	}
 
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
-                .setTitle("删除历史记录")
-                .setMessage("确定要删除「" + vodInfo.name + "」的观看记录吗？")
-                .setPositiveButton("删除", (dialog, which) -> {
-                    historyAdapter.remove(position);
-                    RoomDataManger.deleteVodRecord(vodInfo.sourceKey, vodInfo);
-                    if (historyAdapter.getData().isEmpty()) {
-                        showEmpty();
-                    }
-                    android.widget.Toast.makeText(mContext, "已删除", android.widget.Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
+	private fun showClearDialog() {
+		if (activity == null) return
 
-    private void showClearDialog() {
-        if (getActivity() == null) return;
+		if (historyAdapter?.data?.isEmpty() == true) {
+			Toast.makeText(mContext, "暂无历史记录", Toast.LENGTH_SHORT).show()
+			return
+		}
 
-        if (historyAdapter.getData().isEmpty()) {
-            android.widget.Toast.makeText(mContext, "暂无历史记录", android.widget.Toast.LENGTH_SHORT).show();
-            return;
-        }
+		MaterialAlertDialogBuilder(requireActivity())
+			.setTitle("清空历史记录")
+			.setMessage("确定要清空所有观看记录吗？")
+			.setPositiveButton("清空") { dialog: DialogInterface?, which: Int ->
+				deleteVodRecordAll()
+				historyAdapter?.setNewData(ArrayList<VodInfo?>())
+				showEmpty()
+				Toast.makeText(mContext, "已清空历史记录", Toast.LENGTH_SHORT).show()
+			}
+			.setNegativeButton("取消", null)
+			.show()
+	}
 
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(getActivity())
-                .setTitle("清空历史记录")
-                .setMessage("确定要清空所有观看记录吗？")
-                .setPositiveButton("清空", (dialog, which) -> {
-                    RoomDataManger.deleteVodRecordAll();
-                    historyAdapter.setNewData(new ArrayList<>());
-                    showEmpty();
-                    android.widget.Toast.makeText(mContext, "已清空历史记录", android.widget.Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
+	@Subscribe(threadMode = ThreadMode.MAIN)
+	fun refresh(event: RefreshEvent) {
+		if (event.type == RefreshEvent.TYPE_HISTORY_REFRESH) {
+			initData()
+		}
+	}
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void refresh(RefreshEvent event) {
-        if (event.type == RefreshEvent.TYPE_HISTORY_REFRESH) {
-            initData();
-        }
-    }
+	companion object {
+		var historyAdapter: HistoryAdapter? = null
+	}
 }

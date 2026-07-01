@@ -291,13 +291,15 @@ class VodController(context: Context) : BaseController(context) {
 		val parseAdapter = ParseAdapter()
 		parseAdapter.setOnItemClickListener { _, _, position ->
 			val parseBean = parseAdapter.getItem(position)
-			// 当前默认解析需要刷新
-			val currentDefault = parseAdapter.data.indexOf(ApiConfig.instance.defaultParse)
-			parseAdapter.notifyItemChanged(currentDefault)
-			ApiConfig.instance.defaultParse = parseBean
-			parseAdapter.notifyItemChanged(position)
-			listener?.changeParse(parseBean)
-			hideBottom()
+			parseBean?.let {
+				// 当前默认解析需要刷新
+				val currentDefault = parseAdapter.data.indexOf(ApiConfig.instance.defaultParse)
+				parseAdapter.notifyItemChanged(currentDefault)
+				ApiConfig.instance.defaultParse = it
+				parseAdapter.notifyItemChanged(position)
+				listener?.changeParse(it)
+				hideBottom()
+			}
 		}
 		mGridParseView?.adapter = parseAdapter
 		parseAdapter.setNewData(ApiConfig.instance.parseBeanList)
@@ -448,7 +450,7 @@ class VodController(context: Context) : BaseController(context) {
 				val dialog = SelectDialog<Int>(activity)
 				dialog.setTip("请选择播放器")
 				dialog.setAdapter(object : SelectDialogInterface<Int> {
-					override fun click(value: Int?, pos: Int) {
+					override fun click(value: Int, pos: Int) {
 						try {
 							dialog.cancel()
 							val thisPlayType = players[pos]
@@ -465,8 +467,8 @@ class VodController(context: Context) : BaseController(context) {
 						}
 					}
 
-					override fun getDisplay(`val`: Int?): String {
-						val playerType = players[`val` ?: 0]
+					override fun getDisplay(`val`: Int): String {
+						val playerType = players[`val`]
 						return PlayerHelper.getPlayerName(playerType)
 					}
 				}, object : DiffUtil.ItemCallback<Int>() {
@@ -1135,7 +1137,7 @@ class VodController(context: Context) : BaseController(context) {
 		return false
 	}
 
-	fun playM3u8(url: String, headers: HashMap<String?, String?>?) {
+	fun playM3u8(url: String, headers: HashMap<String, String>?) {
 		if (url.contains("url=")) {
 			listener?.startPlayUrl(url, headers)
 			return
@@ -1143,8 +1145,8 @@ class VodController(context: Context) : BaseController(context) {
 		OkGo.getInstance().cancelTag("m3u8-1")
 		OkGo.getInstance().cancelTag("m3u8-2")
 		val okGoHeaders = HttpHeaders()
-		if (headers != null) {
-			for (entry in headers.entries) {
+		headers?.let {
+			for (entry in it.entries) {
 				okGoHeaders.put(entry.key, entry.value)
 			}
 		}
@@ -1205,7 +1207,7 @@ class VodController(context: Context) : BaseController(context) {
 	}
 
 	@UnstableApi
-	private fun processM3u8Content(url: String, content: String?, headers: HashMap<String?, String?>?) {
+	private fun processM3u8Content(url: String, content: String?, headers: HashMap<String, String>?) {
 		val basePath = getBasePath(url)
 		RemoteServer.m3u8Content = M3U8.purify(basePath, content)
 		if (RemoteServer.m3u8Content == null || M3U8.currentAdCount == 0) {
@@ -1218,8 +1220,10 @@ class VodController(context: Context) : BaseController(context) {
 	}
 
 	private fun fetchAndProcessForwardUrl(
-		forwardUrl: String, headers: HashMap<String?, String?>?,
-		okGoHeaders: HttpHeaders?, fallbackUrl: String?
+		forwardUrl: String,
+		headers: HashMap<String, String>?,
+		okGoHeaders: HttpHeaders?,
+		fallbackUrl: String?
 	) {
 		OkGo.get<String>(forwardUrl)
 			.tag("m3u8-2")
@@ -1313,7 +1317,7 @@ class VodController(context: Context) : BaseController(context) {
 
 		fun prepared()
 
-		fun changeParse(pb: ParseBean?)
+		fun changeParse(pb: ParseBean)
 
 		fun updatePlayerCfg()
 
@@ -1325,7 +1329,7 @@ class VodController(context: Context) : BaseController(context) {
 
 		fun selectAudioTrack()
 
-		fun startPlayUrl(url: String?, headers: HashMap<String?, String?>?)
+		fun startPlayUrl(url: String?, headers: HashMap<String, String>?)
 
 		fun setAllowSwitchPlayer(isAllow: Boolean)
 	}

@@ -20,7 +20,7 @@ class SelectDialogAdapter<T>(
 	private val data = ArrayList<T>()
 	private var select = 0
 
-	fun setData(newData: MutableList<T>, defaultSelect: Int) {
+	fun setData(newData: List<T>, defaultSelect: Int) {
 		data.clear()
 		data.addAll(newData)
 		select = defaultSelect
@@ -57,9 +57,9 @@ class SelectDialogAdapter<T>(
 	}
 
 	interface SelectDialogInterface<T> {
-		fun click(value: T?, pos: Int)
+		fun click(value: T, pos: Int)
 
-		fun getDisplay(`val`: T?): String?
+		fun getDisplay(`val`: T): String?
 	}
 
 	class SelectViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
