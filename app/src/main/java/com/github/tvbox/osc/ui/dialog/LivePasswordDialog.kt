@@ -1,54 +1,47 @@
-package com.github.tvbox.osc.ui.dialog;
+package com.github.tvbox.osc.ui.dialog
 
-import android.app.Activity;
-import android.content.Context;
-import android.widget.EditText;
-
-import androidx.annotation.NonNull;
-
-import com.github.tvbox.osc.R;
-
-import org.jetbrains.annotations.NotNull;
-
+import android.app.Activity
+import android.content.Context
+import android.view.View
+import android.widget.EditText
+import com.github.tvbox.osc.R
 
 /**
  * 描述
- *
+ * 
  * @author pj567
  * @since 2020/12/27
  */
-public class LivePasswordDialog extends BaseDialog {
-    private final EditText inputPassword;
-    OnListener listener = null;
+class LivePasswordDialog(context: Context) : BaseDialog(context) {
+	private val inputPassword: EditText
+	var listener: OnListener? = null
 
-    public LivePasswordDialog(@NonNull @NotNull Context context) {
-        super(context);
-        setOwnerActivity((Activity) context);
-        setContentView(R.layout.dialog_live_password);
-        inputPassword = findViewById(R.id.input);
-        findViewById(R.id.inputSubmit).setOnClickListener(v -> {
-            String password = inputPassword.getText().toString().trim();
-            if (!password.isEmpty()) {
-                listener.onChange(password);
-                dismiss();
-            }
-        });
-    }
+	init {
+		setOwnerActivity(context as Activity)
+		setContentView(R.layout.dialog_live_password)
+		inputPassword = findViewById(R.id.input)
+		findViewById<View>(R.id.inputSubmit).setOnClickListener { v: View? ->
+			val password = inputPassword.text.toString().trim { it <= ' ' }
+			if (!password.isEmpty()) {
+				listener?.onChange(password)
+				dismiss()
+			}
+		}
+	}
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        listener.onCancel();
-        dismiss();
-    }
+	override fun onBackPressed() {
+		super.onBackPressed()
+		listener?.onCancel()
+		dismiss()
+	}
 
-    public void setOnListener(OnListener listener) {
-        this.listener = listener;
-    }
+	fun setOnListener(listener: OnListener?) {
+		this.listener = listener
+	}
 
-    public interface OnListener {
-        void onChange(String password);
+	interface OnListener {
+		fun onChange(password: String?)
 
-        void onCancel();
-    }
+		fun onCancel()
+	}
 }

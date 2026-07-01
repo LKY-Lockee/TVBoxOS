@@ -1,176 +1,173 @@
-package com.github.tvbox.osc.ui.dialog;
+package com.github.tvbox.osc.ui.dialog
 
-import android.app.Activity;
-import android.content.Context;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.app.Activity
+import android.content.Context
+import android.view.View
+import android.widget.TextView
+import android.widget.Toast
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.util.FastClickCheckUtil
+import com.github.tvbox.osc.util.SubtitleHelper
+import com.github.tvbox.osc.util.SubtitleHelper.setTextSize
+import com.github.tvbox.osc.util.SubtitleHelper.timeDelay
 
-import androidx.annotation.NonNull;
+class SubtitleDialog(context: Context) : BaseDialog(context) {
+	@JvmField
+	var selectInternal: TextView? = null
+	private var subtitleSizeText: TextView? = null
+	private var subtitleTimeText: TextView? = null
 
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.util.SubtitleHelper;
+	private var mSearchSubtitleListener: SearchSubtitleListener? = null
+	private var mLocalFileChooserListener: LocalFileChooserListener? = null
+	private var mSubtitleViewListener: SubtitleViewListener? = null
 
-import org.jetbrains.annotations.NotNull;
+	init {
+		if (context is Activity) {
+			setOwnerActivity(context)
+		}
+		setContentView(R.layout.dialog_subtitle)
+		initView(context)
+	}
 
-public class SubtitleDialog extends BaseDialog {
+	private fun initView(context: Context?) {
+		selectInternal = findViewById(R.id.selectInternal)
+		val selectLocal = findViewById<TextView>(R.id.selectLocal)
+		val selectRemote = findViewById<TextView>(R.id.selectRemote)
+		val subtitleSizeMinus = findViewById<TextView>(R.id.subtitleSizeMinus)
+		subtitleSizeText = findViewById(R.id.subtitleSizeText)
+		val subtitleSizePlus = findViewById<TextView>(R.id.subtitleSizePlus)
+		val subtitleTimeMinus = findViewById<TextView>(R.id.subtitleTimeMinus)
+		subtitleTimeText = findViewById(R.id.subtitleTimeText)
+		val subtitleTimePlus = findViewById<TextView>(R.id.subtitleTimePlus)
+		val subtitleStyleOne = findViewById<TextView>(R.id.subtitleStyleOne)
+		val subtitleStyleTwo = findViewById<TextView>(R.id.subtitleStyleTwo)
 
-    public TextView selectInternal;
-    private TextView subtitleSizeText;
-    private TextView subtitleTimeText;
+		selectLocal.setOnClickListener { view: View? ->
+			FastClickCheckUtil.check(view ?: return@setOnClickListener)
+			dismiss()
+			mLocalFileChooserListener?.openLocalFileChooserDialog()
+		}
 
-    private SearchSubtitleListener mSearchSubtitleListener;
-    private LocalFileChooserListener mLocalFileChooserListener;
-    private SubtitleViewListener mSubtitleViewListener;
+		selectRemote.setOnClickListener { view: View? ->
+			FastClickCheckUtil.check(view ?: return@setOnClickListener)
+			dismiss()
+			mSearchSubtitleListener?.openSearchSubtitleDialog()
+		}
 
-    public SubtitleDialog(@NonNull @NotNull Context context) {
-        super(context);
-        if (context instanceof Activity) {
-            setOwnerActivity((Activity) context);
-        }
-        setContentView(R.layout.dialog_subtitle);
-        initView(context);
-    }
+		val size = SubtitleHelper.getTextSize(ownerActivity ?: return)
+		subtitleSizeText?.text = size.toString()
 
-    private void initView(Context context) {
-        selectInternal = findViewById(R.id.selectInternal);
-        TextView selectLocal = findViewById(R.id.selectLocal);
-        TextView selectRemote = findViewById(R.id.selectRemote);
-        TextView subtitleSizeMinus = findViewById(R.id.subtitleSizeMinus);
-        subtitleSizeText = findViewById(R.id.subtitleSizeText);
-        TextView subtitleSizePlus = findViewById(R.id.subtitleSizePlus);
-        TextView subtitleTimeMinus = findViewById(R.id.subtitleTimeMinus);
-        subtitleTimeText = findViewById(R.id.subtitleTimeText);
-        TextView subtitleTimePlus = findViewById(R.id.subtitleTimePlus);
-        TextView subtitleStyleOne = findViewById(R.id.subtitleStyleOne);
-        TextView subtitleStyleTwo = findViewById(R.id.subtitleStyleTwo);
+		subtitleSizeMinus.setOnClickListener { view: View? ->
+			val sizeStr = subtitleSizeText?.text.toString()
+			var curSize = sizeStr.toInt()
+			curSize -= 2
+			if (curSize <= 12) {
+				curSize = 12
+			}
+			subtitleSizeText?.text = curSize.toString()
+			setTextSize(curSize)
+			mSubtitleViewListener?.setTextSize(curSize)
+		}
+		subtitleSizePlus.setOnClickListener { view: View? ->
+			val sizeStr = subtitleSizeText?.text.toString()
+			var curSize = sizeStr.toInt()
+			curSize += 2
+			if (curSize >= 60) {
+				curSize = 60
+			}
+			subtitleSizeText?.text = curSize.toString()
+			setTextSize(curSize)
+			mSubtitleViewListener?.setTextSize(curSize)
+		}
 
-        selectLocal.setOnClickListener(view -> {
-            FastClickCheckUtil.check(view);
-            dismiss();
-            mLocalFileChooserListener.openLocalFileChooserDialog();
-        });
+		val timeDelay = timeDelay
+		var timeStr = "0"
+		if (timeDelay != 0) {
+			val dbTimeDelay = timeDelay / 1000.0
+			timeStr = dbTimeDelay.toString()
+		}
+		subtitleTimeText?.text = timeStr
 
-        selectRemote.setOnClickListener(view -> {
-            FastClickCheckUtil.check(view);
-            dismiss();
-            mSearchSubtitleListener.openSearchSubtitleDialog();
-        });
+		subtitleTimeMinus.setOnClickListener { view: View? ->
+			FastClickCheckUtil.check(view ?: return@setOnClickListener)
+			var timeStr2 = subtitleTimeText?.text.toString()
+			var time = timeStr2.toFloat().toDouble()
+			val oneceDelay = -0.5
+			time += oneceDelay
+			timeStr2 = if (time == 0.0) {
+				"0"
+			} else {
+				time.toString()
+			}
+			subtitleTimeText?.text = timeStr2
+			val mseconds = (oneceDelay * 1000).toInt()
+			SubtitleHelper.timeDelay = (time * 1000).toInt()
+			mSubtitleViewListener?.setSubtitleDelay(mseconds)
+		}
+		subtitleTimePlus.setOnClickListener { view: View? ->
+			FastClickCheckUtil.check(view ?: return@setOnClickListener)
+			var timeStr1 = subtitleTimeText?.text.toString()
+			var time = timeStr1.toFloat().toDouble()
+			val oneceDelay = 0.5
+			time += oneceDelay
+			timeStr1 = if (time == 0.0) {
+				"0"
+			} else {
+				time.toString()
+			}
+			subtitleTimeText?.text = timeStr1
+			val mseconds = (oneceDelay * 1000).toInt()
+			SubtitleHelper.timeDelay = (time * 1000).toInt()
+			mSubtitleViewListener?.setSubtitleDelay(mseconds)
+		}
+		selectInternal?.setOnClickListener { view: View? ->
+			FastClickCheckUtil.check(view ?: return@setOnClickListener)
+			dismiss()
+			mSubtitleViewListener?.selectInternalSubtitle()
+		}
 
-        int size = SubtitleHelper.getTextSize(getOwnerActivity());
-        subtitleSizeText.setText(Integer.toString(size));
+		subtitleStyleOne.setOnClickListener { view: View? ->
+			val style = 0
+			dismiss()
+			mSubtitleViewListener?.setTextStyle(style)
+			Toast.makeText(getContext(), "设置样式成功", Toast.LENGTH_SHORT).show()
+		}
 
-        subtitleSizeMinus.setOnClickListener(view -> {
-            String sizeStr = subtitleSizeText.getText().toString();
-            int curSize = Integer.parseInt(sizeStr);
-            curSize -= 2;
-            if (curSize <= 12) {
-                curSize = 12;
-            }
-            subtitleSizeText.setText(Integer.toString(curSize));
-            SubtitleHelper.setTextSize(curSize);
-            mSubtitleViewListener.setTextSize(curSize);
-        });
-        subtitleSizePlus.setOnClickListener(view -> {
-            String sizeStr = subtitleSizeText.getText().toString();
-            int curSize = Integer.parseInt(sizeStr);
-            curSize += 2;
-            if (curSize >= 60) {
-                curSize = 60;
-            }
-            subtitleSizeText.setText(Integer.toString(curSize));
-            SubtitleHelper.setTextSize(curSize);
-            mSubtitleViewListener.setTextSize(curSize);
-        });
+		subtitleStyleTwo.setOnClickListener { view: View? ->
+			val style = 1
+			dismiss()
+			mSubtitleViewListener?.setTextStyle(style)
+			Toast.makeText(getContext(), "设置样式成功", Toast.LENGTH_SHORT).show()
+		}
+	}
 
-        int timeDelay = SubtitleHelper.getTimeDelay();
-        String timeStr = "0";
-        if (timeDelay != 0) {
-            double dbTimeDelay = timeDelay / 1000d;
-            timeStr = Double.toString(dbTimeDelay);
-        }
-        subtitleTimeText.setText(timeStr);
+	fun setLocalFileChooserListener(localFileChooserListener: LocalFileChooserListener) {
+		mLocalFileChooserListener = localFileChooserListener
+	}
 
-        subtitleTimeMinus.setOnClickListener(view -> {
-            FastClickCheckUtil.check(view);
-            String timeStr2 = subtitleTimeText.getText().toString();
-            double time = Float.parseFloat(timeStr2);
-            double oneceDelay = -0.5;
-            time += oneceDelay;
-            if (time == 0.0) {
-                timeStr2 = "0";
-            } else {
-                timeStr2 = Double.toString(time);
-            }
-            subtitleTimeText.setText(timeStr2);
-            int mseconds = (int) (oneceDelay * 1000);
-            SubtitleHelper.setTimeDelay((int) (time * 1000));
-            mSubtitleViewListener.setSubtitleDelay(mseconds);
-        });
-        subtitleTimePlus.setOnClickListener(view -> {
-            FastClickCheckUtil.check(view);
-            String timeStr1 = subtitleTimeText.getText().toString();
-            double time = Float.parseFloat(timeStr1);
-            double oneceDelay = 0.5;
-            time += oneceDelay;
-            if (time == 0.0) {
-                timeStr1 = "0";
-            } else {
-                timeStr1 = Double.toString(time);
-            }
-            subtitleTimeText.setText(timeStr1);
-            int mseconds = (int) (oneceDelay * 1000);
-            SubtitleHelper.setTimeDelay((int) (time * 1000));
-            mSubtitleViewListener.setSubtitleDelay(mseconds);
-        });
-        selectInternal.setOnClickListener(view -> {
-            FastClickCheckUtil.check(view);
-            dismiss();
-            mSubtitleViewListener.selectInternalSubtitle();
-        });
+	fun setSearchSubtitleListener(searchSubtitleListener: SearchSubtitleListener) {
+		mSearchSubtitleListener = searchSubtitleListener
+	}
 
-        subtitleStyleOne.setOnClickListener(view -> {
-            int style = 0;
-            dismiss();
-            mSubtitleViewListener.setTextStyle(style);
-            Toast.makeText(getContext(), "设置样式成功", Toast.LENGTH_SHORT).show();
-        });
+	fun setSubtitleViewListener(subtitleViewListener: SubtitleViewListener) {
+		mSubtitleViewListener = subtitleViewListener
+	}
 
-        subtitleStyleTwo.setOnClickListener(view -> {
-            int style = 1;
-            dismiss();
-            mSubtitleViewListener.setTextStyle(style);
-            Toast.makeText(getContext(), "设置样式成功", Toast.LENGTH_SHORT).show();
-        });
-    }
+	interface LocalFileChooserListener {
+		fun openLocalFileChooserDialog()
+	}
 
-    public void setLocalFileChooserListener(LocalFileChooserListener localFileChooserListener) {
-        mLocalFileChooserListener = localFileChooserListener;
-    }
+	interface SearchSubtitleListener {
+		fun openSearchSubtitleDialog()
+	}
 
-    public void setSearchSubtitleListener(SearchSubtitleListener searchSubtitleListener) {
-        mSearchSubtitleListener = searchSubtitleListener;
-    }
+	interface SubtitleViewListener {
+		fun setTextSize(size: Int)
 
-    public void setSubtitleViewListener(SubtitleViewListener subtitleViewListener) {
-        mSubtitleViewListener = subtitleViewListener;
-    }
+		fun setSubtitleDelay(milliseconds: Int)
 
-    public interface LocalFileChooserListener {
-        void openLocalFileChooserDialog();
-    }
+		fun selectInternalSubtitle()
 
-    public interface SearchSubtitleListener {
-        void openSearchSubtitleDialog();
-    }
-
-    public interface SubtitleViewListener {
-        void setTextSize(int size);
-
-        void setSubtitleDelay(int milliseconds);
-
-        void selectInternalSubtitle();
-
-        void setTextStyle(int style);
-    }
+		fun setTextStyle(style: Int)
+	}
 }

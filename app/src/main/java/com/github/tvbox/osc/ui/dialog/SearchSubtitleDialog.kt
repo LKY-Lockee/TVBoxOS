@@ -1,194 +1,180 @@
-package com.github.tvbox.osc.ui.dialog;
+package com.github.tvbox.osc.ui.dialog
 
-import android.app.Activity;
-import android.content.Context;
-import android.text.TextUtils;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.app.Activity
+import android.content.Context
+import android.text.TextUtils
+import android.view.View
+import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
+import com.chad.library.adapter.base.BaseQuickAdapter
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.bean.Subtitle
+import com.github.tvbox.osc.bean.SubtitleData
+import com.github.tvbox.osc.ui.adapter.SearchSubtitleAdapter
+import com.github.tvbox.osc.util.FastClickCheckUtil
+import com.github.tvbox.osc.viewmodel.SubtitleViewModel
+import com.owen.tvrecyclerview.widget.TvRecyclerView
+import com.owen.tvrecyclerview.widget.V7LinearLayoutManager
+import kotlin.math.min
 
-import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.lifecycle.ViewModelStoreOwner;
+open class SearchSubtitleDialog(private val mContext: Context) : BaseDialog(mContext) {
+	private val maxPage = 5
+	private var mGridView: TvRecyclerView? = null
+	private var searchAdapter: SearchSubtitleAdapter? = null
+	private var subtitleSearchEt: EditText? = null
+	private var mSubtitleLoader: SubtitleLoader? = null
+	private var loadingBar: ProgressBar? = null
+	private var subtitleViewModel: SubtitleViewModel? = null
+	private var page = 1
+	private var searchWord = ""
 
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.bean.Subtitle;
-import com.github.tvbox.osc.ui.adapter.SearchSubtitleAdapter;
-import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.viewmodel.SubtitleViewModel;
-import com.owen.tvrecyclerview.widget.TvRecyclerView;
-import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
+	private var zipSubtitles: MutableList<Subtitle>? = ArrayList()
+	private var isSearchPag = true
 
-import org.jetbrains.annotations.NotNull;
+	init {
+		if (mContext is Activity) {
+			setOwnerActivity(mContext)
+		}
+		setContentView(R.layout.dialog_search_subtitle)
+		initView(mContext)
+		initViewModel()
+	}
 
-import java.util.ArrayList;
-import java.util.List;
+	protected fun initView(context: Context?) {
+		loadingBar = findViewById(R.id.loadingBar)
+		mGridView = findViewById(R.id.mGridView)
+		subtitleSearchEt = findViewById(R.id.input)
+		val subtitleSearchBtn = findViewById<TextView>(R.id.inputSubmit)
+		searchAdapter = SearchSubtitleAdapter()
+		mGridView?.setHasFixedSize(true)
+		mGridView?.setLayoutManager(V7LinearLayoutManager(getContext(), 1, false))
+		mGridView?.adapter = searchAdapter
+		searchAdapter?.setOnItemClickListener { adapter: BaseQuickAdapter<*, *>?, view: View?, position: Int ->
+			FastClickCheckUtil.check(view ?: return@setOnItemClickListener)
+			val subtitle = (searchAdapter ?: return@setOnItemClickListener).data[position]
+			//加载字幕
+			if (mSubtitleLoader != null) {
+				if (subtitle.isZip) {
+					isSearchPag = false
+					loadingBar?.visibility = View.VISIBLE
+					mGridView?.visibility = View.GONE
+					subtitleViewModel?.getSearchResultSubtitleUrls(subtitle)
+				} else {
+					loadSubtitle(subtitle)
+					dismiss()
+				}
+			}
+		}
 
-public class SearchSubtitleDialog extends BaseDialog {
+		searchAdapter?.setOnLoadMoreListener({
+			if ((searchAdapter ?: return@setOnLoadMoreListener).data[0].isZip) {
+				subtitleViewModel?.searchResult(searchWord, page)
+			}
+		}, mGridView)
 
-    private final Context mContext;
-    private final int maxPage = 5;
-    private TvRecyclerView mGridView;
-    private SearchSubtitleAdapter searchAdapter;
-    private EditText subtitleSearchEt;
-    private SubtitleLoader mSubtitleLoader;
-    private ProgressBar loadingBar;
-    private SubtitleViewModel subtitleViewModel;
-    private int page = 1;
-    private String searchWord = "";
+		subtitleSearchBtn.setOnClickListener { v: View? ->
+			FastClickCheckUtil.check(v ?: return@setOnClickListener)
+			val wd = (subtitleSearchEt ?: return@setOnClickListener).text.toString().trim { it <= ' ' }
+			search(wd)
+		}
+		searchAdapter?.setNewData(ArrayList<Subtitle?>())
+	}
 
-    private List<Subtitle> zipSubtitles = new ArrayList<>();
-    private boolean isSearchPag = true;
+	fun setSearchWord(wd: String) {
+		var wd = wd
+		wd = wd.replace("（|\\(|\\[|【|\\.mp4|\\.mkv|\\.avi|\\.MP4|\\.MKV|\\.AVI".toRegex(), "")
+		wd = wd.replace("[：:）)\\]】.]".toRegex(), " ")
+		val len = wd.length
+		val finalLen = min(len, 36)
+		wd = wd.substring(0, finalLen).trim { it <= ' ' }
+		subtitleSearchEt?.setText(wd)
+		subtitleSearchEt?.setSelection(wd.length)
+		subtitleSearchEt?.requestFocus()
+	}
 
+	fun search(wd: String) {
+		isSearchPag = true
+		searchAdapter?.setNewData(ArrayList<Subtitle?>())
+		if (!TextUtils.isEmpty(wd)) {
+			loadingBar?.visibility = View.VISIBLE
+			mGridView?.visibility = View.GONE
+			searchWord = wd
+			subtitleViewModel?.searchResult(wd, 1.also { page = it })
+		} else {
+			Toast.makeText(context, "输入内容不能为空", Toast.LENGTH_SHORT).show()
+		}
+	}
 
-    public SearchSubtitleDialog(@NonNull @NotNull Context context) {
-        super(context);
-        mContext = context;
-        if (context instanceof Activity) {
-            setOwnerActivity((Activity) context);
-        }
-        setContentView(R.layout.dialog_search_subtitle);
-        initView(context);
-        initViewModel();
-    }
+	private fun initViewModel() {
+		subtitleViewModel = ViewModelProvider((mContext as ViewModelStoreOwner?) ?: return)[SubtitleViewModel::class.java]
+		subtitleViewModel?.searchResult?.observe(mContext as LifecycleOwner) { subtitleData: SubtitleData? ->
+			val data = subtitleData?.subtitleList
+			loadingBar?.visibility = View.GONE
+			mGridView?.visibility = View.VISIBLE
+			if (data == null) {
+				mGridView?.post { Toast.makeText(context, "未查询到匹配字幕", Toast.LENGTH_SHORT).show() }
+				return@observe
+			}
+			if (!data.isEmpty()) {
+				mGridView?.requestFocus()
+				if (subtitleData.isZip) {
+					if (subtitleData.isNew) {
+						searchAdapter?.setNewData(data)
+						zipSubtitles = data as MutableList<Subtitle>?
+					} else {
+						searchAdapter?.addData(data)
+						zipSubtitles?.addAll(data)
+					}
+					page++
+					if (page > maxPage) {
+						searchAdapter?.loadMoreEnd()
+						searchAdapter?.setEnableLoadMore(false)
+					} else {
+						searchAdapter?.loadMoreComplete()
+						searchAdapter?.setEnableLoadMore(true)
+					}
+				} else {
+					searchAdapter?.loadMoreComplete()
+					searchAdapter?.setNewData(data)
+					searchAdapter?.setEnableLoadMore(false)
+				}
+			} else {
+				if (page > maxPage) {
+					searchAdapter?.loadMoreEnd()
+				} else {
+					searchAdapter?.loadMoreComplete()
+				}
+				searchAdapter?.setEnableLoadMore(false)
+			}
+		}
+	}
 
-    protected void initView(Context context) {
-        loadingBar = findViewById(R.id.loadingBar);
-        mGridView = findViewById(R.id.mGridView);
-        subtitleSearchEt = findViewById(R.id.input);
-        TextView subtitleSearchBtn = findViewById(R.id.inputSubmit);
-        searchAdapter = new SearchSubtitleAdapter();
-        mGridView.setHasFixedSize(true);
-        mGridView.setLayoutManager(new V7LinearLayoutManager(getContext(), 1, false));
-        mGridView.setAdapter(searchAdapter);
-        searchAdapter.setOnItemClickListener((adapter, view, position) -> {
-            FastClickCheckUtil.check(view);
-            Subtitle subtitle = searchAdapter.getData().get(position);
-            //加载字幕
-            if (mSubtitleLoader != null) {
-                if (subtitle.getIsZip()) {
-                    isSearchPag = false;
-                    loadingBar.setVisibility(View.VISIBLE);
-                    mGridView.setVisibility(View.GONE);
-                    subtitleViewModel.getSearchResultSubtitleUrls(subtitle);
-                } else {
-                    loadSubtitle(subtitle);
-                    dismiss();
-                }
-            }
-        });
+	private fun loadSubtitle(subtitle: Subtitle) {
+		subtitleViewModel?.getSubtitleUrl(subtitle, mSubtitleLoader ?: return)
+	}
 
-        searchAdapter.setOnLoadMoreListener(() -> {
-            if (searchAdapter.getData().get(0).getIsZip()) {
-                subtitleViewModel.searchResult(searchWord, page);
-            }
-        }, mGridView);
+	fun setSubtitleLoader(subtitleLoader: SubtitleLoader?) {
+		mSubtitleLoader = subtitleLoader
+	}
 
-        subtitleSearchBtn.setOnClickListener(v -> {
-            FastClickCheckUtil.check(v);
-            String wd = subtitleSearchEt.getText().toString().trim();
-            search(wd);
-        });
-        searchAdapter.setNewData(new ArrayList<>());
-    }
+	override fun onBackPressed() {
+		if (!isSearchPag) {
+			isSearchPag = true
+			loadingBar?.visibility = View.GONE
+			mGridView?.visibility = View.VISIBLE
+			searchAdapter?.setNewData(zipSubtitles)
+			searchAdapter?.setEnableLoadMore(page < maxPage)
+			return
+		}
+		dismiss()
+	}
 
-    public void setSearchWord(String wd) {
-        wd = wd.replaceAll("(?:（|\\(|\\[|【|\\.mp4|\\.mkv|\\.avi|\\.MP4|\\.MKV|\\.AVI)", "");
-        wd = wd.replaceAll("(?:：|\\:|）|\\)|\\]|】|\\.)", " ");
-        int len = wd.length();
-        int finalLen = Math.min(len, 36);
-        wd = wd.substring(0, finalLen).trim();
-        subtitleSearchEt.setText(wd);
-        subtitleSearchEt.setSelection(wd.length());
-        subtitleSearchEt.requestFocus();
-    }
-
-    public void search(String wd) {
-        isSearchPag = true;
-        searchAdapter.setNewData(new ArrayList<>());
-        if (!TextUtils.isEmpty(wd)) {
-            loadingBar.setVisibility(View.VISIBLE);
-            mGridView.setVisibility(View.GONE);
-            searchWord = wd;
-            subtitleViewModel.searchResult(wd, page = 1);
-        } else {
-            Toast.makeText(getContext(), "输入内容不能为空", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void initViewModel() {
-        subtitleViewModel = new ViewModelProvider((ViewModelStoreOwner) mContext).get(SubtitleViewModel.class);
-        subtitleViewModel.searchResult.observe((LifecycleOwner) mContext, subtitleData -> {
-            List<Subtitle> data = subtitleData.getSubtitleList();
-            loadingBar.setVisibility(View.GONE);
-            mGridView.setVisibility(View.VISIBLE);
-            if (data == null) {
-                mGridView.post(() -> Toast.makeText(getContext(), "未查询到匹配字幕", Toast.LENGTH_SHORT).show());
-                return;
-            }
-
-            if (!data.isEmpty()) {
-                mGridView.requestFocus();
-                if (subtitleData.getIsZip()) {
-                    if (subtitleData.getIsNew()) {
-                        searchAdapter.setNewData(data);
-                        zipSubtitles = data;
-                    } else {
-                        searchAdapter.addData(data);
-                        zipSubtitles.addAll(data);
-                    }
-                    page++;
-                    if (page > maxPage) {
-                        searchAdapter.loadMoreEnd();
-                        searchAdapter.setEnableLoadMore(false);
-                    } else {
-                        searchAdapter.loadMoreComplete();
-                        searchAdapter.setEnableLoadMore(true);
-                    }
-                } else {
-                    searchAdapter.loadMoreComplete();
-                    searchAdapter.setNewData(data);
-                    searchAdapter.setEnableLoadMore(false);
-                }
-            } else {
-                if (page > maxPage) {
-                    searchAdapter.loadMoreEnd();
-                } else {
-                    searchAdapter.loadMoreComplete();
-                }
-                searchAdapter.setEnableLoadMore(false);
-            }
-
-        });
-    }
-
-    private void loadSubtitle(Subtitle subtitle) {
-        subtitleViewModel.getSubtitleUrl(subtitle, mSubtitleLoader);
-    }
-
-    public void setSubtitleLoader(SubtitleLoader subtitleLoader) {
-        mSubtitleLoader = subtitleLoader;
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (!isSearchPag) {
-            isSearchPag = true;
-            loadingBar.setVisibility(View.GONE);
-            mGridView.setVisibility(View.VISIBLE);
-            searchAdapter.setNewData(zipSubtitles);
-            searchAdapter.setEnableLoadMore(page < maxPage);
-            return;
-        }
-        dismiss();
-    }
-
-    public interface SubtitleLoader {
-        void loadSubtitle(Subtitle subtitle);
-    }
-
-
+	interface SubtitleLoader {
+		fun loadSubtitle(subtitle: Subtitle?)
+	}
 }

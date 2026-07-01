@@ -1,123 +1,105 @@
-package com.github.tvbox.osc.ui.dialog;
+package com.github.tvbox.osc.ui.dialog
 
-import android.app.Dialog;
-import android.content.Context;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.app.Dialog
+import android.content.Context
+import android.content.DialogInterface
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.callback.EmptyCallback
+import com.github.tvbox.osc.callback.LoadingCallback
+import com.github.tvbox.osc.event.RefreshEvent
+import com.github.tvbox.osc.player.thirdparty.RemoteTVBox.available
+import com.github.tvbox.osc.ui.activity.SettingsActivity
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.kingja.loadsir.core.LoadService
+import com.kingja.loadsir.core.LoadSir
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 
-import androidx.annotation.NonNull;
+open class SearchRemoteTvDialog(private val context: Context) {
+	private val dialog: Dialog
+	private val view: View = LayoutInflater.from(context).inflate(R.layout.dialog_search_remotetv, null)
+	private var mLoadService: LoadService<*>? = null
 
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.callback.EmptyCallback;
-import com.github.tvbox.osc.callback.LoadingCallback;
-import com.github.tvbox.osc.event.RefreshEvent;
-import com.github.tvbox.osc.player.thirdparty.RemoteTVBox;
-import com.github.tvbox.osc.ui.activity.SettingsActivity;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.kingja.loadsir.callback.Callback;
-import com.kingja.loadsir.core.LoadService;
-import com.kingja.loadsir.core.LoadSir;
+	init {
+		dialog = MaterialAlertDialogBuilder(context)
+			.setView(view)
+			.create()
+		EventBus.getDefault().register(this)
 
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-import org.jetbrains.annotations.NotNull;
+		val btnCancel = view.findViewById<Button>(R.id.btnCancel)
+		btnCancel.setOnClickListener { v: View? -> dismiss() }
+	}
 
+	fun show() {
+		dialog.show()
+	}
 
-public class SearchRemoteTvDialog {
-    private final Dialog dialog;
-    private final Context context;
-    private final View view;
-    private LoadService<?> mLoadService;
+	fun dismiss() {
+		EventBus.getDefault().unregister(this)
+		dialog.dismiss()
+	}
 
-    public SearchRemoteTvDialog(@NonNull @NotNull Context context) {
-        this.context = context;
-        view = LayoutInflater.from(context).inflate(R.layout.dialog_search_remotetv, null);
-        dialog = new MaterialAlertDialogBuilder(context)
-                .setView(view)
-                .create();
-        EventBus.getDefault().register(this);
+	@Subscribe(threadMode = ThreadMode.MAIN)
+	fun refresh(event: RefreshEvent) {
+		if (event.type == RefreshEvent.TYPE_SETTING_SEARCH_TV) {
+			showRemoteTvDialog(SettingsActivity.foundRemoteTv)
+		}
+	}
 
-        Button btnCancel = view.findViewById(R.id.btnCancel);
-        btnCancel.setOnClickListener(v -> dismiss());
-    }
+	fun setTip(tip: String?) {
+		(view.findViewById<View?>(R.id.title) as TextView).text = tip
+		setLoadSir(view.findViewById(R.id.list))
+		showLoading()
+	}
 
-    public void show() {
-        dialog.show();
-    }
+	private fun showRemoteTvDialog(found: Boolean) {
+		if (!found) {
+			SettingsActivity.loadingSearchRemoteTvDialog?.showEmpty()
+			Toast.makeText(context, "未找到附近TVBox", Toast.LENGTH_SHORT).show()
+			return
+		}
+		SettingsActivity.loadingSearchRemoteTvDialog?.dismiss()
+		available = SettingsActivity.remoteTvHostList[0]
 
-    public void dismiss() {
-        EventBus.getDefault().unregister(this);
-        dialog.dismiss();
-    }
+		val hosts = SettingsActivity.remoteTvHostList.toTypedArray<String?>()
+		MaterialAlertDialogBuilder(context)
+			.setTitle("附近TVBox")
+			.setSingleChoiceItems(hosts, 0) { dlg: DialogInterface?, which: Int ->
+				available = hosts[which]
+				Toast.makeText(context, "设置成功", Toast.LENGTH_SHORT).show()
+				dlg?.dismiss()
+			}
+			.setNegativeButton("取消", null)
+			.show()
+	}
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void refresh(RefreshEvent event) {
-        if (event.type == RefreshEvent.TYPE_SETTING_SEARCH_TV) {
-            showRemoteTvDialog(SettingsActivity.foundRemoteTv);
-        }
-    }
+	protected fun setLoadSir(view: View?) {
+		if (mLoadService == null) {
+			mLoadService = LoadSir.getDefault().register(view) { v: View? -> }
+		}
+	}
 
-    public void setTip(String tip) {
-        ((TextView) view.findViewById(R.id.title)).setText(tip);
-        setLoadSir(view.findViewById(R.id.list));
-        showLoading();
-    }
+	fun showLoading() {
+		if (mLoadService != null) {
+			(mLoadService ?: return).showCallback(LoadingCallback::class.java)
+		}
+	}
 
-    private void showRemoteTvDialog(boolean found) {
-        if (!found) {
-            if (SettingsActivity.loadingSearchRemoteTvDialog != null) {
-                SettingsActivity.loadingSearchRemoteTvDialog.showEmpty();
-            }
-            Toast.makeText(context, "未找到附近TVBox", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (SettingsActivity.loadingSearchRemoteTvDialog != null) {
-            SettingsActivity.loadingSearchRemoteTvDialog.dismiss();
-        }
-        if (SettingsActivity.remoteTvHostList == null) {
-            return;
-        }
-        RemoteTVBox.setAvailable(SettingsActivity.remoteTvHostList.get(0));
+	fun showEmpty() {
+		if (null != mLoadService) {
+			(mLoadService ?: return).showCallback(EmptyCallback::class.java)
+		}
+	}
 
-        String[] hosts = SettingsActivity.remoteTvHostList.toArray(new String[0]);
-        new MaterialAlertDialogBuilder(context)
-                .setTitle("附近TVBox")
-                .setSingleChoiceItems(hosts, 0, (dlg, which) -> {
-                    RemoteTVBox.setAvailable(hosts[which]);
-                    Toast.makeText(context, "设置成功", Toast.LENGTH_SHORT).show();
-                    dlg.dismiss();
-                })
-                .setNegativeButton("取消", null)
-                .show();
-    }
-
-    protected void setLoadSir(View view) {
-        if (mLoadService == null) {
-            mLoadService = LoadSir.getDefault().register(view, (Callback.OnReloadListener) v -> {
-            });
-        }
-    }
-
-    public void showLoading() {
-        if (mLoadService != null) {
-            mLoadService.showCallback(LoadingCallback.class);
-        }
-    }
-
-    public void showEmpty() {
-        if (null != mLoadService) {
-            mLoadService.showCallback(EmptyCallback.class);
-        }
-    }
-
-    public void showSuccess() {
-        if (null != mLoadService) {
-            mLoadService.showSuccess();
-        }
-    }
-
+	fun showSuccess() {
+		if (null != mLoadService) {
+			(mLoadService ?: return).showSuccess()
+		}
+	}
 }

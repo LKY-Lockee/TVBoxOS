@@ -74,7 +74,6 @@ class SettingsActivity : BaseActivity() {
 	private val mHandler = Handler(Looper.getMainLooper())
 	var devMode: String = ""
 	private val mDevModeRun = Runnable { devMode = "" }
-	private var loadingSearchRemoteTvDialog: SearchRemoteTvDialog? = null
 	private var adapter: SettingM3Adapter? = null
 	private val settingItems: MutableList<SettingItem> = ArrayList()
 	private var homeSourceKey: String? = null
@@ -910,6 +909,7 @@ class SettingsActivity : BaseActivity() {
 
 	companion object {
 		var callback: DevModeCallback? = null
+		var loadingSearchRemoteTvDialog: SearchRemoteTvDialog? = null
 		var remoteTvHostList: MutableList<String> = mutableListOf()
 		var foundRemoteTv: Boolean = false
 	}

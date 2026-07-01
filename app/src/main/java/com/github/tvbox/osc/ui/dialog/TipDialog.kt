@@ -1,36 +1,37 @@
-package com.github.tvbox.osc.ui.dialog;
+package com.github.tvbox.osc.ui.dialog
 
-import android.content.Context;
-import android.widget.TextView;
+import android.content.Context
+import android.content.DialogInterface
+import android.view.View
+import android.widget.TextView
+import com.github.tvbox.osc.R
 
-import androidx.annotation.NonNull;
+class TipDialog(
+	context: Context,
+	tip: String?,
+	left: String?,
+	right: String?,
+	listener: OnListener
+) : BaseDialog(context) {
+	init {
+		setContentView(R.layout.dialog_tip)
+		setCanceledOnTouchOutside(false)
+		val tipInfo = findViewById<TextView>(R.id.tipInfo)
+		val leftBtn = findViewById<TextView>(R.id.leftBtn)
+		val rightBtn = findViewById<TextView>(R.id.rightBtn)
+		tipInfo.text = tip
+		leftBtn.text = left
+		rightBtn.text = right
+		leftBtn.setOnClickListener { v: View? -> listener.left() }
+		rightBtn.setOnClickListener { v: View? -> listener.right() }
+		setOnCancelListener { dialog: DialogInterface? -> listener.cancel() }
+	}
 
-import com.github.tvbox.osc.R;
+	interface OnListener {
+		fun left()
 
-import org.jetbrains.annotations.NotNull;
+		fun right()
 
-public class TipDialog extends BaseDialog {
-
-    public TipDialog(@NonNull @NotNull Context context, String tip, String left, String right, OnListener listener) {
-        super(context);
-        setContentView(R.layout.dialog_tip);
-        setCanceledOnTouchOutside(false);
-        TextView tipInfo = findViewById(R.id.tipInfo);
-        TextView leftBtn = findViewById(R.id.leftBtn);
-        TextView rightBtn = findViewById(R.id.rightBtn);
-        tipInfo.setText(tip);
-        leftBtn.setText(left);
-        rightBtn.setText(right);
-        leftBtn.setOnClickListener(v -> listener.left());
-        rightBtn.setOnClickListener(v -> listener.right());
-        setOnCancelListener(dialog -> listener.cancel());
-    }
-
-    public interface OnListener {
-        void left();
-
-        void right();
-
-        void cancel();
-    }
+		fun cancel()
+	}
 }
