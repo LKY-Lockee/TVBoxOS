@@ -41,8 +41,8 @@ class PinyinAdapter : BaseQuickAdapter<SearchItem, BaseViewHolder>(R.layout.item
 	}
 
 	class SearchItem(
-		@JvmField var title: String?, // 0: 历史, 1: 热搜, 2: 搜索建议
-		@JvmField var type: Int
+		var title: String?, // 0: 历史, 1: 热搜, 2: 搜索建议
+		var type: Int
 	) {
 		init {
 			this.type = type

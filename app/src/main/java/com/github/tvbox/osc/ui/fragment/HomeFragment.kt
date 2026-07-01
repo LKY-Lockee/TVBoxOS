@@ -15,15 +15,15 @@ import com.github.tvbox.osc.base.BaseLazyFragment
 import com.github.tvbox.osc.base.ToolbarMenuProvider
 import com.github.tvbox.osc.bean.AbsSortXml
 import com.github.tvbox.osc.bean.MovieSort.SortData
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.ui.activity.HomeActivity
 import com.github.tvbox.osc.ui.adapter.HomePageAdapter
 import com.github.tvbox.osc.util.DefaultConfig
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.viewmodel.SourceViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayout.OnTabSelectedListener
-import com.orhanobut.hawk.Hawk
 
 class HomeFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvider {
 	private var mTabLayout: TabLayout? = null
@@ -150,7 +150,7 @@ class HomeFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvider 
 		if (!sortDataList.isEmpty()) {
 			for (data in sortDataList) {
 				if (data.id == "my0") {
-					if (Hawk.get(HawkConfig.HOME_REC, 0) == 1 && absXml != null && absXml.videoList != null && absXml.videoList?.isEmpty() != true) {
+					if (PreferenceStore.get(ConfigKey.HOME_REC, 0) == 1 && absXml != null && absXml.videoList != null && absXml.videoList?.isEmpty() != true) {
 						fragments.add(UserFragment(data))
 					} else {
 						fragments.add(UserFragment(null))

@@ -3,13 +3,13 @@ package com.github.tvbox.osc.player
 import android.content.Context
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.bean.IJKCode
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.util.AudioTrackMemory
 import com.github.tvbox.osc.util.FileUtils
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.MD5
 import com.github.tvbox.osc.util.TVBoxRuntimeLog
-import com.orhanobut.hawk.Hawk
 import tv.danmaku.ijk.media.player.IMediaPlayer
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
 import tv.danmaku.ijk.media.player.misc.ITrackInfo
@@ -53,7 +53,7 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 		mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "dns_cache_timeout", -1)
 		mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "safe", 0)
 
-		if (Hawk.get(HawkConfig.PLAYER_IS_LIVE)) {
+		if (PreferenceStore.get(ConfigKey.PLAYER_IS_LIVE, false)) {
 			TVBoxRuntimeLog.i("echo-type-直播")
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_PLAYER, "max_cached_duration", 300)
 			mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "flush_packets", 1)
@@ -81,7 +81,7 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 					mMediaPlayer.setOption(IjkMediaPlayer.OPT_CATEGORY_FORMAT, "analyzeduration", (2 * 1000 * 1000).toLong())
 				}
 
-				CACHE_VIDEO -> if (Hawk.get(HawkConfig.IJK_CACHE_PLAY, false)) {
+				CACHE_VIDEO -> if (PreferenceStore.get(ConfigKey.IJK_CACHE_PLAY, false)) {
 					val cachePath = FileUtils.cachePath + "/ijkcaches/"
 					val cacheFile = File(cachePath)
 					if (!cacheFile.exists()) cacheFile.mkdirs()
@@ -98,7 +98,7 @@ open class IjkMediaPlayer(context: Context, private val codec: IJKCode?) : IjkPl
 				}
 
 				M3U8 -> // 直播且是ijk的时候自动自动走代理解决DNS
-					if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false)) {
+					if (PreferenceStore.get(ConfigKey.PLAYER_IS_LIVE, false)) {
 						val uri = URI(resolvedPath)
 						val host = uri.host
 						if (ITV_TARGET_DOMAIN.equals(host, ignoreCase = true)) resolvedPath = ControlManager.instance.getAddress(true) + "proxy?go=live&type=m3u8&url=" + URLEncoder.encode(resolvedPath, "UTF-8")

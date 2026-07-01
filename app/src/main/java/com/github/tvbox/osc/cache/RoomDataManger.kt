@@ -2,14 +2,14 @@ package com.github.tvbox.osc.cache
 
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.data.AppDataManager
-import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.util.HistoryHelper
 import com.google.gson.ExclusionStrategy
 import com.google.gson.FieldAttributes
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
-import com.orhanobut.hawk.Hawk
 
 /**
  * @author pj567
@@ -98,7 +98,7 @@ object RoomDataManger {
 
 	fun getAllVodRecord(limit: Int): List<VodInfo> {
 		val count = AppDataManager.get().vodRecordDao.getCount()
-		val index = Hawk.get(HawkConfig.HISTORY_NUM, 0)
+		val index = PreferenceStore.get(ConfigKey.HISTORY_NUM, 0)
 		val hisNum = HistoryHelper.getHisNum(index)
 		if (count > hisNum) {
 			AppDataManager.get().vodRecordDao.reserver(hisNum)

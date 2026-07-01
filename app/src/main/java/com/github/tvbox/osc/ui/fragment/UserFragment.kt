@@ -3,14 +3,14 @@ package com.github.tvbox.osc.ui.fragment
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort.SortData
 import com.github.tvbox.osc.cache.RoomDataManger.getAllVodRecord
-import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.util.UA.randomOne
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
 import com.lzy.okgo.model.Response
-import com.orhanobut.hawk.Hawk
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.min
@@ -28,7 +28,7 @@ class UserFragment : GridFragment {
 	override fun onFragmentResume() {
 		super.onFragmentResume()
 
-		if (Hawk.get(HawkConfig.HOME_REC, 0) == 2) {
+		if (PreferenceStore.get(ConfigKey.HOME_REC, 0) == 2) {
 			val allVodRecord = getAllVodRecord(20)
 			val vodList: MutableList<Movie.Video?> = ArrayList()
 			for (vodInfo in allVodRecord) {
@@ -51,7 +51,7 @@ class UserFragment : GridFragment {
 	}
 
 	override fun initData() {
-		if (Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
+		if (PreferenceStore.get(ConfigKey.HOME_REC, 0) == 1) {
 			super.initData()
 		} else {
 			showLoading()
@@ -66,9 +66,9 @@ class UserFragment : GridFragment {
 			val month = cal.get(Calendar.MONTH) + 1
 			val day = cal.get(Calendar.DATE)
 			val today = String.format(Locale.getDefault(), "%d%d%d", year, month, day)
-			val requestDay = Hawk.get("home_hot_day", "")
+			val requestDay = PreferenceStore.get("home_hot_day", "")
 			if (requestDay == today) {
-				val json = Hawk.get("home_hot", "")
+				val json = PreferenceStore.get("home_hot", "")
 				if (!json.isEmpty()) {
 					val hotMovies = loadHots(json)
 					if (!hotMovies.isEmpty()) {
@@ -89,8 +89,8 @@ class UserFragment : GridFragment {
 				.execute(object : AbsCallback<String?>() {
 					override fun onSuccess(response: Response<String?>) {
 						val netJson = response.body()
-						Hawk.put("home_hot_day", today)
-						Hawk.put<String?>("home_hot", netJson)
+						PreferenceStore.put("home_hot_day", today)
+						PreferenceStore.put("home_hot", netJson)
 						mActivity.runOnUiThread {
 							val hotMovies = loadHots(netJson)
 							gridAdapter?.setNewData(hotMovies)
@@ -111,7 +111,6 @@ class UserFragment : GridFragment {
 						}
 					}
 
-					@Throws(Throwable::class)
 					override fun convertResponse(response: okhttp3.Response): String {
 						return response.body.string()
 					}

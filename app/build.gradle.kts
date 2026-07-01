@@ -2,6 +2,8 @@ plugins {
 	id("com.android.application")
 	id("com.chaquo.python")
 	id("org.jetbrains.kotlin.plugin.compose")
+	id("com.google.devtools.ksp")
+	id("com.autonomousapps.dependency-analysis")
 }
 
 android {
@@ -41,6 +43,7 @@ android {
 
 		getByName("release") {
 			isMinifyEnabled = true
+			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 		}
 	}
@@ -116,20 +119,18 @@ dependencies {
 	implementation("androidx.core:core-ktx:1.19.0")
 	implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
 	implementation("androidx.datastore:datastore-preferences:1.2.1")
-	annotationProcessor("androidx.room:room-compiler:2.8.4")
+	ksp("androidx.room:room-compiler:2.8.4")
 	implementation("androidx.room:room-runtime:2.8.4")
 	implementation("com.squareup.okio:okio:3.17.0")
 	implementation("com.github.CymChad:BaseRecyclerViewAdapterHelper:2.9.45-androidx")
 	implementation("com.kingja.loadsir:loadsir:1.3.8")
-	//noinspection NewerVersionAvailable,GradleDependency: Newer version not compatible with 'com.orhanobut:hawk'
-	implementation("com.google.code.gson:gson:2.8.7")
+	implementation("com.google.code.gson:gson:2.14.0")
 	implementation("com.squareup.picasso:picasso:2.71828")
 	implementation("me.jessyan:autosize:1.2.1")
 	implementation("com.thoughtworks.xstream:xstream:1.4.21") {
 		exclude(group = "xmlpull", module = "xmlpull")
 	}
 	implementation("org.greenrobot:eventbus:3.3.1")
-	implementation("com.orhanobut:hawk:2.0.1")
 	implementation("com.lzy.net:okgo:3.0.4")
 	implementation("com.owen:tv-recyclerview:3.0.0")
 	implementation("org.jsoup:jsoup:1.22.2")

@@ -1,17 +1,18 @@
 package com.github.tvbox.osc.util
 
 import com.github.tvbox.osc.api.ApiConfig
-import com.orhanobut.hawk.Hawk
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 
 object SearchHelper {
 	val sourcesForSearch: HashMap<String, String>?
 		get() {
 			var mCheckSources: HashMap<String, String>?
 			try {
-				val api = Hawk.get(HawkConfig.API_URL, "")
+				val api = PreferenceStore.get(ConfigKey.API_URL, "")
 				if (api.isEmpty()) return null
-				val mCheckSourcesForApi = Hawk.get(
-					HawkConfig.SOURCES_FOR_SEARCH,
+				val mCheckSourcesForApi = PreferenceStore.getObj(
+					ConfigKey.SOURCES_FOR_SEARCH,
 					HashMap<String, HashMap<String, String>>()
 				)
 				mCheckSources = mCheckSourcesForApi[api]

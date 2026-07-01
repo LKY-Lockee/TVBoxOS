@@ -23,10 +23,6 @@ class LiveEpgDateAdapter : BaseQuickAdapter<LiveEpgDate, BaseViewHolder>(R.layou
 		}
 	}
 
-	fun getSelectedIndex(): Int {
-		return selectedIndex
-	}
-
 	fun setSelectedIndex(selectedIndex: Int) {
 		if (selectedIndex == this.selectedIndex) return
 		val preSelectedIndex = this.selectedIndex

@@ -46,11 +46,11 @@ class DetailTabPlaylistFragment : Fragment() {
 	private var onSeriesFlagSelectedListener: OnSeriesFlagSelectedListener? = null
 	private var onSeriesSelectedListener: OnSeriesSelectedListener? = null
 
-	interface OnSeriesFlagSelectedListener {
+	fun interface OnSeriesFlagSelectedListener {
 		fun onSeriesFlagSelected(flagName: String?, position: Int)
 	}
 
-	interface OnSeriesSelectedListener {
+	fun interface OnSeriesSelectedListener {
 		fun onSeriesSelected(position: Int)
 	}
 
@@ -235,7 +235,7 @@ class DetailTabPlaylistFragment : Fragment() {
 		var maxTextWidth = 1
 		for (i in 0..<listSize) {
 			val name = list[i].name
-			pFont.getTextBounds(name, 0, (name ?: return).length, rect)
+			pFont.getTextBounds(name, 0, name.length, rect)
 			if (maxTextWidth < rect.width()) {
 				maxTextWidth = rect.width()
 			}

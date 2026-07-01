@@ -17,12 +17,13 @@ import com.github.tvbox.osc.bean.LiveSettingGroup
 import com.github.tvbox.osc.bean.LiveSettingItem
 import com.github.tvbox.osc.bean.ParseBean
 import com.github.tvbox.osc.bean.SourceBean
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.util.AES
 import com.github.tvbox.osc.util.AdBlocker
 import com.github.tvbox.osc.util.DefaultConfig
 import com.github.tvbox.osc.util.FileUtils
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.M3U8
 import com.github.tvbox.osc.util.MD5
 import com.github.tvbox.osc.util.OkGoHelper
@@ -35,7 +36,6 @@ import com.google.gson.JsonObject
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
 import com.lzy.okgo.model.Response
-import com.orhanobut.hawk.Hawk
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
@@ -86,7 +86,7 @@ class ApiConfig private constructor() {
 		parseBeanList = ArrayList()
 		searchSourceBeanList = ArrayList()
 		gson = Gson()
-		Hawk.put(HawkConfig.LIVE_GROUP_LIST, JsonArray())
+		PreferenceStore.putObj(ConfigKey.LIVE_GROUP_LIST, JsonArray())
 		loadDefaultConfig()
 	}
 
@@ -116,9 +116,9 @@ class ApiConfig private constructor() {
 	}
 
 	fun loadConfig(useCache: Boolean, callback: LoadConfigCallback, activity: Activity?) {
-		val apiUrl = Hawk.get(HawkConfig.API_URL, "")
+		val apiUrl = PreferenceStore.get(ConfigKey.API_URL, "")
 		//独立加载直播配置
-		val liveApiUrl = Hawk.get(HawkConfig.LIVE_API_URL, "")
+		val liveApiUrl = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
 		val liveApiConfigUrl = configUrl(liveApiUrl)
 		if (!liveApiUrl.isEmpty() && liveApiUrl != apiUrl) {
 			if (liveApiUrl.contains(".txt") || liveApiUrl.contains(".m3u") || liveApiUrl.contains("=txt") || liveApiUrl.contains("=m3u")) {
@@ -384,7 +384,7 @@ class ApiConfig private constructor() {
 			sourceBeanList[siteKey] = sb
 		}
 		if (sourceBeanList.isNotEmpty()) {
-			val home = Hawk.get(HawkConfig.HOME_API, "")
+			val home = PreferenceStore.get(ConfigKey.HOME_API, "")
 			val sh = getSource(home)
 			if (sh == null) {
 				setSourceBean(requireNotNull(firstSite))
@@ -409,7 +409,7 @@ class ApiConfig private constructor() {
 		}
 		// 获取默认解析
 		if (!parseBeanList.isEmpty()) {
-			val defaultParse = Hawk.get(HawkConfig.DEFAULT_PARSE, "")
+			val defaultParse = PreferenceStore.get(ConfigKey.DEFAULT_PARSE, "")
 			if (!TextUtils.isEmpty(defaultParse)) for (pb in parseBeanList) {
 				if (pb.name == defaultParse) this.defaultParse = pb
 			}
@@ -417,15 +417,15 @@ class ApiConfig private constructor() {
 		}
 
 		// 直播源
-		val liveApiUrl = Hawk.get(HawkConfig.LIVE_API_URL, "")
+		val liveApiUrl = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
 		if (liveApiUrl.isEmpty() || apiUrl == liveApiUrl) {
 			TVBoxRuntimeLog.i("echo-load-config_live")
 			initLiveSettings()
 			if (infoJson.has("lives")) {
 				val livesGroups = infoJson.get("lives").getAsJsonArray()
-				val liveGroupIndex = Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)
-				if (liveGroupIndex > livesGroups.size() - 1) Hawk.put(HawkConfig.LIVE_GROUP_INDEX, 0)
-				Hawk.put(HawkConfig.LIVE_GROUP_LIST, livesGroups)
+				val liveGroupIndex = PreferenceStore.get(ConfigKey.LIVE_GROUP_INDEX, 0)
+				if (liveGroupIndex > livesGroups.size() - 1) PreferenceStore.put(ConfigKey.LIVE_GROUP_INDEX, 0)
+				PreferenceStore.putObj(ConfigKey.LIVE_GROUP_LIST, livesGroups)
 				//加载多源配置
 				try {
 					val liveSettingItemList = ArrayList<LiveSettingItem>()
@@ -525,12 +525,12 @@ class ApiConfig private constructor() {
 
 		if (infoJson.has("doh")) {
 			val dohJson = infoJson.getAsJsonArray("doh").toString()
-			if (Hawk.get(HawkConfig.DOH_JSON, "") != dohJson) {
-				Hawk.put(HawkConfig.DOH_URL, 0)
-				Hawk.put(HawkConfig.DOH_JSON, dohJson)
+			if (PreferenceStore.get(ConfigKey.DOH_JSON, "") != dohJson) {
+				PreferenceStore.put(ConfigKey.DOH_URL, 0)
+				PreferenceStore.put(ConfigKey.DOH_JSON, dohJson)
 			}
 		} else {
-			Hawk.put(HawkConfig.DOH_JSON, "")
+			PreferenceStore.put(ConfigKey.DOH_JSON, "")
 		}
 		OkGoHelper.setDnsList()
 		TVBoxRuntimeLog.i("echo-api-config-----------load")
@@ -559,7 +559,7 @@ class ApiConfig private constructor() {
 		if (ijkCodes.isEmpty()) {
 			ijkCodes = ArrayList()
 			var foundOldSelect = false
-			var ijkCodec = Hawk.get(HawkConfig.IJK_CODEC, "硬解码")
+			var ijkCodec = PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码")
 			val ijkJsonArray = defaultJson.get("ijk").getAsJsonArray()
 			for (opt in ijkJsonArray) {
 				val obj = opt as JsonObject
@@ -610,9 +610,9 @@ class ApiConfig private constructor() {
 		if (infoJson.has("lives")) {
 			val livesGroups = infoJson.get("lives").getAsJsonArray()
 
-			val liveGroupIndex = Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)
-			if (liveGroupIndex > livesGroups.size() - 1) Hawk.put(HawkConfig.LIVE_GROUP_INDEX, 0)
-			Hawk.put(HawkConfig.LIVE_GROUP_LIST, livesGroups)
+			val liveGroupIndex = PreferenceStore.get(ConfigKey.LIVE_GROUP_INDEX, 0)
+			if (liveGroupIndex > livesGroups.size() - 1) PreferenceStore.put(ConfigKey.LIVE_GROUP_INDEX, 0)
+			PreferenceStore.putObj(ConfigKey.LIVE_GROUP_LIST, livesGroups)
 			//加载多源配置
 			try {
 				val liveSettingItemList = ArrayList<LiveSettingItem>()
@@ -783,16 +783,16 @@ class ApiConfig private constructor() {
 			//设置epg
 			if (livesOBJ.has("epg")) {
 				val epg = livesOBJ.get("epg").asString
-				Hawk.put(HawkConfig.EPG_URL, epg)
+				PreferenceStore.put(ConfigKey.EPG_URL, epg)
 			} else {
-				Hawk.put(HawkConfig.EPG_URL, "")
+				PreferenceStore.put(ConfigKey.EPG_URL, "")
 			}
 			//直播播放器类型
 			if (livesOBJ.has("playerType")) {
 				val livePlayType = livesOBJ.get("playerType").asString
-				Hawk.put(HawkConfig.LIVE_PLAY_TYPE, livePlayType)
+				PreferenceStore.put(ConfigKey.LIVE_PLAY_TYPE, livePlayType)
 			} else {
-				Hawk.put(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 0))
+				PreferenceStore.put(ConfigKey.LIVE_PLAY_TYPE, PreferenceStore.get(ConfigKey.PLAY_TYPE, 0))
 			}
 			//设置UA
 			if (livesOBJ.has("header")) {
@@ -801,14 +801,14 @@ class ApiConfig private constructor() {
 				for (entry in headerObj.entrySet()) {
 					liveHeader[entry.key] = entry.value.asString
 				}
-				Hawk.put(HawkConfig.LIVE_WEB_HEADER, liveHeader)
+				PreferenceStore.putObj(ConfigKey.LIVE_WEB_HEADER, liveHeader)
 			} else if (livesOBJ.has("ua")) {
 				val ua = livesOBJ.get("ua").asString
 				val liveHeader = HashMap<String, String>()
 				liveHeader["User-Agent"] = ua
-				Hawk.put(HawkConfig.LIVE_WEB_HEADER, liveHeader)
+				PreferenceStore.putObj(ConfigKey.LIVE_WEB_HEADER, liveHeader)
 			} else {
-				Hawk.put<Any?>(HawkConfig.LIVE_WEB_HEADER, null)
+				PreferenceStore.putObj<Any?>(ConfigKey.LIVE_WEB_HEADER, null)
 			}
 			val liveChannelGroup = LiveChannelGroup()
 			liveChannelGroup.groupName = url
@@ -850,7 +850,7 @@ class ApiConfig private constructor() {
 			return jsLoader.proxyInvoke(param)
 		}
 		val apiString: String
-		if (Hawk.get(HawkConfig.PLAYER_IS_LIVE, false)) {
+		if (PreferenceStore.get(ConfigKey.PLAYER_IS_LIVE, false)) {
 			apiString = currentLiveSpider.orEmpty()
 		} else {
 			val sourceBean: SourceBean = homeSourceBean
@@ -874,7 +874,7 @@ class ApiConfig private constructor() {
 
 	fun setSourceBean(sourceBean: SourceBean) {
 		this.mHomeSource = sourceBean
-		Hawk.put(HawkConfig.HOME_API, sourceBean.key)
+		PreferenceStore.put(ConfigKey.HOME_API, sourceBean.key)
 	}
 
 	var defaultParse: ParseBean?
@@ -883,7 +883,7 @@ class ApiConfig private constructor() {
 			mDefaultParse?.isDefault = false
 			mDefaultParse = value
 			if (value != null) {
-				Hawk.put(HawkConfig.DEFAULT_PARSE, value.name)
+				PreferenceStore.put(ConfigKey.DEFAULT_PARSE, value.name)
 				value.isDefault = true
 			}
 		}
@@ -908,7 +908,7 @@ class ApiConfig private constructor() {
 
 	val currentIJKCode: IJKCode?
 		get() {
-			val codeName = Hawk.get(HawkConfig.IJK_CODEC, "硬解码")
+			val codeName = PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码")
 			return getIJKCodec(codeName)
 		}
 

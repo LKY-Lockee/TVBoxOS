@@ -29,6 +29,7 @@ class LivePasswordDialog(context: Context) : BaseDialog(context) {
 		}
 	}
 
+	@Deprecated("Deprecated in Java")
 	override fun onBackPressed() {
 		super.onBackPressed()
 		listener?.onCancel()

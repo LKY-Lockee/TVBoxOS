@@ -145,6 +145,10 @@ class JarLoader {
 			val cacheDir = File(App.instance.cacheDir.absolutePath + "/catvod_csp")
 			if (!cacheDir.exists()) cacheDir.mkdirs()
 
+			val jarFile = File(jar)
+			jarFile.setReadable(true, false)
+			jarFile.setWritable(false, false)
+
 			val classLoader = DexClassLoader(jar, cacheDir.absolutePath, null, App.instance.classLoader)
 			var count = 0
 			do {

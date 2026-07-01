@@ -27,10 +27,6 @@ class LiveSettingGroupAdapter : BaseQuickAdapter<LiveSettingGroup, BaseViewHolde
 		}
 	}
 
-	fun getSelectedGroupIndex(): Int {
-		return selectedGroupIndex
-	}
-
 	fun setSelectedGroupIndex(selectedGroupIndex: Int) {
 		val preSelectedGroupIndex = this.selectedGroupIndex
 		this.selectedGroupIndex = selectedGroupIndex

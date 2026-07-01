@@ -46,8 +46,6 @@ open class GridFragment : BaseLazyFragment {
 	private var mGridView: RecyclerView? = null
 	private var mSwipe: SwipeRefreshLayout? = null
 	private var sourceViewModel: SourceViewModel? = null
-
-	@JvmField
 	protected var gridAdapter: GridAdapter? = null
 	private var page = 1
 	private var maxPage = 1

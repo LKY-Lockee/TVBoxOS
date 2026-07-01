@@ -1,7 +1,7 @@
 package com.github.tvbox.osc.bean
 
-import com.github.tvbox.osc.util.HawkConfig
-import com.orhanobut.hawk.Hawk
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 
 /**
  * @author pj567
@@ -16,7 +16,7 @@ class IJKCode {
 	fun selected(selected: Boolean) {
 		isSelected = selected
 		if (selected) {
-			Hawk.put(HawkConfig.IJK_CODEC, name)
+			PreferenceStore.put(ConfigKey.IJK_CODEC, name)
 		}
 	}
 }

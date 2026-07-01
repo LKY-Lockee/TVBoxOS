@@ -31,13 +31,14 @@ import com.github.tvbox.osc.base.ToolbarMenuProvider
 import com.github.tvbox.osc.bean.AbsXml
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.SourceBean
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.event.ServerEvent
 import com.github.tvbox.osc.ui.activity.HomeActivity
 import com.github.tvbox.osc.ui.adapter.PinyinAdapter
 import com.github.tvbox.osc.ui.adapter.PinyinAdapter.SearchItem
 import com.github.tvbox.osc.util.FastClickCheckUtil
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HistoryHelper.setSearchHistory
 import com.github.tvbox.osc.util.SearchHelper.sourcesForSearch
 import com.github.tvbox.osc.viewmodel.SourceViewModel
@@ -55,7 +56,6 @@ import com.google.gson.JsonParser
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
 import com.lzy.okgo.model.Response
-import com.orhanobut.hawk.Hawk
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -282,7 +282,7 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 	}
 
 	private fun loadHistoryAndHotWords() {
-		val historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, ArrayList<String?>())
+		val historyList = PreferenceStore.getObj(ConfigKey.SEARCH_HISTORY, ArrayList<String?>())
 
 		val combinedList = ArrayList<SearchItem?>()
 		for (s in historyList) {
@@ -329,7 +329,6 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 					}
 				}
 
-				@Throws(Throwable::class)
 				override fun convertResponse(response: okhttp3.Response): String {
 					return Objects.requireNonNull(response.body).string()
 				}
@@ -369,7 +368,6 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 					}
 				}
 
-				@Throws(Throwable::class)
 				override fun convertResponse(response: okhttp3.Response): String {
 					return Objects.requireNonNull(response.body).string()
 				}
@@ -731,9 +729,9 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 			.setMessage("确定要删除「$keyword」吗？")
 			.setPositiveButton("删除") { dialog: DialogInterface?, which: Int ->
 				// 从 Hawk 中获取历史记录
-				val historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, ArrayList<String?>())
+				val historyList = PreferenceStore.getObj(ConfigKey.SEARCH_HISTORY, ArrayList<String?>())
 				historyList.remove(keyword)
-				Hawk.put(HawkConfig.SEARCH_HISTORY, historyList)
+				PreferenceStore.putObj(ConfigKey.SEARCH_HISTORY, historyList)
 
 				// 从 Adapter 中移除
 				wordAdapter?.remove(position)
@@ -745,7 +743,7 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 	private fun showClearHistoryDialog() {
 		if (activity == null) return
 
-		val historyList = Hawk.get(HawkConfig.SEARCH_HISTORY, ArrayList<String?>())
+		val historyList = PreferenceStore.getObj(ConfigKey.SEARCH_HISTORY, ArrayList<String?>())
 		if (historyList.isEmpty()) {
 			Toast.makeText(mContext, "暂无搜索记录", Toast.LENGTH_SHORT).show()
 			return
@@ -755,7 +753,7 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 			.setTitle("清空搜索记录")
 			.setMessage("确定要清空所有搜索记录吗？")
 			.setPositiveButton("清空") { dialog: DialogInterface?, which: Int ->
-				Hawk.delete(HawkConfig.SEARCH_HISTORY)
+				PreferenceStore.delete(ConfigKey.SEARCH_HISTORY)
 				val newList = ArrayList<SearchItem?>()
 				if (hots != null && hots?.isEmpty() != false) {
 					for (s in hots) {

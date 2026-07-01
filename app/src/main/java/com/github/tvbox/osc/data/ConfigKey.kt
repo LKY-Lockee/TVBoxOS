@@ -1,10 +1,10 @@
-package com.github.tvbox.osc.util
+package com.github.tvbox.osc.data
 
 /**
  * @author pj567
  * @date 2020/12/23
  */
-object HawkConfig {
+object ConfigKey {
 	const val API_URL = "api_url"
 	const val EPG_URL = "epg_url"
 	const val API_HISTORY = "api_history"

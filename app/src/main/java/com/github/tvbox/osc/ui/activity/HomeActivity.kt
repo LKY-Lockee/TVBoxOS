@@ -19,6 +19,8 @@ import com.github.tvbox.osc.api.ApiConfig.LoadConfigCallback
 import com.github.tvbox.osc.base.BackPressProvider
 import com.github.tvbox.osc.base.BaseActivity
 import com.github.tvbox.osc.base.ToolbarMenuProvider
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.ui.dialog.TipDialog
 import com.github.tvbox.osc.ui.fragment.CollectFragment
@@ -26,11 +28,9 @@ import com.github.tvbox.osc.ui.fragment.HistoryFragment
 import com.github.tvbox.osc.ui.fragment.HomeFragment
 import com.github.tvbox.osc.ui.fragment.SearchFragment
 import com.github.tvbox.osc.util.AppManager
-import com.github.tvbox.osc.util.HawkConfig
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.orhanobut.hawk.Hawk
 import kotlin.system.exitProcess
 
 internal enum class Page {
@@ -199,7 +199,7 @@ class HomeActivity : BaseActivity() {
 			(viewPager ?: return).setAdapter(HomePagerAdapter(this))
 			showFragment(Page.Home, false)
 			showSuccess()
-			if (!useCacheConfig && Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) {
+			if (!useCacheConfig && PreferenceStore.get(ConfigKey.DEFAULT_LOAD_LIVE, false)) {
 				jumpActivity(LivePlayActivity::class.java)
 			}
 			return

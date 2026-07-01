@@ -41,6 +41,8 @@ import com.github.tvbox.osc.bean.LiveEpgDate
 import com.github.tvbox.osc.bean.LivePlayerManager
 import com.github.tvbox.osc.bean.LiveSettingGroup
 import com.github.tvbox.osc.bean.LiveSettingItem
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.player.controller.LiveController
 import com.github.tvbox.osc.player.controller.LiveController.LiveControlListener
 import com.github.tvbox.osc.ui.adapter.LiveChannelGroupAdapter
@@ -55,7 +57,6 @@ import com.github.tvbox.osc.ui.tv.widget.ViewObj
 import com.github.tvbox.osc.util.DefaultConfig.safeJsonString
 import com.github.tvbox.osc.util.EpgUtil.getEpgInfo
 import com.github.tvbox.osc.util.FastClickCheckUtil
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.PlayerHelper.getDisplaySpeed
 import com.github.tvbox.osc.util.RegexUtils.getPattern
 import com.github.tvbox.osc.util.TVBoxRuntimeLog.i
@@ -66,7 +67,6 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
-import com.orhanobut.hawk.Hawk
 import com.owen.tvrecyclerview.widget.TvRecyclerView
 import com.owen.tvrecyclerview.widget.TvRecyclerView.OnItemListener
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager
@@ -136,17 +136,17 @@ class LivePlayActivity : BaseActivity() {
 			mHandler.postDelayed(this, 1000)
 		}
 	}
-	private var tvLeftChannelListLayout: LinearLayout? = null
+	private lateinit var tvLeftChannelListLayout: LinearLayout
 	private val mHideChannelListRun: Runnable = Runnable {
-		val params = (tvLeftChannelListLayout ?: return@Runnable).layoutParams as MarginLayoutParams
-		if ((tvLeftChannelListLayout ?: return@Runnable).isVisible) {
+		val params = tvLeftChannelListLayout.layoutParams as MarginLayoutParams
+		if (tvLeftChannelListLayout.isVisible) {
 			val viewObj = ViewObj(tvLeftChannelListLayout, params)
-			val animator = ObjectAnimator.ofObject(viewObj, "marginLeft", IntEvaluator(), 0, -(tvLeftChannelListLayout ?: return@Runnable).layoutParams.width)
+			val animator = ObjectAnimator.ofObject(viewObj, "marginLeft", IntEvaluator(), 0, -tvLeftChannelListLayout.layoutParams.width)
 			animator.duration = 200
 			animator.addListener(object : AnimatorListenerAdapter() {
 				override fun onAnimationEnd(animation: Animator) {
 					super.onAnimationEnd(animation)
-					tvLeftChannelListLayout?.visibility = View.INVISIBLE
+					tvLeftChannelListLayout.visibility = View.INVISIBLE
 				}
 			})
 			animator.start()
@@ -156,20 +156,20 @@ class LivePlayActivity : BaseActivity() {
 	private var mLiveChannelView: TvRecyclerView? = null
 	private var liveChannelGroupAdapter: LiveChannelGroupAdapter? = null
 	private var liveChannelItemAdapter: LiveChannelItemAdapter? = null
-	private var tvRightSettingLayout: LinearLayout? = null
+	private lateinit var tvRightSettingLayout: LinearLayout
 	private var mSettingGroupView: TvRecyclerView? = null
 	private var mSettingItemView: TvRecyclerView? = null
 	private var liveSettingGroupAdapter: LiveSettingGroupAdapter? = null
 	private val mHideSettingLayoutRun: Runnable = Runnable {
-		val params = (tvRightSettingLayout ?: return@Runnable).layoutParams as MarginLayoutParams
-		if ((tvRightSettingLayout ?: return@Runnable).isVisible) {
+		val params = tvRightSettingLayout.layoutParams as MarginLayoutParams
+		if (tvRightSettingLayout.isVisible) {
 			val viewObj = ViewObj(tvRightSettingLayout, params)
-			val animator = ObjectAnimator.ofObject(viewObj, "marginRight", IntEvaluator(), 0, -(tvRightSettingLayout ?: return@Runnable).layoutParams.width)
+			val animator = ObjectAnimator.ofObject(viewObj, "marginRight", IntEvaluator(), 0, -tvRightSettingLayout.layoutParams.width)
 			animator.duration = 200
 			animator.addListener(object : AnimatorListenerAdapter() {
 				override fun onAnimationEnd(animation: Animator) {
 					super.onAnimationEnd(animation)
-					(tvRightSettingLayout ?: return).visibility = View.INVISIBLE
+					tvRightSettingLayout.visibility = View.INVISIBLE
 					(liveSettingGroupAdapter ?: return).setSelectedGroupIndex(-1)
 				}
 			})
@@ -183,11 +183,11 @@ class LivePlayActivity : BaseActivity() {
 			} else {
 				val holder = (mSettingGroupView ?: return).findViewHolderForAdapterPosition(0)
 				holder?.itemView?.requestFocus()
-				(tvRightSettingLayout ?: return).visibility = View.VISIBLE
-				val params = (tvRightSettingLayout ?: return).layoutParams as MarginLayoutParams
-				if ((tvRightSettingLayout ?: return).isVisible) {
+				tvRightSettingLayout.visibility = View.VISIBLE
+				val params = tvRightSettingLayout.layoutParams as MarginLayoutParams
+				if (tvRightSettingLayout.isVisible) {
 					val viewObj = ViewObj(tvRightSettingLayout, params)
-					val animator = ObjectAnimator.ofObject(viewObj, "marginRight", IntEvaluator(), -(tvRightSettingLayout ?: return).layoutParams.width, 0)
+					val animator = ObjectAnimator.ofObject(viewObj, "marginRight", IntEvaluator(), -tvRightSettingLayout.layoutParams.width, 0)
 					animator.duration = 200
 					animator.addListener(object : AnimatorListenerAdapter() {
 						override fun onAnimationEnd(animation: Animator) {
@@ -212,9 +212,9 @@ class LivePlayActivity : BaseActivity() {
 				(liveChannelItemAdapter ?: return).setSelectedChannelIndex(currentLiveChannelIndex)
 				val holder = (mLiveChannelView ?: return).findViewHolderForAdapterPosition(currentLiveChannelIndex)
 				holder?.itemView?.requestFocus()
-				(tvLeftChannelListLayout ?: return).visibility = View.VISIBLE
-				val viewObj = ViewObj(tvLeftChannelListLayout, (tvLeftChannelListLayout ?: return).layoutParams as MarginLayoutParams?)
-				val animator = ObjectAnimator.ofObject(viewObj, "marginLeft", IntEvaluator(), -(tvLeftChannelListLayout ?: return).layoutParams.width, 0)
+				tvLeftChannelListLayout.visibility = View.VISIBLE
+				val viewObj = ViewObj(tvLeftChannelListLayout, tvLeftChannelListLayout.layoutParams as MarginLayoutParams)
+				val animator = ObjectAnimator.ofObject(viewObj, "marginLeft", IntEvaluator(), -tvLeftChannelListLayout.layoutParams.width, 0)
 				animator.duration = 200
 				animator.addListener(object : AnimatorListenerAdapter() {
 					override fun onAnimationEnd(animation: Animator) {
@@ -298,7 +298,7 @@ class LivePlayActivity : BaseActivity() {
 		currentLiveChangeSourceTimes++
 		if ((currentLiveChannelItem ?: return@Runnable).sourceNum == currentLiveChangeSourceTimes) {
 			currentLiveChangeSourceTimes = 0
-			val groupChannelIndex = getNextChannel(if (Hawk.get(HawkConfig.LIVE_CHANNEL_REVERSE, false)) -1 else 1)
+			val groupChannelIndex = getNextChannel(if (PreferenceStore.get(ConfigKey.LIVE_CHANNEL_REVERSE, false)) -1 else 1)
 			playChannel(groupChannelIndex[0], groupChannelIndex[1], false)
 		} else {
 			playNextSource()
@@ -309,7 +309,7 @@ class LivePlayActivity : BaseActivity() {
 		get() = R.layout.activity_live_play
 
 	override fun init() {
-		epgStringAddress = Hawk.get(HawkConfig.EPG_URL, "")
+		epgStringAddress = PreferenceStore.get(ConfigKey.EPG_URL, "")
 		if (epgStringAddress == null || (epgStringAddress ?: return).length < 5) epgStringAddress = "http://epg.51zmt.top:8000/api/diyp/"
 
 		setLoadSir(findViewById(R.id.live_root))
@@ -352,7 +352,7 @@ class LivePlayActivity : BaseActivity() {
 
 		//laodao 7day replay
 		mEpgDateGridView = findViewById(R.id.mEpgDateGridView)
-		Hawk.put(HawkConfig.NOW_DATE, formatDate.format(Date()))
+		PreferenceStore.put(ConfigKey.NOW_DATE, formatDate.format(Date()))
 		day = formatDate.format(Date())
 		nowDay = Date()
 
@@ -432,7 +432,7 @@ class LivePlayActivity : BaseActivity() {
 		initSettingItemView()
 		initLiveChannelList()
 		initLiveSettingGroupList()
-		Hawk.put(HawkConfig.PLAYER_IS_LIVE, true)
+		PreferenceStore.put(ConfigKey.PLAYER_IS_LIVE, true)
 
 		backPressedCallback = object : OnBackPressedCallback(true) {
 			override fun handleOnBackPressed() {
@@ -696,10 +696,10 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	private fun handleBackPressed() {
-		if ((tvLeftChannelListLayout ?: return).isVisible) {
+		if (tvLeftChannelListLayout.isVisible) {
 			mHandler.removeCallbacks(mHideChannelListRun)
 			mHandler.post(mHideChannelListRun)
-		} else if ((tvRightSettingLayout ?: return).isVisible) {
+		} else if (tvRightSettingLayout.isVisible) {
 			mHandler.removeCallbacks(mHideSettingLayoutRun)
 			mHandler.post(mHideSettingLayoutRun)
 		} else if ((backController ?: return).isVisible) { //
@@ -735,10 +735,10 @@ class LivePlayActivity : BaseActivity() {
 				showSettingGroup()
 			} else if (!this.isListOrSettingLayoutVisible) {
 				when (keyCode) {
-					KeyEvent.KEYCODE_DPAD_UP -> if (Hawk.get(HawkConfig.LIVE_CHANNEL_REVERSE, false)) playNext()
+					KeyEvent.KEYCODE_DPAD_UP -> if (PreferenceStore.get(ConfigKey.LIVE_CHANNEL_REVERSE, false)) playNext()
 					else playPrevious()
 
-					KeyEvent.KEYCODE_DPAD_DOWN -> if (Hawk.get(HawkConfig.LIVE_CHANNEL_REVERSE, false)) playPrevious()
+					KeyEvent.KEYCODE_DPAD_DOWN -> if (PreferenceStore.get(ConfigKey.LIVE_CHANNEL_REVERSE, false)) playPrevious()
 					else playNext()
 
 					KeyEvent.KEYCODE_DPAD_LEFT -> if (isBack) {
@@ -818,12 +818,12 @@ class LivePlayActivity : BaseActivity() {
 
 	private fun showChannelList() {
 		if (liveChannelGroupList.isEmpty()) return
-		if ((tvRightSettingLayout ?: return).isVisible) {
+		if (tvRightSettingLayout.isVisible) {
 			mHandler.removeCallbacks(mHideSettingLayoutRun)
 			mHandler.post(mHideSettingLayoutRun)
 			return
 		}
-		if ((tvLeftChannelListLayout ?: return).isInvisible) {
+		if (tvLeftChannelListLayout.isInvisible) {
 			if (currentLiveLookBackIndex > -1) {
 				(mRightEpgList ?: return).selectedPosition = currentLiveLookBackIndex
 				(mRightEpgList ?: return).post { (mRightEpgList ?: return@post).smoothScrollToPosition(currentLiveLookBackIndex) }
@@ -877,7 +877,7 @@ class LivePlayActivity : BaseActivity() {
 		)
 
 		val lParams = FrameLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-		if ((tvRightSettingLayout ?: return).isVisible) {
+		if (tvRightSettingLayout.isVisible) {
 			lParams.gravity = Gravity.START
 			lParams.leftMargin = 60
 			lParams.topMargin = 30
@@ -894,8 +894,8 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	private fun initLiveObj() {
-		val position = Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)
-		val liveGroups = Hawk.get(HawkConfig.LIVE_GROUP_LIST, JsonArray())
+		val position = PreferenceStore.get(ConfigKey.LIVE_GROUP_INDEX, 0)
+		val liveGroups = PreferenceStore.getObj(ConfigKey.LIVE_GROUP_LIST, JsonArray())
 		val livesOBJ = liveGroups.get(position).getAsJsonObject()
 		val type = if (livesOBJ.has("type")) livesOBJ.get("type").asString else "0"
 
@@ -927,7 +927,7 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	private fun liveWebHeader(): HashMap<String, String>? {
-		return Hawk.get<HashMap<String, String>?>(HawkConfig.LIVE_WEB_HEADER)
+		return PreferenceStore.getObj(ConfigKey.LIVE_WEB_HEADER, null as HashMap<String, String>?)
 	}
 
 	private fun playChannel(channelGroupIndex: Int, liveChannelIndex: Int, changeSource: Boolean): Boolean {
@@ -947,7 +947,7 @@ class LivePlayActivity : BaseActivity() {
 			currentLiveChannelIndex = liveChannelIndex
 			selectedItem = getLiveChannels(currentChannelGroupIndex)[currentLiveChannelIndex]
 			currentLiveChannelItem = selectedItem
-			Hawk.put(HawkConfig.LIVE_CHANNEL, selectedItem.channelName)
+			PreferenceStore.put(ConfigKey.LIVE_CHANNEL, selectedItem.channelName)
 			livePlayerManager.getLiveChannelPlayer(videoView, selectedItem.channelName)
 		} else {
 			selectedItem = currentItem ?: return false
@@ -996,11 +996,11 @@ class LivePlayActivity : BaseActivity() {
 
 	//显示设置列表
 	private fun showSettingGroup() {
-		if ((tvLeftChannelListLayout ?: return).isVisible) {
+		if (tvLeftChannelListLayout.isVisible) {
 			mHandler.removeCallbacks(mHideChannelListRun)
 			mHandler.post(mHideChannelListRun)
 		}
-		if ((tvRightSettingLayout ?: return).isInvisible) {
+		if (tvRightSettingLayout.isInvisible) {
 			if (!this.isCurrentLiveChannelValid) return
 			//重新载入默认状态
 			loadCurrentSourceList()
@@ -1312,7 +1312,7 @@ class LivePlayActivity : BaseActivity() {
 						mHandler.postDelayed(mConnectTimeoutChangeSourceRun, 3500)
 
 					VideoView.STATE_PREPARING, VideoView.STATE_BUFFERING ->                         // 正在准备或缓冲状态：表示当前源正在加载中
-						mHandler.postDelayed(mConnectTimeoutChangeSourceRun, (Hawk.get(HawkConfig.LIVE_CONNECT_TIMEOUT, 1) + 1) * 5000L)
+						mHandler.postDelayed(mConnectTimeoutChangeSourceRun, (PreferenceStore.get(ConfigKey.LIVE_CONNECT_TIMEOUT, 1) + 1) * 5000L)
 
 					else -> i("echo-Unexpected live_play state: $playState")
 				}
@@ -1386,7 +1386,7 @@ class LivePlayActivity : BaseActivity() {
 			}
 			loadChannelGroupDataAndPlay(groupIndex, liveChannelIndex)
 		}
-		if ((tvLeftChannelListLayout ?: return).isVisible) {
+		if (tvLeftChannelListLayout.isVisible) {
 			mHandler.removeCallbacks(mHideChannelListRun)
 			mHandler.postDelayed(mHideChannelListRun, POST_TIMEOUT.toLong())
 		}
@@ -1431,7 +1431,7 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	private fun clickLiveChannel(position: Int) {
-		if ((tvLeftChannelListLayout ?: return).isVisible) {
+		if (tvLeftChannelListLayout.isVisible) {
 			mHandler.removeCallbacks(mHideChannelListRun)
 			mHandler.postDelayed(mHideChannelListRun, POST_TIMEOUT.toLong())
 		}
@@ -1556,30 +1556,30 @@ class LivePlayActivity : BaseActivity() {
 				(mVideoView ?: return).start()
 			}
 
-			3 -> Hawk.put(HawkConfig.LIVE_CONNECT_TIMEOUT, position)
+			3 -> PreferenceStore.put(ConfigKey.LIVE_CONNECT_TIMEOUT, position)
 			4 -> {
 				var select = false
 				when (position) {
 					0 -> {
-						select = !Hawk.get(HawkConfig.LIVE_SHOW_TIME, false)
-						Hawk.put(HawkConfig.LIVE_SHOW_TIME, select)
+						select = !PreferenceStore.get(ConfigKey.LIVE_SHOW_TIME, false)
+						PreferenceStore.put(ConfigKey.LIVE_SHOW_TIME, select)
 						showTime()
 					}
 
 					1 -> {
-						select = !Hawk.get(HawkConfig.LIVE_SHOW_NET_SPEED, false)
-						Hawk.put(HawkConfig.LIVE_SHOW_NET_SPEED, select)
+						select = !PreferenceStore.get(ConfigKey.LIVE_SHOW_NET_SPEED, false)
+						PreferenceStore.put(ConfigKey.LIVE_SHOW_NET_SPEED, select)
 						showNetSpeed()
 					}
 
 					2 -> {
-						select = !Hawk.get(HawkConfig.LIVE_CHANNEL_REVERSE, false)
-						Hawk.put(HawkConfig.LIVE_CHANNEL_REVERSE, select)
+						select = !PreferenceStore.get(ConfigKey.LIVE_CHANNEL_REVERSE, false)
+						PreferenceStore.put(ConfigKey.LIVE_CHANNEL_REVERSE, select)
 					}
 
 					3 -> {
-						select = !Hawk.get(HawkConfig.LIVE_CROSS_GROUP, false)
-						Hawk.put(HawkConfig.LIVE_CROSS_GROUP, select)
+						select = !PreferenceStore.get(ConfigKey.LIVE_CROSS_GROUP, false)
+						PreferenceStore.put(ConfigKey.LIVE_CROSS_GROUP, select)
 					}
 				}
 				(liveSettingItemAdapter ?: return).selectItem(position, select, false)
@@ -1591,11 +1591,11 @@ class LivePlayActivity : BaseActivity() {
 					(mVideoView ?: return).release()
 					mVideoView = null
 				}
-				if (position == Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)) return
-				val liveGroups = Hawk.get(HawkConfig.LIVE_GROUP_LIST, JsonArray())
+				if (position == PreferenceStore.get(ConfigKey.LIVE_GROUP_INDEX, 0)) return
+				val liveGroups = PreferenceStore.getObj(ConfigKey.LIVE_GROUP_LIST, JsonArray())
 				val livesOBJ = liveGroups.get(position).getAsJsonObject()
 				(liveSettingItemAdapter ?: return).selectItem(position, select = true, unselectPreItemIndex = true)
-				Hawk.put(HawkConfig.LIVE_GROUP_INDEX, position)
+				PreferenceStore.put(ConfigKey.LIVE_GROUP_INDEX, position)
 				ApiConfig.instance.loadLiveApi(livesOBJ)
 				recreate()
 				return
@@ -1730,7 +1730,7 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	private fun initLiveState() {
-		val lastChannelName = Hawk.get(HawkConfig.LIVE_CHANNEL, "")
+		val lastChannelName = PreferenceStore.get(ConfigKey.LIVE_CHANNEL, "")
 
 		var lastChannelGroupIndex = -1
 		var lastLiveChannelIndex = -1
@@ -1753,24 +1753,24 @@ class LivePlayActivity : BaseActivity() {
 		livePlayerManager.init(mVideoView)
 		showTime()
 		showNetSpeed()
-		(tvLeftChannelListLayout ?: return).visibility = View.INVISIBLE
-		(tvRightSettingLayout ?: return).visibility = View.INVISIBLE
+		tvLeftChannelListLayout.visibility = View.INVISIBLE
+		tvRightSettingLayout.visibility = View.INVISIBLE
 
 		(liveChannelGroupAdapter ?: return).setNewData(liveChannelGroupList)
 		selectChannelGroup(lastChannelGroupIndex, false, lastLiveChannelIndex)
 	}
 
 	private val isListOrSettingLayoutVisible: Boolean
-		get() = tvLeftChannelListLayout?.isVisible == true || tvRightSettingLayout?.isVisible == true
+		get() = tvLeftChannelListLayout.isVisible || tvRightSettingLayout.isVisible
 
 	private fun initLiveSettingGroupList() {
 		liveSettingGroupList = ApiConfig.instance.liveSettingGroupList
-		(liveSettingGroupList[3].liveSettingItems ?: return)[Hawk.get(HawkConfig.LIVE_CONNECT_TIMEOUT, 1)].isItemSelected = true
-		(liveSettingGroupList[4].liveSettingItems ?: return)[0].isItemSelected = Hawk.get(HawkConfig.LIVE_SHOW_TIME, false)
-		(liveSettingGroupList[4].liveSettingItems ?: return)[1].isItemSelected = Hawk.get(HawkConfig.LIVE_SHOW_NET_SPEED, false)
-		(liveSettingGroupList[4].liveSettingItems ?: return)[2].isItemSelected = Hawk.get(HawkConfig.LIVE_CHANNEL_REVERSE, false)
-		(liveSettingGroupList[4].liveSettingItems ?: return)[3].isItemSelected = Hawk.get(HawkConfig.LIVE_CROSS_GROUP, false)
-		(liveSettingGroupList[5].liveSettingItems ?: return)[Hawk.get(HawkConfig.LIVE_GROUP_INDEX, 0)].isItemSelected = true
+		(liveSettingGroupList[3].liveSettingItems ?: return)[PreferenceStore.get(ConfigKey.LIVE_CONNECT_TIMEOUT, 1)].isItemSelected = true
+		(liveSettingGroupList[4].liveSettingItems ?: return)[0].isItemSelected = PreferenceStore.get(ConfigKey.LIVE_SHOW_TIME, false)
+		(liveSettingGroupList[4].liveSettingItems ?: return)[1].isItemSelected = PreferenceStore.get(ConfigKey.LIVE_SHOW_NET_SPEED, false)
+		(liveSettingGroupList[4].liveSettingItems ?: return)[2].isItemSelected = PreferenceStore.get(ConfigKey.LIVE_CHANNEL_REVERSE, false)
+		(liveSettingGroupList[4].liveSettingItems ?: return)[3].isItemSelected = PreferenceStore.get(ConfigKey.LIVE_CROSS_GROUP, false)
+		(liveSettingGroupList[5].liveSettingItems ?: return)[PreferenceStore.get(ConfigKey.LIVE_GROUP_INDEX, 0)].isItemSelected = true
 	}
 
 	private fun loadCurrentSourceList() {
@@ -1786,7 +1786,7 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	fun showTime() {
-		if (Hawk.get(HawkConfig.LIVE_SHOW_TIME, false)) {
+		if (PreferenceStore.get(ConfigKey.LIVE_SHOW_TIME, false)) {
 			mHandler.post(mUpdateTimeRun)
 			(tvTime ?: return).visibility = View.VISIBLE
 		} else {
@@ -1797,7 +1797,7 @@ class LivePlayActivity : BaseActivity() {
 
 	private fun showNetSpeed() {
 //        tv_right_top_tipnetspeed.setVisibility(View.VISIBLE);
-		if (Hawk.get(HawkConfig.LIVE_SHOW_NET_SPEED, false)) {
+		if (PreferenceStore.get(ConfigKey.LIVE_SHOW_NET_SPEED, false)) {
 			mHandler.post(mUpdateNetSpeedRun)
 			(tvNetSpeed ?: return).visibility = View.VISIBLE
 		} else {
@@ -1807,11 +1807,11 @@ class LivePlayActivity : BaseActivity() {
 	}
 
 	private fun showPasswordDialog(groupIndex: Int, liveChannelIndex: Int) {
-		if ((tvLeftChannelListLayout ?: return).isVisible) mHandler.removeCallbacks(mHideChannelListRun)
+		if (tvLeftChannelListLayout.isVisible) mHandler.removeCallbacks(mHideChannelListRun)
 
 		val dialog = LivePasswordDialog(this)
 		dialog.setOnListener(object : LivePasswordDialog.OnListener {
-			override fun onChange(password: String) {
+			override fun onChange(password: String?) {
 				if (password == liveChannelGroupList[groupIndex].groupPassword) {
 					channelGroupPasswordConfirmed.add(groupIndex)
 					loadChannelGroupDataAndPlay(groupIndex, liveChannelIndex)
@@ -1819,11 +1819,11 @@ class LivePlayActivity : BaseActivity() {
 					Toast.makeText(App.instance, "密码错误", Toast.LENGTH_SHORT).show()
 				}
 
-				if ((tvLeftChannelListLayout ?: return).isVisible) mHandler.postDelayed(mHideChannelListRun, POST_TIMEOUT.toLong())
+				if (tvLeftChannelListLayout.isVisible) mHandler.postDelayed(mHideChannelListRun, POST_TIMEOUT.toLong())
 			}
 
 			override fun onCancel() {
-				if ((tvLeftChannelListLayout ?: return).isVisible) {
+				if (tvLeftChannelListLayout.isVisible) {
 					val groupIndex = (liveChannelGroupAdapter ?: return).selectedGroupIndex
 					(liveChannelItemAdapter ?: return).setNewData(getLiveChannels(groupIndex))
 				}
@@ -1879,7 +1879,7 @@ class LivePlayActivity : BaseActivity() {
 			liveChannelIndex++
 			if (liveChannelIndex >= getLiveChannels(channelGroupIndex).size) {
 				liveChannelIndex = 0
-				if (Hawk.get(HawkConfig.LIVE_CROSS_GROUP, false)) {
+				if (PreferenceStore.get(ConfigKey.LIVE_CROSS_GROUP, false)) {
 					do {
 						channelGroupIndex++
 						if (channelGroupIndex >= liveChannelGroupList.size) channelGroupIndex = 0
@@ -1889,7 +1889,7 @@ class LivePlayActivity : BaseActivity() {
 		} else {
 			liveChannelIndex--
 			if (liveChannelIndex < 0) {
-				if (Hawk.get(HawkConfig.LIVE_CROSS_GROUP, false)) {
+				if (PreferenceStore.get(ConfigKey.LIVE_CROSS_GROUP, false)) {
 					do {
 						channelGroupIndex--
 						if (channelGroupIndex < 0) channelGroupIndex = liveChannelGroupList.size - 1

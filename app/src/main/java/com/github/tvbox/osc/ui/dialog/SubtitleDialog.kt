@@ -12,11 +12,9 @@ import com.github.tvbox.osc.util.SubtitleHelper.setTextSize
 import com.github.tvbox.osc.util.SubtitleHelper.timeDelay
 
 class SubtitleDialog(context: Context) : BaseDialog(context) {
-	@JvmField
 	var selectInternal: TextView? = null
 	private var subtitleSizeText: TextView? = null
 	private var subtitleTimeText: TextView? = null
-
 	private var mSearchSubtitleListener: SearchSubtitleListener? = null
 	private var mLocalFileChooserListener: LocalFileChooserListener? = null
 	private var mSubtitleViewListener: SubtitleViewListener? = null

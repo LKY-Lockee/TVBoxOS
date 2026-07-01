@@ -42,6 +42,8 @@ import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.cache.CacheManager.delete
 import com.github.tvbox.osc.cache.CacheManager.getCache
 import com.github.tvbox.osc.cache.CacheManager.save
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.player.ExoPlayer
 import com.github.tvbox.osc.player.IjkMediaPlayer
@@ -63,7 +65,6 @@ import com.github.tvbox.osc.util.AdBlocker.isAd
 import com.github.tvbox.osc.util.DefaultConfig.checkReplaceProxy
 import com.github.tvbox.osc.util.DefaultConfig.noAd
 import com.github.tvbox.osc.util.FileUtils.hasExtension
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.MD5.string2MD5
 import com.github.tvbox.osc.util.PlayerHelper
 import com.github.tvbox.osc.util.PlayerHelper.getPlayerName
@@ -82,7 +83,6 @@ import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
 import com.lzy.okgo.model.HttpHeaders
 import com.obsez.android.lib.filechooser.ChooserDialog
-import com.orhanobut.hawk.Hawk
 import me.jessyan.autosize.AutoSize
 import okhttp3.Response
 import org.greenrobot.eventbus.EventBus
@@ -147,7 +147,7 @@ class PlayFragment : BaseLazyFragment() {
 	override fun init() {
 		initView()
 		initViewModel()
-		Hawk.put(HawkConfig.PLAYER_IS_LIVE, false)
+		PreferenceStore.put(ConfigKey.PLAYER_IS_LIVE, false)
 	}
 
 	fun getSavedProgress(url: String?): Long {
@@ -289,7 +289,6 @@ class PlayFragment : BaseLazyFragment() {
 		}
 	}
 
-	@Throws(Exception::class)
 	fun selectMySubtitle() {
 		val subtitleDialog = SubtitleDialog(requireActivity())
 		val playerType = mVodPlayerCfg?.getInt("pl")
@@ -501,7 +500,7 @@ class PlayFragment : BaseLazyFragment() {
 	fun playUrl(url: String, headers: HashMap<String, String>?) {
 		if (!url.startsWith("data:application")) EventBus.getDefault().post(RefreshEvent(RefreshEvent.TYPE_REFRESH, url)) //更新播放地址
 
-		if (!Hawk.get(HawkConfig.M3U8_PURIFY, false)) {
+		if (!PreferenceStore.get(ConfigKey.M3U8_PURIFY, false)) {
 			goPlayUrl(url, headers)
 			return
 		}
@@ -721,16 +720,16 @@ class PlayFragment : BaseLazyFragment() {
 		}
 		try {
 			if (mVodPlayerCfg?.has("pl") != true) {
-				mVodPlayerCfg?.put("pl", if (sourceBean?.playerType == -1) Hawk.get(HawkConfig.PLAY_TYPE, 1) as Int else sourceBean?.playerType)
+				mVodPlayerCfg?.put("pl", if (sourceBean?.playerType == -1) PreferenceStore.get(ConfigKey.PLAY_TYPE, 1) as Int else sourceBean?.playerType)
 			}
 			if (mVodPlayerCfg?.has("pr") != true) {
-				mVodPlayerCfg?.put("pr", Hawk.get(HawkConfig.PLAY_RENDER, 0))
+				mVodPlayerCfg?.put("pr", PreferenceStore.get(ConfigKey.PLAY_RENDER, 0))
 			}
 			if (mVodPlayerCfg?.has("ijk") != true) {
-				mVodPlayerCfg?.put("ijk", Hawk.get(HawkConfig.IJK_CODEC, "硬解码"))
+				mVodPlayerCfg?.put("ijk", PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码"))
 			}
 			if (mVodPlayerCfg?.has("sc") != true) {
-				mVodPlayerCfg?.put("sc", Hawk.get(HawkConfig.PLAY_SCALE, 0))
+				mVodPlayerCfg?.put("sc", PreferenceStore.get(ConfigKey.PLAY_SCALE, 0))
 			}
 			if (mVodPlayerCfg?.has("sp") != true) {
 				mVodPlayerCfg?.put("sp", 1.0)
@@ -1006,7 +1005,6 @@ class PlayFragment : BaseLazyFragment() {
 		doParse(parseBean ?: return)
 	}
 
-	@Throws(JSONException::class)
 	fun jsonParse(input: String?, json: String): JSONObject? {
 		val jsonPlayData = JSONObject(json)
 		//小窗版解析方法改到这了  之前那个位置data解析无效
@@ -1106,7 +1104,6 @@ class PlayFragment : BaseLazyFragment() {
 					.tag("json_jx")
 					.headers(reqHeaders)
 					.execute(object : AbsCallback<String>() {
-						@Throws(Throwable::class)
 						override fun convertResponse(response: Response): String {
 							return response.body.string()
 						}
@@ -1378,7 +1375,7 @@ class PlayFragment : BaseLazyFragment() {
 		if (webView == null) {
 			return
 		}
-		val layoutParams = if (Hawk.get(HawkConfig.DEBUG_OPEN, false))
+		val layoutParams = if (PreferenceStore.get(ConfigKey.DEBUG_OPEN, false))
 			ViewGroup.LayoutParams(800, 400)
 		else
 			ViewGroup.LayoutParams(1, 1)
@@ -1400,7 +1397,7 @@ class PlayFragment : BaseLazyFragment() {
 		settings.javaScriptEnabled = true
 
 		settings.mediaPlaybackRequiresUserGesture = false
-		settings.blockNetworkImage = !Hawk.get(HawkConfig.DEBUG_OPEN, false)
+		settings.blockNetworkImage = !PreferenceStore.get(ConfigKey.DEBUG_OPEN, false)
 		settings.useWideViewPort = true
 		settings.domStorageEnabled = true
 		settings.javaScriptCanOpenWindowsAutomatically = true

@@ -10,14 +10,14 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import com.github.tvbox.osc.R
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.server.ControlManager.Companion.instance
 import com.github.tvbox.osc.ui.tv.QRCodeGen
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HistoryHelper.setApiHistory
 import com.github.tvbox.osc.util.HistoryHelper.setLiveApiHistory
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.orhanobut.hawk.Hawk
 import me.jessyan.autosize.utils.AutoSizeUtils
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -50,8 +50,8 @@ class ApiDialog(private val context: Context) {
 			.create()
 
 		// 初始化数据
-		inputApi.setText(Hawk.get(HawkConfig.API_URL, ""))
-		inputApiLive.setText(Hawk.get<String?>(HawkConfig.LIVE_API_URL, Hawk.get(HawkConfig.API_URL)))
+		inputApi.setText(PreferenceStore.get(ConfigKey.API_URL, ""))
+		inputApiLive.setText(PreferenceStore.get(ConfigKey.LIVE_API_URL, PreferenceStore.get(ConfigKey.API_URL, "")))
 
 		view.findViewById<View>(R.id.inputSubmit).setOnClickListener { v: View? ->
 			val newApi = inputApi.text.toString().trim { it <= ' ' }
@@ -60,16 +60,16 @@ class ApiDialog(private val context: Context) {
 			// 保存点播配置
 			if (!newApi.isEmpty()) {
 				setApiHistory(newApi)
-				Hawk.put(HawkConfig.API_URL, newApi)
+				PreferenceStore.put(ConfigKey.API_URL, newApi)
 			}
 
 			// 保存直播配置
 			if (!newLiveApi.isEmpty()) {
 				setLiveApiHistory(newLiveApi)
-				Hawk.put(HawkConfig.LIVE_API_URL, newLiveApi)
+				PreferenceStore.put(ConfigKey.LIVE_API_URL, newLiveApi)
 			} else if (!newApi.isEmpty()) {
 				// 如果直播配置为空，使用点播配置
-				Hawk.put(HawkConfig.LIVE_API_URL, newApi)
+				PreferenceStore.put(ConfigKey.LIVE_API_URL, newApi)
 			}
 
 			if (listener != null) {

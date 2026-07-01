@@ -10,7 +10,11 @@ import android.widget.TextView
  * Created by acer on 2018/7/13.
  */
 @SuppressLint("AppCompatCustomView")
-class MarqueeTextView @JvmOverloads constructor(context: Context?, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : TextView(context, attrs, defStyleAttr) {
+class MarqueeTextView(
+	context: Context?,
+	attrs: AttributeSet? = null,
+	defStyleAttr: Int = 0
+) : TextView(context, attrs, defStyleAttr) {
 	init {
 		isSelected = true
 		isSingleLine = true

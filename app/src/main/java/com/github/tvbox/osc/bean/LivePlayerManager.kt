@@ -1,8 +1,8 @@
 package com.github.tvbox.osc.bean
 
-import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.util.PlayerHelper
-import com.orhanobut.hawk.Hawk
 import org.json.JSONException
 import org.json.JSONObject
 import xyz.doikki.videoplayer.player.VideoView
@@ -41,11 +41,11 @@ class LivePlayerManager {
 
 	fun init(videoView: VideoView?) {
 		try {
-			currentApi = Hawk.get(HawkConfig.LIVE_API_URL, "")
-			defaultPlayerConfig.put("pl", Hawk.get(HawkConfig.LIVE_PLAY_TYPE, Hawk.get(HawkConfig.PLAY_TYPE, 0)))
-			defaultPlayerConfig.put("ijk", Hawk.get(HawkConfig.IJK_CODEC, "硬解码"))
-			defaultPlayerConfig.put("pr", Hawk.get(HawkConfig.PLAY_RENDER, 0))
-			defaultPlayerConfig.put("sc", Hawk.get(HawkConfig.PLAY_SCALE, 0))
+			currentApi = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
+			defaultPlayerConfig.put("pl", PreferenceStore.get(ConfigKey.LIVE_PLAY_TYPE, PreferenceStore.get(ConfigKey.PLAY_TYPE, 0)))
+			defaultPlayerConfig.put("ijk", PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码"))
+			defaultPlayerConfig.put("pr", PreferenceStore.get(ConfigKey.PLAY_RENDER, 0))
+			defaultPlayerConfig.put("sc", PreferenceStore.get(ConfigKey.PLAY_SCALE, 0))
 		} catch (e: JSONException) {
 			e.printStackTrace()
 		}
@@ -63,7 +63,8 @@ class LivePlayerManager {
 
 	fun getLiveChannelPlayer(videoView: VideoView, channelName: String?) {
 		val cfgKey = currentCfgKey(channelName)
-		val playerConfig = Hawk.get<JSONObject?>(cfgKey, null)
+		val jsonStr = PreferenceStore.get(cfgKey, "")
+		val playerConfig = if (jsonStr.isEmpty()) null else JSONObject(jsonStr)
 		if (playerConfig == null) {
 			if (currentPlayerConfig.toString() != defaultPlayerConfig.toString()) {
 				getDefaultLiveChannelPlayer(videoView)
@@ -121,9 +122,9 @@ class LivePlayerManager {
 		PlayerHelper.updateCfg(videoView, playerConfig)
 
 		if (playerConfig.toString() == defaultPlayerConfig.toString()) {
-			Hawk.delete(cfgKey)
+			PreferenceStore.delete(cfgKey)
 		} else {
-			Hawk.put(cfgKey, playerConfig)
+			PreferenceStore.put(cfgKey, playerConfig.toString())
 		}
 
 		currentPlayerConfig = playerConfig
@@ -141,9 +142,9 @@ class LivePlayerManager {
 		}
 
 		if (playerConfig.toString() == defaultPlayerConfig.toString()) {
-			Hawk.delete(cfgKey)
+			PreferenceStore.delete(cfgKey)
 		} else {
-			Hawk.put(cfgKey, playerConfig)
+			PreferenceStore.put(cfgKey, playerConfig.toString())
 		}
 
 		currentPlayerConfig = playerConfig

@@ -29,6 +29,8 @@ import com.github.tvbox.osc.base.App
 import com.github.tvbox.osc.bean.IJKCode
 import com.github.tvbox.osc.bean.ParseBean
 import com.github.tvbox.osc.bean.SourceBean
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.server.RemoteServer
 import com.github.tvbox.osc.subtitle.widget.SimpleSubtitleView
@@ -36,7 +38,6 @@ import com.github.tvbox.osc.ui.adapter.ParseAdapter
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter.SelectDialogInterface
 import com.github.tvbox.osc.ui.dialog.SelectDialog
 import com.github.tvbox.osc.util.FastClickCheckUtil
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.M3U8
 import com.github.tvbox.osc.util.PlayerHelper
 import com.github.tvbox.osc.util.ScreenUtils
@@ -49,7 +50,6 @@ import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
 import com.lzy.okgo.model.HttpHeaders
 import com.lzy.okgo.model.Response
-import com.orhanobut.hawk.Hawk
 import com.owen.tvrecyclerview.widget.TvRecyclerView
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager
 import org.json.JSONArray
@@ -166,7 +166,7 @@ class VodController(context: Context) : BaseController(context) {
 					mTopRoot1?.visibility = VISIBLE
 					mTopRoot2?.visibility = VISIBLE
 					mPlayLoadNetSpeedRightTop?.visibility = VISIBLE
-					if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == GONE) {
+					if (PreferenceStore.get(ConfigKey.SCREEN_DISPLAY, GONE) == GONE) {
 						mPlayPauseTime?.visibility = VISIBLE
 					} else {
 						netPlaySpeed?.visibility = GONE
@@ -182,7 +182,7 @@ class VodController(context: Context) : BaseController(context) {
 					mTopRoot1?.visibility = GONE
 					mTopRoot2?.visibility = GONE
 					mPlayLoadNetSpeedRightTop?.visibility = GONE
-					if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == GONE) {
+					if (PreferenceStore.get(ConfigKey.SCREEN_DISPLAY, GONE) == GONE) {
 						mPlayPauseTime?.visibility = GONE
 					} else {
 						netPlaySpeed?.visibility = VISIBLE
@@ -611,17 +611,17 @@ class VodController(context: Context) : BaseController(context) {
 			hideBottom()
 		}
 		//屏显
-		val disPlay = Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE)
+		val disPlay = PreferenceStore.get(ConfigKey.SCREEN_DISPLAY, GONE)
 		seekTime?.visibility = disPlay
 		netPlaySpeed?.visibility = disPlay
 		mPlayPauseTime?.visibility = disPlay
 		mScreenDisplay?.setTextColor(if (disPlay == VISIBLE) resources.getColor(R.color.color_02F8E1) else Color.WHITE)
 		mScreenDisplay?.setOnClickListener {
-			val disPlay1 = if (Hawk.get(HawkConfig.SCREEN_DISPLAY, GONE) == VISIBLE) GONE else VISIBLE
+			val disPlay1 = if (PreferenceStore.get(ConfigKey.SCREEN_DISPLAY, GONE) == VISIBLE) GONE else VISIBLE
 			seekTime?.visibility = disPlay1
 			netPlaySpeed?.visibility = disPlay1
 			if (disPlay1 == VISIBLE) mPlayPauseTime?.visibility = VISIBLE
-			Hawk.put(HawkConfig.SCREEN_DISPLAY, disPlay1)
+			PreferenceStore.put(ConfigKey.SCREEN_DISPLAY, disPlay1)
 			mScreenDisplay?.setTextColor(if (disPlay1 == VISIBLE) resources.getColor(R.color.color_02F8E1) else Color.WHITE)
 			hideBottom()
 		}

@@ -14,11 +14,12 @@ import com.github.tvbox.osc.bean.Movie.Video.UrlBean.UrlInfo.InfoBean
 import com.github.tvbox.osc.bean.MovieSort
 import com.github.tvbox.osc.bean.MovieSort.SortData
 import com.github.tvbox.osc.bean.SourceBean
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import com.github.tvbox.osc.util.DefaultConfig
 import com.github.tvbox.osc.util.FileUtils
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.MD5
 import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.thunder.Thunder
@@ -30,7 +31,6 @@ import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
-import com.orhanobut.hawk.Hawk
 import com.thoughtworks.xstream.XStream
 import com.thoughtworks.xstream.io.xml.DomDriver
 import okhttp3.Call
@@ -77,7 +77,7 @@ class SourceViewModel : ViewModel() {
 		val cached: AbsSortXml? = sortCache[sourceKey]
 		if (cached != null) {
 			TVBoxRuntimeLog.i("echo--getSort-cached--$sourceKey")
-			val homeRec = Hawk.get(HawkConfig.HOME_REC, 0)
+			val homeRec = PreferenceStore.get(ConfigKey.HOME_REC, 0)
 			val videoList = cached.videoList
 			val shouldUseCache = (homeRec != 1) || !videoList.isNullOrEmpty()
 			if (shouldUseCache) {
@@ -114,7 +114,7 @@ class SourceViewModel : ViewModel() {
 				} finally {
 					if (sortJson != null) {
 						val sortXml = sortJson(sortResult, sortJson)
-						if (sortXml != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
+						if (sortXml != null && PreferenceStore.get(ConfigKey.HOME_REC, 0) == 1) {
 							val absXml = json(null, sortJson, sourceBean.key)
 							val movie = absXml?.movie
 							val videos = movie?.videoList
@@ -161,7 +161,7 @@ class SourceViewModel : ViewModel() {
 							val json = response?.body()
 							sortXml = sortJson(sortResult, json ?: return)
 						}
-						if (sortXml != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
+						if (sortXml != null && PreferenceStore.get(ConfigKey.HOME_REC, 0) == 1) {
 							val list = sortXml.list
 							val videos = list?.videoList
 							if (list != null && !videos.isNullOrEmpty()) {
@@ -206,7 +206,7 @@ class SourceViewModel : ViewModel() {
 						val sortJson = response.body()
 						if (sortJson != null) {
 							val sortXml = sortJson(sortResult, sortJson)
-							if (sortXml != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
+							if (sortXml != null && PreferenceStore.get(ConfigKey.HOME_REC, 0) == 1) {
 								val absXml = json(null, sortJson, sourceBean.key)
 								val movie = absXml?.movie
 								val videos = movie?.videoList
@@ -251,7 +251,7 @@ class SourceViewModel : ViewModel() {
 							val body = response.body
 							val sortJson = body.string()
 							val sortXml = sortJson(sortResult, sortJson)
-							if (sortXml != null && Hawk.get(HawkConfig.HOME_REC, 0) == 1) {
+							if (sortXml != null && PreferenceStore.get(ConfigKey.HOME_REC, 0) == 1) {
 								val absXml = json(null, sortJson, sourceBean.key)
 								val movie = absXml?.movie
 								val videos = movie?.videoList
@@ -995,7 +995,7 @@ class SourceViewModel : ViewModel() {
 			val beanList = urlinfo.beanList ?: continue
 			if (beanList.isEmpty()) continue
 			for (infoBean in beanList) {
-				val infoBeanUrl = infoBean.url ?: continue
+				val infoBeanUrl = infoBean.url
 				if (infoBeanUrl.startsWith("push://")) {
 					var pushUrl = infoBeanUrl.substring(7)
 					if (pushUrl.startsWith("b64:")) {
@@ -1122,7 +1122,7 @@ class SourceViewModel : ViewModel() {
 			thunderLoop@ for (idx in infoList.indices) {
 				val urlInfo = infoList[idx]
 				for (infoBean in urlInfo.beanList ?: continue) {
-					if (Thunder.isSupportUrl(infoBean.url ?: continue)) {
+					if (Thunder.isSupportUrl(infoBean.url)) {
 						hasThunder = true
 						break@thunderLoop
 					}

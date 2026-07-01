@@ -12,7 +12,6 @@ import java.util.EnumMap
  * @date 2021/1/5
  */
 object QRCodeGen {
-	@JvmOverloads
 	fun generateBitmap(content: String, width: Int, height: Int, padding: Int = 0): Bitmap? {
 		val qrCodeWriter = QRCodeWriter()
 		val hints: MutableMap<EncodeHintType?, String?> = EnumMap(EncodeHintType::class.java)

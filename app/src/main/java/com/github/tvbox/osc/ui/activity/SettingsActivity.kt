@@ -17,7 +17,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -31,6 +30,8 @@ import com.github.tvbox.osc.bean.SettingItem.Companion.createSwitch
 import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.data.AppDataManager.backup
 import com.github.tvbox.osc.data.AppDataManager.restore
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import com.github.tvbox.osc.ui.adapter.SettingM3Adapter
@@ -40,10 +41,7 @@ import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.FileUtils.cachePath
 import com.github.tvbox.osc.util.FileUtils.cleanDirectory
 import com.github.tvbox.osc.util.FileUtils.filePath
-import com.github.tvbox.osc.util.FileUtils.readSimple
 import com.github.tvbox.osc.util.FileUtils.recursiveDelete
-import com.github.tvbox.osc.util.FileUtils.writeSimple
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HistoryHelper.getHistoryNumName
 import com.github.tvbox.osc.util.HistoryHelper.setLiveApiHistory
 import com.github.tvbox.osc.util.OkGoHelper.dnsHttpsList
@@ -54,11 +52,8 @@ import com.github.tvbox.osc.util.PlayerHelper.getRenderName
 import com.github.tvbox.osc.util.PlayerHelper.getScaleName
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.orhanobut.hawk.Hawk
 import org.greenrobot.eventbus.EventBus
-import org.json.JSONObject
 import java.io.File
-import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.Arrays
 import java.util.Date
@@ -130,11 +125,11 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun initData() {
-		currentApi = Hawk.get(HawkConfig.API_URL, "")
+		currentApi = PreferenceStore.get(ConfigKey.API_URL, "")
 		homeSourceKey = ApiConfig.instance.homeSourceBean.key
-		homeRec = Hawk.get(HawkConfig.HOME_REC, 0)
-		dnsOpt = Hawk.get(HawkConfig.DOH_URL, 0)
-		currentLiveApi = Hawk.get(HawkConfig.LIVE_API_URL, "")
+		homeRec = PreferenceStore.get(ConfigKey.HOME_REC, 0)
+		dnsOpt = PreferenceStore.get(ConfigKey.DOH_URL, 0)
+		currentLiveApi = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
 
 		buildSettingItems()
 		adapter?.setItems(settingItems)
@@ -146,7 +141,7 @@ class SettingsActivity : BaseActivity() {
 		// 数据源设置
 		settingItems.add(createCategory("数据源"))
 
-		settingItems.add(createPreference("配置地址", Hawk.get(HawkConfig.API_URL, "")) {
+		settingItems.add(createPreference("配置地址", PreferenceStore.get(ConfigKey.API_URL, "")) {
 			showApiDialog()
 		}.apply { summary = "设置应用数据源配置地址" })
 
@@ -162,49 +157,49 @@ class SettingsActivity : BaseActivity() {
 			showHomeSourceDialog()
 		}.apply { summary = "选择默认首页数据源" })
 
-		settingItems.add(createPreference("安全DNS", dnsHttpsList[Hawk.get(HawkConfig.DOH_URL, 0)]) {
+		settingItems.add(createPreference("安全DNS", dnsHttpsList[PreferenceStore.get(ConfigKey.DOH_URL, 0)]) {
 			showDnsDialog()
 		}.apply { summary = "选择DNS解析服务" })
 
 		// 播放设置
 		settingItems.add(createCategory("播放"))
 
-		settingItems.add(createPreference("默认播放器", getPlayerName(Hawk.get(HawkConfig.PLAY_TYPE, 0))) {
+		settingItems.add(createPreference("默认播放器", getPlayerName(PreferenceStore.get(ConfigKey.PLAY_TYPE, 0))) {
 			showPlayerDialog()
 		}.apply { summary = "选择视频播放器" })
 
-		settingItems.add(createPreference("IJK解码方式", Hawk.get(HawkConfig.IJK_CODEC, "硬解码")) {
+		settingItems.add(createPreference("IJK解码方式", PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码")) {
 			showCodecDialog()
 		}.apply { summary = "IJK播放器解码方式" })
 
-		settingItems.add(createPreference("渲染方式", getRenderName(Hawk.get(HawkConfig.PLAY_RENDER, 0))) {
+		settingItems.add(createPreference("渲染方式", getRenderName(PreferenceStore.get(ConfigKey.PLAY_RENDER, 0))) {
 			showRenderDialog()
 		}.apply { summary = "视频画面渲染方式" })
 
-		settingItems.add(createPreference("画面缩放", getScaleName(Hawk.get(HawkConfig.PLAY_SCALE, 0))) {
+		settingItems.add(createPreference("画面缩放", getScaleName(PreferenceStore.get(ConfigKey.PLAY_SCALE, 0))) {
 			showScaleDialog()
 		}.apply { summary = "默认画面缩放比例" })
 
-		settingItems.add(createSwitch("IJK缓存播放", Hawk.get(HawkConfig.IJK_CACHE_PLAY, false)) { item ->
-			Hawk.put(HawkConfig.IJK_CACHE_PLAY, item.switchState)
+		settingItems.add(createSwitch("IJK缓存播放", PreferenceStore.get(ConfigKey.IJK_CACHE_PLAY, false)) { item ->
+			PreferenceStore.put(ConfigKey.IJK_CACHE_PLAY, item.switchState)
 		}.apply { summary = "开启IJK缓存" })
 
-		settingItems.add(createSwitch("去广告", Hawk.get(HawkConfig.M3U8_PURIFY, false)) { item ->
-			Hawk.put(HawkConfig.M3U8_PURIFY, item.switchState)
+		settingItems.add(createSwitch("去广告", PreferenceStore.get(ConfigKey.M3U8_PURIFY, false)) { item ->
+			PreferenceStore.put(ConfigKey.M3U8_PURIFY, item.switchState)
 		}.apply { summary = "过滤M3U8视频广告" })
 
 		// 界面设置
 		settingItems.add(createCategory("界面"))
 
-		settingItems.add(createPreference("首页推荐", getHomeRecName(Hawk.get(HawkConfig.HOME_REC, 0))) {
+		settingItems.add(createPreference("首页推荐", getHomeRecName(PreferenceStore.get(ConfigKey.HOME_REC, 0))) {
 			showHomeRecDialog()
 		}.apply { summary = "设置首页推荐内容" })
 
-		settingItems.add(createPreference("启动方式", if (Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) "直播" else "点播") {
+		settingItems.add(createPreference("启动方式", if (PreferenceStore.get(ConfigKey.DEFAULT_LOAD_LIVE, false)) "直播" else "点播") {
 			showDefaultLoadDialog()
 		}.apply { summary = "设置启动后默认页面" })
 
-		settingItems.add(createPreference("保留历史记录", getHistoryNumName(Hawk.get(HawkConfig.HISTORY_NUM, 0))) {
+		settingItems.add(createPreference("保留历史记录", getHistoryNumName(PreferenceStore.get(ConfigKey.HISTORY_NUM, 0))) {
 			showHistoryNumDialog()
 		}.apply { summary = "保留历史记录的数量" })
 
@@ -223,8 +218,8 @@ class SettingsActivity : BaseActivity() {
 			clearCache()
 		}.apply { summary = "清空播放缓存和JAR缓存" })
 
-		settingItems.add(createSwitch("调试模式", Hawk.get(HawkConfig.DEBUG_OPEN, false)) { item ->
-			Hawk.put(HawkConfig.DEBUG_OPEN, item.switchState)
+		settingItems.add(createSwitch("调试模式", PreferenceStore.get(ConfigKey.DEBUG_OPEN, false)) { item ->
+			PreferenceStore.put(ConfigKey.DEBUG_OPEN, item.switchState)
 		}.apply { summary = "开启应用调试信息" })
 
 		// 其他
@@ -257,13 +252,13 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun handleBackPressed() {
-		if (currentApi == Hawk.get(HawkConfig.API_URL, "")) {
-			if (dnsOpt != Hawk.get(HawkConfig.DOH_URL, 0)) {
+		if (currentApi == PreferenceStore.get(ConfigKey.API_URL, "")) {
+			if (dnsOpt != PreferenceStore.get(ConfigKey.DOH_URL, 0)) {
 				AppManager.instance.finishAllActivity()
 				jumpActivity(HomeActivity::class.java)
-			} else if ((homeSourceKey != null && homeSourceKey != Hawk.get(HawkConfig.HOME_API, "")) || homeRec != Hawk.get(HawkConfig.HOME_REC, 0)) {
+			} else if ((homeSourceKey != null && homeSourceKey != PreferenceStore.get(ConfigKey.HOME_API, "")) || homeRec != PreferenceStore.get(ConfigKey.HOME_REC, 0)) {
 				jumpActivity(HomeActivity::class.java, createBundle())
-			} else if (currentLiveApi != Hawk.get(HawkConfig.LIVE_API_URL, "")) {
+			} else if (currentLiveApi != PreferenceStore.get(ConfigKey.LIVE_API_URL, "")) {
 				jumpActivity(HomeActivity::class.java)
 			}
 		} else {
@@ -284,19 +279,19 @@ class SettingsActivity : BaseActivity() {
 	private fun showApiDialog() {
 		val dialog = ApiDialog(this)
 		dialog.setOnListener { api: String? ->
-			Hawk.put(HawkConfig.API_URL, api)
+			PreferenceStore.put(ConfigKey.API_URL, api)
 			updateSettingsItem("配置地址", api)
 		}
 		dialog.show()
 	}
 
 	private fun showApiHistoryDialog() {
-		val history = Hawk.get(HawkConfig.API_HISTORY, arrayListOf<String>())
+		val history = PreferenceStore.getObj(ConfigKey.API_HISTORY, arrayListOf<String>())
 		if (history.isEmpty()) {
 			Toast.makeText(this, "暂无点播配置历史", Toast.LENGTH_SHORT).show()
 			return
 		}
-		val current = Hawk.get(HawkConfig.API_URL, "")
+		val current = PreferenceStore.get(ConfigKey.API_URL, "")
 		val idx = if (history.contains(current)) history.indexOf(current) else 0
 
 		val historyArray = history.toTypedArray()
@@ -305,8 +300,8 @@ class SettingsActivity : BaseActivity() {
 			.setTitle("点播配置历史")
 			.setSingleChoiceItems(historyArray, idx) { dialog: DialogInterface?, which: Int ->
 				val selectedUrl = historyArray[which]
-				Hawk.put(HawkConfig.API_URL, selectedUrl)
-				Hawk.put(HawkConfig.LIVE_API_URL, selectedUrl)
+				PreferenceStore.put(ConfigKey.API_URL, selectedUrl)
+				PreferenceStore.put(ConfigKey.LIVE_API_URL, selectedUrl)
 				setLiveApiHistory(selectedUrl)
 				updateSettingsItem("配置地址", selectedUrl)
 				dialog?.dismiss()
@@ -316,7 +311,7 @@ class SettingsActivity : BaseActivity() {
 					.setTitle("确认清空")
 					.setMessage("确定要清空所有点播配置历史吗？")
 					.setPositiveButton("确定") { d: DialogInterface?, w: Int ->
-						Hawk.put(HawkConfig.API_HISTORY, arrayListOf<String>())
+						PreferenceStore.putObj(ConfigKey.API_HISTORY, arrayListOf<String>())
 						Toast.makeText(this, "已清点播空历史配置", Toast.LENGTH_SHORT).show()
 					}
 					.setNegativeButton("取消", null)
@@ -327,12 +322,12 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun showLiveHistoryDialog() {
-		val history = Hawk.get(HawkConfig.LIVE_API_HISTORY, arrayListOf<String>())
+		val history = PreferenceStore.getObj(ConfigKey.LIVE_API_HISTORY, arrayListOf<String>())
 		if (history.isEmpty()) {
 			Toast.makeText(this, "暂无直播历史配置", Toast.LENGTH_SHORT).show()
 			return
 		}
-		val current = Hawk.get(HawkConfig.LIVE_API_URL, "")
+		val current = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
 		val idx = if (history.contains(current)) history.indexOf(current) else 0
 
 		val historyArray: Array<String> = history.toTypedArray()
@@ -341,7 +336,7 @@ class SettingsActivity : BaseActivity() {
 			.setTitle("直播历史配置")
 			.setSingleChoiceItems(historyArray, idx) { dialog: DialogInterface?, which: Int ->
 				val selectedUrl: String = historyArray[which]
-				Hawk.put(HawkConfig.LIVE_API_URL, selectedUrl)
+				PreferenceStore.put(ConfigKey.LIVE_API_URL, selectedUrl)
 				Toast.makeText(this, "已选择直播配置", Toast.LENGTH_SHORT).show()
 				dialog?.dismiss()
 			}
@@ -350,7 +345,7 @@ class SettingsActivity : BaseActivity() {
 					.setTitle("确认清空")
 					.setMessage("确定要清空所有直播历史配置吗？")
 					.setPositiveButton("确定") { d: DialogInterface?, w: Int ->
-						Hawk.put(HawkConfig.LIVE_API_HISTORY, arrayListOf<String>())
+						PreferenceStore.putObj(ConfigKey.LIVE_API_HISTORY, arrayListOf<String>())
 						Toast.makeText(this, "已清空直播历史配置", Toast.LENGTH_SHORT).show()
 					}
 					.setNegativeButton("取消", null)
@@ -392,13 +387,13 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun showDnsDialog() {
-		val dohUrl = Hawk.get(HawkConfig.DOH_URL, 0)
+		val dohUrl = PreferenceStore.get(ConfigKey.DOH_URL, 0)
 		val dnsOptions: Array<String> = dnsHttpsList.toTypedArray()
 
 		MaterialAlertDialogBuilder(this)
 			.setTitle("请选择安全DNS")
 			.setSingleChoiceItems(dnsOptions, dohUrl) { dialog: DialogInterface?, which: Int ->
-				Hawk.put(HawkConfig.DOH_URL, which)
+				PreferenceStore.put(ConfigKey.DOH_URL, which)
 				updateSettingsItem("安全DNS", dnsHttpsList[which])
 				dialog?.dismiss()
 			}
@@ -408,7 +403,7 @@ class SettingsActivity : BaseActivity() {
 
 	// 播放
 	private fun showPlayerDialog() {
-		val playerType = Hawk.get(HawkConfig.PLAY_TYPE, 0)
+		val playerType = PreferenceStore.get(ConfigKey.PLAY_TYPE, 0)
 		var defaultPos = 0
 		val players: List<Int> = existPlayerTypes
 
@@ -423,7 +418,7 @@ class SettingsActivity : BaseActivity() {
 			.setTitle("请选择默认播放器")
 			.setSingleChoiceItems(playerNames, defaultPos) { dialog: DialogInterface?, which: Int ->
 				val thisPlayerType = players[which]
-				Hawk.put(HawkConfig.PLAY_TYPE, thisPlayerType)
+				PreferenceStore.put(ConfigKey.PLAY_TYPE, thisPlayerType)
 				updateSettingsItem("默认播放器", getPlayerName(thisPlayerType))
 				PlayerHelper.init()
 				dialog?.dismiss()
@@ -440,7 +435,7 @@ class SettingsActivity : BaseActivity() {
 		}
 
 		var defaultPos = 0
-		val ijkSel = Hawk.get(HawkConfig.IJK_CODEC, "硬解码")
+		val ijkSel = PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码")
 		val codecNames = Array(ijkCodes.size) { j -> ijkCodes[j].name ?: "" }
 		for (j in ijkCodes.indices) {
 			if (ijkSel == ijkCodes[j].name) {
@@ -461,7 +456,7 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun showRenderDialog() {
-		val defaultPos = Hawk.get(HawkConfig.PLAY_RENDER, 0)
+		val defaultPos = PreferenceStore.get(ConfigKey.PLAY_RENDER, 0)
 		val renderNames = arrayOf(
 			getRenderName(0),
 			getRenderName(1)
@@ -470,7 +465,7 @@ class SettingsActivity : BaseActivity() {
 		MaterialAlertDialogBuilder(this)
 			.setTitle("请选择默认渲染方式")
 			.setSingleChoiceItems(renderNames, defaultPos) { dialog: DialogInterface?, which: Int ->
-				Hawk.put(HawkConfig.PLAY_RENDER, which)
+				PreferenceStore.put(ConfigKey.PLAY_RENDER, which)
 				updateSettingsItem("渲染方式", getRenderName(which))
 				PlayerHelper.init()
 				dialog?.dismiss()
@@ -480,7 +475,7 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun showScaleDialog() {
-		val defaultPos = Hawk.get(HawkConfig.PLAY_SCALE, 0)
+		val defaultPos = PreferenceStore.get(ConfigKey.PLAY_SCALE, 0)
 		val scaleNames = arrayOf(
 			getScaleName(0),
 			getScaleName(1),
@@ -493,7 +488,7 @@ class SettingsActivity : BaseActivity() {
 		MaterialAlertDialogBuilder(this)
 			.setTitle("请选择默认画面缩放")
 			.setSingleChoiceItems(scaleNames, defaultPos) { dialog: DialogInterface?, which: Int ->
-				Hawk.put(HawkConfig.PLAY_SCALE, which)
+				PreferenceStore.put(ConfigKey.PLAY_SCALE, which)
 				updateSettingsItem("画面缩放", getScaleName(which))
 				dialog?.dismiss()
 			}
@@ -503,7 +498,7 @@ class SettingsActivity : BaseActivity() {
 
 	// 界面
 	private fun showHomeRecDialog() {
-		val defaultPos = Hawk.get(HawkConfig.HOME_REC, 0)
+		val defaultPos = PreferenceStore.get(ConfigKey.HOME_REC, 0)
 		val recNames = arrayOf(
 			getHomeRecName(0),
 			getHomeRecName(1),
@@ -513,7 +508,7 @@ class SettingsActivity : BaseActivity() {
 		MaterialAlertDialogBuilder(this)
 			.setTitle("请选择首页列表数据")
 			.setSingleChoiceItems(recNames, defaultPos) { dialog: DialogInterface?, which: Int ->
-				Hawk.put(HawkConfig.HOME_REC, which)
+				PreferenceStore.put(ConfigKey.HOME_REC, which)
 				updateSettingsItem("首页推荐", getHomeRecName(which))
 				dialog?.dismiss()
 			}
@@ -522,7 +517,7 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun showDefaultLoadDialog() {
-		val currentState = Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)
+		val currentState = PreferenceStore.get(ConfigKey.DEFAULT_LOAD_LIVE, false)
 		val defaultPos = if (currentState) 1 else 0
 		val options = arrayOf("点播", "直播")
 
@@ -530,7 +525,7 @@ class SettingsActivity : BaseActivity() {
 			.setTitle("设置启动后默认页面")
 			.setSingleChoiceItems(options, defaultPos) { dialog: DialogInterface?, which: Int ->
 				val newState = (which == 1)
-				Hawk.put(HawkConfig.DEFAULT_LOAD_LIVE, newState)
+				PreferenceStore.put(ConfigKey.DEFAULT_LOAD_LIVE, newState)
 				updateSettingsItem("启动方式", if (newState) "直播" else "点播")
 				dialog?.dismiss()
 			}
@@ -539,7 +534,7 @@ class SettingsActivity : BaseActivity() {
 	}
 
 	private fun showHistoryNumDialog() {
-		val defaultPos = Hawk.get(HawkConfig.HISTORY_NUM, 0)
+		val defaultPos = PreferenceStore.get(ConfigKey.HISTORY_NUM, 0)
 		val historyOptions = arrayOf(
 			getHistoryNumName(0),
 			getHistoryNumName(1),
@@ -549,7 +544,7 @@ class SettingsActivity : BaseActivity() {
 		MaterialAlertDialogBuilder(this)
 			.setTitle("保留历史记录数量")
 			.setSingleChoiceItems(historyOptions, defaultPos) { dialog: DialogInterface?, which: Int ->
-				Hawk.put(HawkConfig.HISTORY_NUM, which)
+				PreferenceStore.put(ConfigKey.HISTORY_NUM, which)
 				updateSettingsItem("保留历史记录", getHistoryNumName(which))
 				dialog?.dismiss()
 			}
@@ -766,23 +761,10 @@ class SettingsActivity : BaseActivity() {
 			backup.mkdirs()
 			val db = File(backup, "sqlite")
 			if (backup(db)) {
-				val sharedPreferences = getSharedPreferences("Hawk2", MODE_PRIVATE)
-				val jsonObject = JSONObject()
-				for (key in sharedPreferences.all.keys) {
-					jsonObject.put(key, sharedPreferences.getString(key, ""))
-				}
-				val cryptoPrefs = getSharedPreferences("crypto.KEY_256", MODE_PRIVATE)
-				for (key in cryptoPrefs.all.keys) {
-					jsonObject.put(key, cryptoPrefs.getString(key, ""))
-				}
-				if (!writeSimple(jsonObject.toString().toByteArray(StandardCharsets.UTF_8), File(backup, "hawk"))) {
-					backup.delete()
-					Toast.makeText(this, "备份失败", Toast.LENGTH_SHORT).show()
-				} else {
-					Toast.makeText(this, "备份成功", Toast.LENGTH_SHORT).show()
-					// 刷新备份列表
-					showBackupDialog()
-				}
+				PreferenceStore.exportFile(File(backup, "preferences"))
+				Toast.makeText(this, "备份成功", Toast.LENGTH_SHORT).show()
+				// 刷新备份列表
+				showBackupDialog()
 			} else {
 				Toast.makeText(this, "备份失败", Toast.LENGTH_SHORT).show()
 				backup.delete()
@@ -804,26 +786,9 @@ class SettingsActivity : BaseActivity() {
 					if (backup.exists()) {
 						val db = File(backup, "sqlite")
 						if (restore(db)) {
-							val data = readSimple(File(backup, "hawk"))
-							if (data != null) {
-								val hawkJson = String(data, StandardCharsets.UTF_8)
-								val jsonObject = JSONObject(hawkJson)
-								val it = jsonObject.keys()
-								val sharedPreferences = getSharedPreferences("Hawk2", MODE_PRIVATE)
-								while (it.hasNext()) {
-									val key = it.next()
-									val value = jsonObject.getString(key)
-									if (key == "cipher_key") {
-										getSharedPreferences("crypto.KEY_256", MODE_PRIVATE).edit(commit = true) { putString(key, value) }
-									} else {
-										sharedPreferences.edit(commit = true) { putString(key, value) }
-									}
-								}
-								Toast.makeText(this, "恢复成功，即将自动重启应用", Toast.LENGTH_SHORT).show()
-								Handler(Looper.getMainLooper()).postDelayed({ this.restartApp() }, 3000)
-							} else {
-								Toast.makeText(this, "恢复失败", Toast.LENGTH_SHORT).show()
-							}
+							PreferenceStore.importFile(File(backup, "preferences"))
+							Toast.makeText(this, "恢复成功，即将自动重启应用", Toast.LENGTH_SHORT).show()
+							Handler(Looper.getMainLooper()).postDelayed({ this.restartApp() }, 3000)
 						} else {
 							Toast.makeText(this, "恢复失败", Toast.LENGTH_SHORT).show()
 						}

@@ -5,6 +5,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.picasso.MyOkhttpDownLoader
 import com.github.tvbox.osc.util.ssl.SSLSocketFactoryCompat
 import com.google.gson.JsonArray
@@ -12,7 +14,6 @@ import com.google.gson.JsonParser
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.https.HttpsUtils
 import com.lzy.okgo.interceptor.HttpLoggingInterceptor
-import com.orhanobut.hawk.Hawk
 import com.squareup.picasso.Picasso
 import okhttp3.Cache
 import okhttp3.Dns
@@ -50,7 +51,7 @@ object OkGoHelper {
 		val builder = OkHttpClient.Builder()
 		val loggingInterceptor = HttpLoggingInterceptor("OkExoPlayer")
 
-		if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+		if (PreferenceStore.get(ConfigKey.DEBUG_OPEN, false)) {
 			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY)
 			loggingInterceptor.setColorLevel(Level.INFO)
 		} else {
@@ -79,7 +80,7 @@ object OkGoHelper {
 	}
 
 	fun getDohUrl(type: Int): String {
-		var json = Hawk.get(HawkConfig.DOH_JSON, "")
+		var json = PreferenceStore.get(ConfigKey.DOH_JSON, "")
 		if (json.isEmpty()) json = DNS_CONFIG_JSON
 		val jsonArray = JsonParser.parseString(json).asJsonArray
 		if (type >= 1 && type < dnsHttpsList.size) {
@@ -91,7 +92,7 @@ object OkGoHelper {
 
 	fun setDnsList() {
 		dnsHttpsList.clear()
-		var json = Hawk.get(HawkConfig.DOH_JSON, "")
+		var json = PreferenceStore.get(ConfigKey.DOH_JSON, "")
 		if (json.isEmpty()) json = DNS_CONFIG_JSON
 		val jsonArray = JsonParser.parseString(json).asJsonArray
 		dnsHttpsList.add("关闭")
@@ -100,7 +101,7 @@ object OkGoHelper {
 			val name = if (dnsConfig.has("name")) dnsConfig.get("name").asString else "Unknown Name"
 			dnsHttpsList.add(name)
 		}
-		if (Hawk.get(HawkConfig.DOH_URL, 0) + 1 > dnsHttpsList.size) Hawk.put(HawkConfig.DOH_URL, 0)
+		if (PreferenceStore.get(ConfigKey.DOH_URL, 0) + 1 > dnsHttpsList.size) PreferenceStore.put(ConfigKey.DOH_URL, 0)
 	}
 
 	private fun dohIps(ips: JsonArray?): List<InetAddress> {
@@ -119,14 +120,14 @@ object OkGoHelper {
 	}
 
 	fun initDnsOverHttps() {
-		val dohSelector = Hawk.get(HawkConfig.DOH_URL, 0)
+		val dohSelector = PreferenceStore.get(ConfigKey.DOH_URL, 0)
 		var ips: JsonArray? = null
 		try {
 			dnsHttpsList.add("关闭")
-			var json = Hawk.get(HawkConfig.DOH_JSON, "")
+			var json = PreferenceStore.get(ConfigKey.DOH_JSON, "")
 			if (json.isEmpty()) json = DNS_CONFIG_JSON
 			val jsonArray = JsonParser.parseString(json).asJsonArray
-			if (dohSelector + 1 > jsonArray.size()) Hawk.put(HawkConfig.DOH_URL, 0)
+			if (dohSelector + 1 > jsonArray.size()) PreferenceStore.put(ConfigKey.DOH_URL, 0)
 			for (i in 0..<jsonArray.size()) {
 				val dnsConfig = jsonArray.get(i).asJsonObject
 				val name = if (dnsConfig.has("name")) dnsConfig.get("name").asString else "Unknown Name"
@@ -139,7 +140,7 @@ object OkGoHelper {
 
 		val builder = OkHttpClient.Builder()
 		val loggingInterceptor = HttpLoggingInterceptor("OkExoPlayer")
-		if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+		if (PreferenceStore.get(ConfigKey.DEBUG_OPEN, false)) {
 			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY)
 			loggingInterceptor.setColorLevel(Level.INFO)
 		} else {
@@ -154,7 +155,7 @@ object OkGoHelper {
 		}
 		builder.cache(Cache(File(App.instance.cacheDir.absolutePath, "dohcache"), (100 * 1024 * 1024).toLong()))
 		val dohClient = builder.build()
-		val dohUrl = getDohUrl(Hawk.get(HawkConfig.DOH_URL, 0))
+		val dohUrl = getDohUrl(PreferenceStore.get(ConfigKey.DOH_URL, 0))
 		dnsOverHttps = DnsOverHttps.Builder(dohClient)
 			.url(if (dohUrl.isEmpty()) null else dohUrl.toHttpUrl())
 			.bootstrapDnsHosts(if (ips != null && dohUrl != "https://doh.pub/dns-query") dohIps(ips) else null)
@@ -169,7 +170,7 @@ object OkGoHelper {
 		val builder = OkHttpClient.Builder()
 		val loggingInterceptor = HttpLoggingInterceptor("OkGo")
 
-		if (Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+		if (PreferenceStore.get(ConfigKey.DEBUG_OPEN, false)) {
 			loggingInterceptor.setPrintLevel(HttpLoggingInterceptor.Level.BODY)
 			loggingInterceptor.setColorLevel(Level.INFO)
 		} else {

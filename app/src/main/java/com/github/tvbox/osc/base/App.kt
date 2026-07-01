@@ -7,17 +7,17 @@ import com.github.catvod.crawler.JsLoader
 import com.github.tvbox.osc.bean.VodInfo
 import com.github.tvbox.osc.callback.EmptyCallback
 import com.github.tvbox.osc.callback.LoadingCallback
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.EpgUtil
 import com.github.tvbox.osc.util.FileUtils
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.OkGoHelper
 import com.github.tvbox.osc.util.PlayerHelper
 import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.google.android.material.color.DynamicColors
 import com.kingja.loadsir.core.LoadSir
-import com.orhanobut.hawk.Hawk
 import com.p2p.P2PClass
 import com.whl.quickjs.android.QuickJSLoader
 import me.jessyan.autosize.AutoSizeConfig
@@ -63,11 +63,10 @@ class App : Application() {
 	}
 
 	private fun initParams() {
-		// Hawk
-		Hawk.init(this).build()
-		Hawk.put(HawkConfig.DEBUG_OPEN, false)
-		if (!Hawk.contains(HawkConfig.PLAY_TYPE)) {
-			Hawk.put(HawkConfig.PLAY_TYPE, 1)
+		PreferenceStore.init(this)
+		PreferenceStore.put(ConfigKey.DEBUG_OPEN, false)
+		if (PreferenceStore.get(ConfigKey.PLAY_TYPE, -1) == -1) {
+			PreferenceStore.put(ConfigKey.PLAY_TYPE, 1)
 		}
 	}
 

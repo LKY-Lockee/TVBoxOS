@@ -162,6 +162,7 @@ open class SearchSubtitleDialog(private val mContext: Context) : BaseDialog(mCon
 		mSubtitleLoader = subtitleLoader
 	}
 
+	@Deprecated("Deprecated in Java")
 	override fun onBackPressed() {
 		if (!isSearchPag) {
 			isSearchPag = true

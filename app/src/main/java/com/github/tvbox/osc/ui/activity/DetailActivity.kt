@@ -227,7 +227,7 @@ class DetailActivity : BaseActivity() {
 				(viewPager ?: return).currentItem = tab.position
 				(viewPager ?: return).post(Runnable {
 					if (tab.position == 2 && mVideo != null && searchFragment != null && !hasSearchedOnce) {
-						(searchFragment ?: return@Runnable).search((mVideo ?: return@Runnable).name)
+						searchFragment?.search(mVideo?.name.orEmpty())
 						hasSearchedOnce = true
 					}
 				})
@@ -309,7 +309,7 @@ class DetailActivity : BaseActivity() {
 				(vodInfo ?: return@Observer).sourceKey = (mVideo ?: return@Observer).sourceKey
 				sourceKey = (mVideo ?: return@Observer).sourceKey
 
-				(tabInfoFragment ?: return@Observer).setVideoInfo(mVideo, sourceKey, firstSourceKey, vodId)
+				(tabInfoFragment ?: return@Observer).setVideoInfo(mVideo, sourceKey, firstSourceKey.orEmpty(), vodId)
 
 				if ((vodInfo ?: return@Observer).seriesMap != null && !((vodInfo ?: return@Observer).seriesMap ?: return@Observer).isEmpty()) {
 					val vodInfoRecord = RoomDataManger.getVodInfo(sourceKey ?: return@Observer, vodId ?: return@Observer)
@@ -407,7 +407,7 @@ class DetailActivity : BaseActivity() {
 
 	private fun insertVod(sourceKey: String, vodInfo: VodInfo) {
 		try {
-			vodInfo.playNote = (((vodInfo.seriesMap ?: return)[vodInfo.playFlag ?: return] ?: return)[vodInfo.playIndex].name ?: return)
+			vodInfo.playNote = ((vodInfo.seriesMap ?: return)[vodInfo.playFlag ?: return] ?: return)[vodInfo.playIndex].name
 		} catch (th: Throwable) {
 			vodInfo.playNote = ""
 		}

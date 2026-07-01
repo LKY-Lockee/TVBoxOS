@@ -1,12 +1,11 @@
 package com.github.tvbox.osc.player.thirdparty
 
 import android.app.Activity
-
 import com.github.tvbox.osc.base.App.Companion.instance
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.RemoteServer.Companion.getLocalIPAddress
-import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.IpScanning
-import com.orhanobut.hawk.Hawk
 import okhttp3.Call
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -94,9 +93,9 @@ object RemoteTVBox {
 	}
 
 	var available: String?
-		get() = Hawk.get<String>(HawkConfig.REMOTE_TVBOX, null)
+		get() = PreferenceStore.getObj(ConfigKey.REMOTE_TVBOX, null as String?)
 		set(viewHost) {
-			Hawk.put<String?>(HawkConfig.REMOTE_TVBOX, viewHost)
+			PreferenceStore.put(ConfigKey.REMOTE_TVBOX, viewHost)
 		}
 
 	val availableActionUrl: String

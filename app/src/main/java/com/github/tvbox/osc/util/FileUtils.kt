@@ -4,11 +4,12 @@ import android.os.Environment
 import android.text.TextUtils
 import android.util.Base64
 import com.github.tvbox.osc.base.App
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.util.urlhttp.OkHttpUtil
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import com.orhanobut.hawk.Hawk
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -233,7 +234,7 @@ object FileUtils {
 			TVBoxRuntimeLog.i("echo-loadModule $resolvedName")
 			val m = URL_JOIN.matcher(resolvedName)
 			if (m.find()) {
-				if (!Hawk.get(HawkConfig.DEBUG_OPEN, false)) {
+				if (!PreferenceStore.get(ConfigKey.DEBUG_OPEN, false)) {
 					val cache = getCache(MD5.encode(resolvedName))
 					rel = cache
 					if (StringUtils.isEmpty(cache)) {

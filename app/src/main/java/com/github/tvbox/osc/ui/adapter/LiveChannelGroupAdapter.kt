@@ -27,10 +27,6 @@ class LiveChannelGroupAdapter : BaseQuickAdapter<LiveChannelGroup, BaseViewHolde
 		}
 	}
 
-	fun getSelectedGroupIndex(): Int {
-		return selectedGroupIndex
-	}
-
 	fun setSelectedGroupIndex(selectedGroupIndex: Int) {
 		if (selectedGroupIndex == this.selectedGroupIndex) return
 		val preSelectedGroupIndex = this.selectedGroupIndex

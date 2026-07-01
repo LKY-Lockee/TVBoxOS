@@ -2,6 +2,8 @@ package com.github.tvbox.osc.util
 
 import android.app.Activity
 import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.data.ConfigKey
+import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.player.ExoMediaPlayerFactory
 import com.github.tvbox.osc.player.IjkMediaPlayer
 import com.github.tvbox.osc.player.render.SurfaceRenderViewFactory
@@ -10,7 +12,6 @@ import com.github.tvbox.osc.player.thirdparty.MXPlayer
 import com.github.tvbox.osc.player.thirdparty.ReexPlayer
 import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import com.github.tvbox.osc.player.thirdparty.VlcPlayer
-import com.orhanobut.hawk.Hawk
 import org.json.JSONException
 import org.json.JSONObject
 import xyz.doikki.videoplayer.player.AndroidMediaPlayerFactory
@@ -25,10 +26,10 @@ object PlayerHelper {
 	private var mPlayersExistInfo: HashMap<Int, Boolean>? = null
 
 	fun updateCfg(videoView: VideoView?, playerCfg: JSONObject, forcePlayerType: Int = -1) {
-		var playerType = Hawk.get(HawkConfig.PLAY_TYPE, 0)
-		var renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0)
-		var ijkCode = Hawk.get(HawkConfig.IJK_CODEC, "硬解码")
-		var scale = Hawk.get(HawkConfig.PLAY_SCALE, 0)
+		var playerType = PreferenceStore.get(ConfigKey.PLAY_TYPE, 0)
+		var renderType = PreferenceStore.get(ConfigKey.PLAY_RENDER, 0)
+		var ijkCode = PreferenceStore.get(ConfigKey.IJK_CODEC, "硬解码")
+		var scale = PreferenceStore.get(ConfigKey.PLAY_SCALE, 0)
 		try {
 			playerType = playerCfg.getInt("pl")
 			renderType = playerCfg.getInt("pr")
@@ -75,7 +76,7 @@ object PlayerHelper {
 	}
 
 	fun updateCfg(videoView: VideoView) {
-		val playType = Hawk.get(HawkConfig.PLAY_TYPE, 0)
+		val playType = PreferenceStore.get(ConfigKey.PLAY_TYPE, 0)
 		val playerFactory = when (playType) {
 			1 -> {
 				try {
@@ -99,7 +100,7 @@ object PlayerHelper {
 			2 -> ExoMediaPlayerFactory.create()
 			else -> AndroidMediaPlayerFactory.create()
 		}
-		val renderType = Hawk.get(HawkConfig.PLAY_RENDER, 0)
+		val renderType = PreferenceStore.get(ConfigKey.PLAY_RENDER, 0)
 		val renderViewFactory: RenderViewFactory = when (renderType) {
 			1 -> SurfaceRenderViewFactory.create()
 			else -> TextureRenderViewFactory.create()
