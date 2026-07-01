@@ -7,14 +7,14 @@ import java.util.TimeZone
 
 class EpgInfo(
 	epgDate: Date,
-	val title: String?,
+	val title: String,
 	val date: Date,
-	originStart: String?,
-	originEnd: String?,
+	val originStart: String,
+	val originEnd: String,
 	val index: Int
 ) {
-	val startDateTime: Date?
-	val endDateTime: Date?
+	val startDateTime: Date
+	val endDateTime: Date
 	val dateStart: Int
 	val dateEnd: Int
 	val start: String
@@ -31,12 +31,12 @@ class EpgInfo(
 			timeZone = TimeZone.getDefault()
 		}
 		val dateStr = dateFormat.format(date)
-		startDateTime = userSdf.parse("$dateStr ${originStart ?: "00:00"}:00 GMT+8:00")
-		endDateTime = userSdf.parse("$dateStr ${originEnd ?: "00:00"}:00 GMT+8:00")
+		startDateTime = userSdf.parse("$dateStr $originStart:00 GMT+8:00") ?: date
+		endDateTime = userSdf.parse("$dateStr $originEnd:00 GMT+8:00") ?: date
 
 		val zoneFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-		start = if (startDateTime != null) zoneFormat.format(startDateTime) else "00:00"
-		end = if (endDateTime != null) zoneFormat.format(endDateTime) else "00:00"
+		start = zoneFormat.format(startDateTime)
+		end = zoneFormat.format(endDateTime)
 		dateStart = start.replace(":", "").toInt()
 		dateEnd = end.replace(":", "").toInt()
 	}

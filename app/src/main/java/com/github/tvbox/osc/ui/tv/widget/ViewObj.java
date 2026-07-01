@@ -3,6 +3,8 @@ package com.github.tvbox.osc.ui.tv.widget;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.Keep;
+
 /**
  * 描述
  *
@@ -18,6 +20,7 @@ public class ViewObj {
         this.params = params;
     }
 
+    @Keep
     public void setMarginLeft(int left) {
         params.leftMargin = left;
         view.setLayoutParams(params);
@@ -28,6 +31,7 @@ public class ViewObj {
         view.setLayoutParams(params);
     }
 
+    @Keep
     public void setMarginRight(int right) {
         params.rightMargin = right;
         view.setLayoutParams(params);

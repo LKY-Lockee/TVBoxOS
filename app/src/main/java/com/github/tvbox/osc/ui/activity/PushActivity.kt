@@ -1,65 +1,56 @@
-package com.github.tvbox.osc.ui.activity;
+package com.github.tvbox.osc.ui.activity
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
-import android.content.Intent;
-import android.widget.ImageView;
-import android.widget.TextView;
+import android.content.ClipboardManager
+import android.content.Intent
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.server.ControlManager.Companion.instance
+import com.github.tvbox.osc.ui.tv.QRCodeGen
+import me.jessyan.autosize.utils.AutoSizeUtils
 
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.base.BaseActivity;
-import com.github.tvbox.osc.server.ControlManager;
-import com.github.tvbox.osc.ui.tv.QRCodeGen;
+class PushActivity : BaseActivity() {
+	private lateinit var ivQRCode: ImageView
+	private lateinit var tvAddress: TextView
 
-import me.jessyan.autosize.utils.AutoSizeUtils;
+	override val layoutResID: Int
+		get() = R.layout.activity_push
 
-public class PushActivity extends BaseActivity {
-    private ImageView ivQRCode;
-    private TextView tvAddress;
+	override fun init() {
+		initView()
+		initData()
+	}
 
-    @Override
-    protected int getLayoutResID() {
-        return R.layout.activity_push;
-    }
+	private fun initView() {
+		ivQRCode = findViewById(R.id.ivQRCode)
+		tvAddress = findViewById(R.id.tvAddress)
+		refreshQRCode()
+		findViewById<View>(R.id.pushLocal).setOnClickListener {
+			try {
+				val manager = getSystemService(CLIPBOARD_SERVICE) as? ClipboardManager
+				val clip = manager?.primaryClip
+				if (clip != null && manager.hasPrimaryClip() && clip.itemCount > 0) {
+					val addedText = clip.getItemAt(0)
+					val clipText = addedText.text.toString().trim { it <= ' ' }
+					val newIntent = Intent(mContext, DetailActivity::class.java)
+					newIntent.putExtra("id", clipText)
+					newIntent.putExtra("sourceKey", "push_agent")
+					newIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+					startActivity(newIntent)
+				}
+			} catch (ignored: Throwable) {
+			}
+		}
+	}
 
-    @Override
-    protected void init() {
-        initView();
-        initData();
-    }
+	private fun refreshQRCode() {
+		val address = instance.getAddress(false)
+		tvAddress.text = String.format("扫描上方二维码或访问地址\n%s", address)
+		ivQRCode.setImageBitmap(QRCodeGen.generateBitmap(address + "push.html", AutoSizeUtils.mm2px(this, 300f), AutoSizeUtils.mm2px(this, 300f), 4))
+	}
 
-    private void initView() {
-        ivQRCode = findViewById(R.id.ivQRCode);
-        tvAddress = findViewById(R.id.tvAddress);
-        refreshQRCode();
-        findViewById(R.id.pushLocal).setOnClickListener(v -> {
-            try {
-                ClipboardManager manager = (ClipboardManager) PushActivity.this.getSystemService(Context.CLIPBOARD_SERVICE);
-                if (manager != null) {
-                    if (manager.hasPrimaryClip() && manager.getPrimaryClip() != null && manager.getPrimaryClip().getItemCount() > 0) {
-                        ClipData.Item addedText = manager.getPrimaryClip().getItemAt(0);
-                        String clipText = addedText.getText().toString().trim();
-                        Intent newIntent = new Intent(mContext, DetailActivity.class);
-                        newIntent.putExtra("id", clipText);
-                        newIntent.putExtra("sourceKey", "push_agent");
-                        newIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        PushActivity.this.startActivity(newIntent);
-                    }
-                }
-            } catch (Throwable ignored) {
-
-            }
-        });
-    }
-
-    private void refreshQRCode() {
-        String address = ControlManager.get().getAddress(false);
-        tvAddress.setText(String.format("扫描上方二维码或访问地址\n%s", address));
-        ivQRCode.setImageBitmap(QRCodeGen.generateBitmap(address + "push.html", AutoSizeUtils.mm2px(this, 300), AutoSizeUtils.mm2px(this, 300), 4));
-    }
-
-    private void initData() {
-
-    }
+	private fun initData() {
+	}
 }

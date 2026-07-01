@@ -3,14 +3,14 @@ package com.github.tvbox.osc.bean
 /**
  * 设置项数据模型 - Material 3风格
  */
-class SettingItem(val type: Int, val title: String?) {
+class SettingItem(val type: Int, val title: String) {
 	var summary: String? = null
 	var value: String? = null
-	var switchState: Boolean = false
+	var switchState = false
 	var onClickListener: OnClickListener? = null
 
-	interface OnClickListener {
-		fun onClick(item: SettingItem?)
+	fun interface OnClickListener {
+		fun onClick(item: SettingItem)
 	}
 
 	companion object {
@@ -29,18 +29,18 @@ class SettingItem(val type: Int, val title: String?) {
 		 */
 		const val TYPE_SWITCH: Int = 2
 
-		fun createCategory(title: String?): SettingItem {
+		fun createCategory(title: String): SettingItem {
 			return SettingItem(TYPE_CATEGORY, title)
 		}
 
-		fun createPreference(title: String?, value: String?, listener: OnClickListener?): SettingItem {
+		fun createPreference(title: String, value: String?, listener: OnClickListener?): SettingItem {
 			return SettingItem(TYPE_PREFERENCE, title).apply {
 				this.value = value
 				this.onClickListener = listener
 			}
 		}
 
-		fun createSwitch(title: String?, checked: Boolean, listener: OnClickListener?): SettingItem {
+		fun createSwitch(title: String, checked: Boolean, listener: OnClickListener?): SettingItem {
 			return SettingItem(TYPE_SWITCH, title).apply {
 				this.switchState = checked
 				this.onClickListener = listener

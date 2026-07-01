@@ -1,502 +1,470 @@
-package com.github.tvbox.osc.ui.activity;
+package com.github.tvbox.osc.ui.activity
 
-import android.content.Intent;
-import android.os.Bundle;
-import android.os.Handler;
-import android.view.View;
-import android.widget.Toast;
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
+import android.view.MenuItem
+import android.view.View
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
+import com.github.tvbox.osc.R
+import com.github.tvbox.osc.api.ApiConfig
+import com.github.tvbox.osc.api.ApiConfig.LoadConfigCallback
+import com.github.tvbox.osc.base.BackPressProvider
+import com.github.tvbox.osc.base.BaseActivity
+import com.github.tvbox.osc.base.ToolbarMenuProvider
+import com.github.tvbox.osc.server.ControlManager
+import com.github.tvbox.osc.ui.dialog.TipDialog
+import com.github.tvbox.osc.ui.fragment.CollectFragment
+import com.github.tvbox.osc.ui.fragment.HistoryFragment
+import com.github.tvbox.osc.ui.fragment.HomeFragment
+import com.github.tvbox.osc.ui.fragment.SearchFragment
+import com.github.tvbox.osc.util.AppManager
+import com.github.tvbox.osc.util.HawkConfig
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.orhanobut.hawk.Hawk
+import kotlin.system.exitProcess
 
-import androidx.activity.OnBackPressedCallback;
-import androidx.annotation.NonNull;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.viewpager2.adapter.FragmentStateAdapter;
-import androidx.viewpager2.widget.ViewPager2;
-
-import com.github.tvbox.osc.R;
-import com.github.tvbox.osc.api.ApiConfig;
-import com.github.tvbox.osc.base.BackPressProvider;
-import com.github.tvbox.osc.base.BaseActivity;
-import com.github.tvbox.osc.base.ToolbarMenuProvider;
-import com.github.tvbox.osc.server.ControlManager;
-import com.github.tvbox.osc.ui.dialog.TipDialog;
-import com.github.tvbox.osc.ui.fragment.CollectFragment;
-import com.github.tvbox.osc.ui.fragment.HistoryFragment;
-import com.github.tvbox.osc.ui.fragment.HomeFragment;
-import com.github.tvbox.osc.ui.fragment.SearchFragment;
-import com.github.tvbox.osc.util.AppManager;
-import com.github.tvbox.osc.util.HawkConfig;
-import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.orhanobut.hawk.Hawk;
-
-enum Page {
-    Home,
-    History,
-    Search,
-    Collect,
+internal enum class Page {
+	Home,
+	History,
+	Search,
+	Collect,
 }
 
-public class HomeActivity extends BaseActivity {
-    // Fragments
-    private HomeFragment homeFragment;
-    private HistoryFragment historyFragment;
-    private SearchFragment searchFragment;
-    private CollectFragment collectFragment;
-    // ----------------
+class HomeActivity : BaseActivity() {
+	// Fragments
+	private var homeFragment: HomeFragment? = null
+	private var historyFragment: HistoryFragment? = null
+	private var searchFragment: SearchFragment? = null
+	private var collectFragment: CollectFragment? = null
 
-    private final Handler mHandler = new Handler();
-    private boolean useCacheConfig = false;
-    private BottomNavigationView mBottomNavigation;
-    private ViewPager2 viewPager;
-    private Page currentMainPage = Page.Home;
-    private long mExitTime = 0;
-    private boolean dataInitOk = false;
-    private boolean jarInitOk = false;
-    private MaterialToolbar topAppBar;
-    private AppBarLayout appBarLayout;
+	// ----------------
+	private val mHandler = Handler(Looper.getMainLooper())
+	private var useCacheConfig = false
+	private var mBottomNavigation: BottomNavigationView? = null
+	private var viewPager: ViewPager2? = null
+	private var currentMainPage: Page? = Page.Home
+	private var mExitTime: Long = 0
+	private var dataInitOk = false
+	private var jarInitOk = false
+	private var topAppBar: MaterialToolbar? = null
+	private var appBarLayout: AppBarLayout? = null
 
-    // --- BaseActivity ---
-    @Override
-    protected int getLayoutResID() {
-        return R.layout.activity_home;
-    }
+	override val layoutResID: Int
+		// --- BaseActivity ---
+		get() = R.layout.activity_home
 
-    @Override
-    protected void init() {
-        ControlManager.get().startServer();
-        initView();
-        useCacheConfig = false;
-        initData();
+	override fun init() {
+		ControlManager.instance.startServer()
+		initView()
+		useCacheConfig = false
+		initData()
 
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                handleBackPress();
-            }
-        });
-    }
+		onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+			override fun handleOnBackPressed() {
+				handleBackPress()
+			}
+		})
+	}
 
-    @Override
-    protected void onNewIntent(@NonNull Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
+	override fun onNewIntent(intent: Intent) {
+		super.onNewIntent(intent)
+		setIntent(intent)
 
-        if (intent.getExtras() != null) {
-            Bundle bundle = intent.getExtras();
-            if (bundle.getBoolean("openSearch", false)) {
-                String searchTitle = bundle.getString("searchTitle");
-                mHandler.postDelayed(() -> {
-                    showFragment(Page.Search, false);
-                    if (searchTitle != null && !searchTitle.isEmpty()) {
-                        mHandler.postDelayed(() -> {
-                            if (searchFragment != null && searchFragment.isAdded() && searchFragment.getContext() != null) {
-                                searchFragment.search(searchTitle);
-                            } else {
-                                mHandler.postDelayed(() -> {
-                                    if (searchFragment != null && searchFragment.isAdded() && searchFragment.getContext() != null) {
-                                        searchFragment.search(searchTitle);
-                                    }
-                                }, 500);
-                            }
-                        }, 500);
-                    }
-                }, 100);
-            }
-        }
-    }
+		val bundle = intent.extras ?: return
+		if (!bundle.getBoolean("openSearch", false)) return
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        AppManager.getInstance().appExit(0);
-        ControlManager.get().stopServer();
-    }
-    // ----------------
+		val searchTitle = bundle.getString("searchTitle")
+		mHandler.postDelayed({
+			showFragment(Page.Search, false)
+			if (!searchTitle.isNullOrEmpty()) {
+				mHandler.postDelayed({ searchWhenReady(searchTitle) }, 500)
+			}
+		}, 100)
+	}
 
-    // --- FragmentActivity ---
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mHandler.removeCallbacksAndMessages(null);
-    }
-    // ----------------
+	override fun onDestroy() {
+		super.onDestroy()
+		AppManager.instance.appExit(0)
+		ControlManager.instance.stopServer()
+	}
 
-    private void initView() {
-        // 菜单
-        appBarLayout = findViewById(R.id.appBarLayout);
-        topAppBar = findViewById(R.id.appBar);
-        topAppBar.inflateMenu(R.menu.home_toolbar_menu);
-        topAppBar.setOnMenuItemClickListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.action_settings) {
-                jumpActivity(SettingsActivity.class);
-                return true;
-            }
+	// ----------------
+	// --- FragmentActivity ---
+	override fun onPause() {
+		super.onPause()
+		mHandler.removeCallbacksAndMessages(null)
+	}
 
-            // 将菜单点击事件委托给实现了 ToolbarMenuProvider 的 Fragment
-            Fragment currentFragment = getCurrentFragment();
-            if (currentFragment instanceof ToolbarMenuProvider) {
-                return ((ToolbarMenuProvider) currentFragment).onMenuItemClick(itemId);
-            }
+	// ----------------
+	private fun initView() {
+		// 菜单
+		appBarLayout = findViewById(R.id.appBarLayout)
+		val toolbar = findViewById<MaterialToolbar>(R.id.appBar)
+		topAppBar = toolbar
+		toolbar.inflateMenu(R.menu.home_toolbar_menu)
+		toolbar.setOnMenuItemClickListener { item: MenuItem ->
+			val itemId = item.itemId
+			if (itemId == R.id.action_settings) {
+				jumpActivity(SettingsActivity::class.java)
+				return@setOnMenuItemClickListener true
+			}
 
-            return false;
-        });
+			// 将菜单点击事件委托给实现了 ToolbarMenuProvider 的 Fragment
+			val currentFragment = this.currentFragment
+			if (currentFragment is ToolbarMenuProvider) {
+				return@setOnMenuItemClickListener (currentFragment as ToolbarMenuProvider).onMenuItemClick(itemId)
+			}
+			false
+		}
 
-        // 设置 ViewPager2
-        viewPager = findViewById(R.id.contentLayout);
-        viewPager.setUserInputEnabled(false);
+		// 设置 ViewPager2
+		val pager = findViewById<ViewPager2>(R.id.contentLayout)
+		viewPager = pager
+		pager.setUserInputEnabled(false)
 
-        // ViewPager2 页面改变监听
-        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int position) {
-                super.onPageSelected(position);
+		// ViewPager2 页面改变监听
+		pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+			override fun onPageSelected(position: Int) {
+				super.onPageSelected(position)
 
-                Page page = Page.values()[position];
-                currentMainPage = page;
+				val page = Page.entries[position]
+				currentMainPage = page
 
-                // 同步底部导航栏
-                switch (page) {
-                    case Home:
-                        mBottomNavigation.setSelectedItemId(R.id.navigation_main);
-                        break;
-                    case History:
-                        mBottomNavigation.setSelectedItemId(R.id.navigation_history);
-                        break;
-                    case Search:
-                        mBottomNavigation.setSelectedItemId(R.id.navigation_search);
-                        break;
-                    case Collect:
-                        mBottomNavigation.setSelectedItemId(R.id.navigation_favourite);
-                        break;
-                }
+				// 同步底部导航栏
+				val bottomNavigation = mBottomNavigation ?: return
+				when (page) {
+					Page.Home -> bottomNavigation.selectedItemId = R.id.navigation_main
+					Page.History -> bottomNavigation.selectedItemId = R.id.navigation_history
+					Page.Search -> bottomNavigation.selectedItemId = R.id.navigation_search
+					Page.Collect -> bottomNavigation.selectedItemId = R.id.navigation_favourite
+				}
 
-                // 强制展开 AppBar 和底部导航
-                expandUI();
+				// 强制展开 AppBar 和底部导航
+				expandUI()
 
-                mHandler.post(() -> updateAppBarForCurrentPage());
-            }
-        });
+				mHandler.post { updateAppBarForCurrentPage() }
+			}
+		})
 
-        // 设置底部导航栏监听器
-        this.mBottomNavigation = findViewById(R.id.bottom_navigation);
-        this.mBottomNavigation.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.navigation_main) {
-                showFragment(Page.Home, true);
-                return true;
-            } else if (itemId == R.id.navigation_history) {
-                showFragment(Page.History, true);
-                return true;
-            } else if (itemId == R.id.navigation_search) {
-                showFragment(Page.Search, true);
-                return true;
-            } else if (itemId == R.id.navigation_favourite) {
-                showFragment(Page.Collect, true);
-                return true;
-            } else if (itemId == R.id.navigation_live) {
-                jumpActivity(LivePlayActivity.class);
-            }
-            return false;
-        });
+		// 设置底部导航栏监听器
+		val bottomNavigation = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+		mBottomNavigation = bottomNavigation
+		bottomNavigation.setOnItemSelectedListener { item: MenuItem ->
+			val itemId = item.itemId
+			when (itemId) {
+				R.id.navigation_main -> {
+					showFragment(Page.Home, true)
+					return@setOnItemSelectedListener true
+				}
 
-        setLoadSir(viewPager);
-    }
+				R.id.navigation_history -> {
+					showFragment(Page.History, true)
+					return@setOnItemSelectedListener true
+				}
 
-    private void initData() {
-        if (dataInitOk && jarInitOk) {
-            viewPager.setAdapter(new HomePagerAdapter(this));
-            showFragment(Page.Home, false);
-            showSuccess();
-            if (!useCacheConfig && Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) {
-                jumpActivity(LivePlayActivity.class);
-            }
-            return;
-        }
-        showLoading();
-        if (dataInitOk && !jarInitOk) {
-            if (!ApiConfig.get().getSpider().isEmpty()) {
-                ApiConfig.get().loadJar(useCacheConfig, ApiConfig.get().getSpider(), new ApiConfig.LoadConfigCallback() {
-                    @Override
-                    public void success() {
-                        jarInitOk = true;
-                        mHandler.postDelayed(() -> initData(), 50);
-                    }
+				R.id.navigation_search -> {
+					showFragment(Page.Search, true)
+					return@setOnItemSelectedListener true
+				}
 
-                    @Override
-                    public void notice(String msg) {
-                        mHandler.post(() -> Toast.makeText(HomeActivity.this, msg, Toast.LENGTH_SHORT).show());
-                    }
+				R.id.navigation_favourite -> {
+					showFragment(Page.Collect, true)
+					return@setOnItemSelectedListener true
+				}
 
-                    @Override
-                    public void error(String msg) {
-                        jarInitOk = true;
-                        dataInitOk = true;
-                        mHandler.postDelayed(() -> {
-                            Toast.makeText(HomeActivity.this, msg + "; 尝试加载最近一次的jar", Toast.LENGTH_SHORT).show();
-                            initData();
-                        }, 50);
-                    }
-                });
-            }
-            return;
-        }
-        ApiConfig.get().loadConfig(useCacheConfig, new ApiConfig.LoadConfigCallback() {
-            TipDialog dialog = null;
+				R.id.navigation_live -> {
+					jumpActivity(LivePlayActivity::class.java)
+					return@setOnItemSelectedListener false
+				}
 
-            @Override
-            public void notice(String msg) {
-                mHandler.post(() -> Toast.makeText(HomeActivity.this, msg, Toast.LENGTH_SHORT).show());
-            }
+				else -> false
+			}
+		}
 
-            @Override
-            public void success() {
-                dataInitOk = true;
-                if (ApiConfig.get().getSpider().isEmpty()) {
-                    jarInitOk = true;
-                }
-                mHandler.postDelayed(() -> initData(), 50);
-            }
+		setLoadSir(viewPager)
+	}
 
-            @Override
-            public void error(String msg) {
-                if (msg.equalsIgnoreCase("-1")) {
-                    mHandler.post(() -> {
-                        dataInitOk = true;
-                        jarInitOk = true;
-                        initData();
-                    });
-                    return;
-                }
-                mHandler.post(() -> {
-                    if (dialog == null)
-                        dialog = new TipDialog(HomeActivity.this, msg, "重试", "取消", new TipDialog.OnListener() {
-                            @Override
-                            public void left() {
-                                mHandler.post(() -> {
-                                    initData();
-                                    dialog.hide();
-                                });
-                            }
+	private fun initData() {
+		if (dataInitOk && jarInitOk) {
+			(viewPager ?: return).setAdapter(HomePagerAdapter(this))
+			showFragment(Page.Home, false)
+			showSuccess()
+			if (!useCacheConfig && Hawk.get(HawkConfig.DEFAULT_LOAD_LIVE, false)) {
+				jumpActivity(LivePlayActivity::class.java)
+			}
+			return
+		}
+		showLoading()
+		if (dataInitOk && !jarInitOk) {
+			if (!(ApiConfig.instance.spider ?: return).isEmpty()) {
+				ApiConfig.instance.loadJar(useCacheConfig, ApiConfig.instance.spider ?: return, object : LoadConfigCallback {
+					override fun success() {
+						jarInitOk = true
+						mHandler.postDelayed({ initData() }, 50)
+					}
 
-                            @Override
-                            public void right() {
-                                dataInitOk = true;
-                                jarInitOk = true;
-                                mHandler.post(() -> {
-                                    initData();
-                                    dialog.hide();
-                                });
-                            }
+					override fun notice(msg: String?) {
+						mHandler.post { Toast.makeText(this@HomeActivity, msg, Toast.LENGTH_SHORT).show() }
+					}
 
-                            @Override
-                            public void cancel() {
-                                dataInitOk = true;
-                                jarInitOk = true;
-                                mHandler.post(() -> {
-                                    initData();
-                                    dialog.hide();
-                                });
-                            }
-                        });
-                    if (!dialog.isShowing())
-                        dialog.show();
-                });
-            }
-        }, this);
-    }
+					override fun error(msg: String?) {
+						jarInitOk = true
+						dataInitOk = true
+						mHandler.postDelayed({
+							Toast.makeText(this@HomeActivity, "$msg; 尝试加载最近一次的jar", Toast.LENGTH_SHORT).show()
+							initData()
+						}, 50)
+					}
+				})
+			}
+			return
+		}
+		ApiConfig.instance.loadConfig(useCacheConfig, object : LoadConfigCallback {
+			var dialog: TipDialog? = null
 
-    private Fragment getCurrentFragment() {
-        int position = viewPager.getCurrentItem();
-        Page page = Page.values()[position];
-        return switch (page) {
-            case Home -> homeFragment;
-            case History -> historyFragment;
-            case Search -> searchFragment;
-            case Collect -> collectFragment;
-        };
-    }
+			override fun notice(msg: String?) {
+				mHandler.post { Toast.makeText(this@HomeActivity, msg, Toast.LENGTH_SHORT).show() }
+			}
 
-    private void showFragment(Page page, boolean smoothScroll) {
-        currentMainPage = page;
-        viewPager.setCurrentItem(page.ordinal(), smoothScroll);
+			override fun success() {
+				dataInitOk = true
+				if ((ApiConfig.instance.spider ?: return).isEmpty()) {
+					jarInitOk = true
+				}
+				mHandler.postDelayed({ initData() }, 50)
+			}
 
-        // 强制展开 AppBar 和底部导航
-        expandUI();
-    }
+			override fun error(msg: String?) {
+				if (msg.equals("-1", ignoreCase = true)) {
+					mHandler.post {
+						dataInitOk = true
+						jarInitOk = true
+						initData()
+					}
+					return
+				}
+				mHandler.post {
+					if (dialog == null) dialog = TipDialog(this@HomeActivity, msg, "重试", "取消", object : TipDialog.OnListener {
+						override fun left() {
+							mHandler.post {
+								initData()
+								(dialog ?: return@post).hide()
+							}
+						}
 
-    public void expandUI() {
-        expandAppBar();
-        expandBottomNav();
-    }
+						override fun right() {
+							dataInitOk = true
+							jarInitOk = true
+							mHandler.post {
+								initData()
+								(dialog ?: return@post).hide()
+							}
+						}
 
-    public void expandAppBar() {
-        if (appBarLayout != null) {
-            appBarLayout.setExpanded(true, true);
-        }
-    }
+						override fun cancel() {
+							dataInitOk = true
+							jarInitOk = true
+							mHandler.post {
+								initData()
+								(dialog ?: return@post).hide()
+							}
+						}
+					})
+					if (!(dialog ?: return@post).isShowing) (dialog ?: return@post).show()
+				}
+			}
+		}, this)
+	}
 
-    public void expandBottomNav() {
-        if (mBottomNavigation != null) {
-            mBottomNavigation.setVisibility(View.VISIBLE);
-            if (mBottomNavigation.getTranslationY() != 0) {
-                mBottomNavigation.animate()
-                        .translationY(0)
-                        .setDuration(300)
-                        .start();
-            }
-        }
-    }
+	private val currentFragment: Fragment?
+		get() {
+			val position = viewPager?.currentItem ?: return null
+			val page: Page = Page.entries[position]
+			return when (page) {
+				Page.Home -> homeFragment
+				Page.History -> historyFragment
+				Page.Search -> searchFragment
+				Page.Collect -> collectFragment
+			}
+		}
 
-    public void collapseBottomNav() {
-        if (mBottomNavigation != null && mBottomNavigation.getVisibility() == View.VISIBLE) {
-            mBottomNavigation.animate()
-                    .translationY(mBottomNavigation.getHeight())
-                    .setDuration(300)
-                    .withEndAction(() -> {
-                        if (mBottomNavigation != null) {
-                            mBottomNavigation.setVisibility(View.GONE);
-                        }
-                    })
-                    .start();
-        }
-    }
+	private fun showFragment(page: Page, smoothScroll: Boolean) {
+		currentMainPage = page
+		(viewPager ?: return).setCurrentItem(page.ordinal, smoothScroll)
 
-    public void switchToSearchAndSearch(String keyword) {
-        showFragment(Page.Search, false);
-        mHandler.postDelayed(() -> {
-            if (searchFragment != null && searchFragment.isAdded() && searchFragment.getContext() != null) {
-                searchFragment.search(keyword);
-            } else {
-                // 如果 Fragment 还没准备好，等待一段时间后重试
-                mHandler.postDelayed(() -> {
-                    if (searchFragment != null && searchFragment.isAdded() && searchFragment.getContext() != null) {
-                        searchFragment.search(keyword);
-                    }
-                }, 500);
-            }
-        }, 200);
-    }
+		// 强制展开 AppBar 和底部导航
+		expandUI()
+	}
 
-    private void updateAppBarForCurrentPage() {
-        Fragment fragment = getCurrentFragment();
-        if (fragment == null) {
-            return;
-        }
+	fun expandUI() {
+		expandAppBar()
+		expandBottomNav()
+	}
 
-        boolean enableScroll = false;
-        if (fragment instanceof ToolbarMenuProvider provider) {
-            enableScroll = provider.enableAppBarScroll();
-        }
+	fun expandAppBar() {
+		appBarLayout?.setExpanded(true, true)
+	}
 
-        // 设置 AppBar 滚动行为
-        AppBarLayout.LayoutParams params = (AppBarLayout.LayoutParams) topAppBar.getLayoutParams();
-        if (enableScroll) {
-            // 允许随滑动收起
-            params.setScrollFlags(AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL | AppBarLayout.LayoutParams.SCROLL_FLAG_ENTER_ALWAYS | AppBarLayout.LayoutParams.SCROLL_FLAG_SNAP);
-        } else {
-            // 不允许随滑动收起
-            params.setScrollFlags(0);
-        }
-        topAppBar.setLayoutParams(params);
+	fun expandBottomNav() {
+		val bottomNavigation = mBottomNavigation ?: return
+		bottomNavigation.visibility = View.VISIBLE
+		if (bottomNavigation.translationY != 0f) {
+			bottomNavigation.animate()
+				.translationY(0f)
+				.setDuration(300)
+				.start()
+		}
+	}
 
-        // 清除菜单
-        topAppBar.getMenu().clear();
+	fun collapseBottomNav() {
+		val bottomNavigation = mBottomNavigation ?: return
+		if (!bottomNavigation.isVisible) return
 
-        if (fragment instanceof ToolbarMenuProvider provider) {
-            // 设置标题
-            String title = provider.getToolbarTitle();
-            if (title != null) {
-                topAppBar.setTitle(title);
-            } else {
-                topAppBar.setTitle(R.string.app_name);
-            }
+		bottomNavigation.animate()
+			.translationY(bottomNavigation.height.toFloat())
+			.setDuration(300)
+			.withEndAction {
+				bottomNavigation.visibility = View.GONE
+			}
+			.start()
+	}
 
-            // 加载 Fragment 特定的菜单（会在设置按钮之前添加）
-            int menuResId = provider.getMenuResId();
-            if (menuResId != 0) {
-                topAppBar.inflateMenu(menuResId);
-            }
-        } else {
-            topAppBar.setTitle(R.string.app_name);
-        }
+	private fun searchWhenReady(keyword: String, retry: Boolean = true) {
+		val fragment = searchFragment
+		if (fragment?.isAdded == true && fragment.context != null) {
+			fragment.search(keyword)
+		} else if (retry) {
+			mHandler.postDelayed({ searchWhenReady(keyword, false) }, 500)
+		}
+	}
 
-        // 加载通用菜单
-        topAppBar.inflateMenu(R.menu.home_toolbar_menu);
-    }
+	fun switchToSearchAndSearch(keyword: String?) {
+		showFragment(Page.Search, false)
+		if (!keyword.isNullOrEmpty()) {
+			mHandler.postDelayed({ searchWhenReady(keyword) }, 200)
+		}
+	}
 
-    private void handleBackPress() {
-        // 检查当前页面是否有自定义返回处理
-        Fragment currentFragment = getCurrentFragment();
-        if (currentFragment instanceof BackPressProvider backPressProvider) {
-            if (backPressProvider.handleBackPress()) {
-                return;
-            }
-        }
+	private fun updateAppBarForCurrentPage() {
+		val fragment = this.currentFragment ?: return
 
-        // 如果不在主页，先返回主页
-        if (currentMainPage != Page.Home) {
-            // 返回主页
-            mBottomNavigation.setSelectedItemId(R.id.navigation_main);
-            return;
-        }
+		var enableScroll = false
+		if (fragment is ToolbarMenuProvider) {
+			enableScroll = fragment.enableAppBarScroll()
+		}
 
-        // 如果两次返回间隔小于 2000 毫秒，则退出应用
-        if (System.currentTimeMillis() - mExitTime < 2000) {
-            AppManager.getInstance().finishAllActivity();
-            ControlManager.get().stopServer();
-            finish();
-            android.os.Process.killProcess(android.os.Process.myPid());
-            System.exit(0);
-        } else {
-            // 否则仅提示用户，再按一次退出应用
-            mExitTime = System.currentTimeMillis();
-            Toast.makeText(mContext, "再按一次返回键退出应用", Toast.LENGTH_SHORT).show();
-        }
-    }
+		// 设置 AppBar 滚动行为
+		val params = (topAppBar ?: return).layoutParams as AppBarLayout.LayoutParams
+		if (enableScroll) {
+			// 允许随滑动收起
+			params.setScrollFlags(AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL or AppBarLayout.LayoutParams.SCROLL_FLAG_ENTER_ALWAYS or AppBarLayout.LayoutParams.SCROLL_FLAG_SNAP)
+		} else {
+			// 不允许随滑动收起
+			params.setScrollFlags(0)
+		}
+		(topAppBar ?: return).layoutParams = params
 
-    private class HomePagerAdapter extends FragmentStateAdapter {
-        public HomePagerAdapter(@NonNull FragmentActivity fragmentActivity) {
-            super(fragmentActivity);
-        }
+		// 清除菜单
+		(topAppBar ?: return).getMenu().clear()
 
-        @NonNull
-        @Override
-        public Fragment createFragment(int position) {
-            Page page = Page.values()[position];
-            return switch (page) {
-                case Home -> {
-                    if (homeFragment == null) {
-                        homeFragment = new HomeFragment();
-                    }
-                    yield homeFragment;
-                }
-                case History -> {
-                    if (historyFragment == null) {
-                        historyFragment = new HistoryFragment();
-                    }
-                    yield historyFragment;
-                }
-                case Search -> {
-                    if (searchFragment == null) {
-                        searchFragment = new SearchFragment();
-                    }
-                    yield searchFragment;
-                }
-                case Collect -> {
-                    if (collectFragment == null) {
-                        collectFragment = new CollectFragment();
-                    }
-                    yield collectFragment;
-                }
-            };
-        }
+		if (fragment is ToolbarMenuProvider) {
+			// 设置标题
+			val title = fragment.toolbarTitle
+			if (title != null) {
+				(topAppBar ?: return).setTitle(title)
+			} else {
+				(topAppBar ?: return).setTitle(R.string.app_name)
+			}
 
-        @Override
-        public int getItemCount() {
-            return Page.values().length;
-        }
-    }
+			// 加载 Fragment 特定的菜单（会在设置按钮之前添加）
+			val menuResId = fragment.menuResId
+			if (menuResId != 0) {
+				(topAppBar ?: return).inflateMenu(menuResId)
+			}
+		} else {
+			(topAppBar ?: return).setTitle(R.string.app_name)
+		}
+
+		// 加载通用菜单
+		(topAppBar ?: return).inflateMenu(R.menu.home_toolbar_menu)
+	}
+
+	private fun handleBackPress() {
+		// 检查当前页面是否有自定义返回处理
+		val currentFragment = this.currentFragment
+		if (currentFragment is BackPressProvider) {
+			if (currentFragment.handleBackPress()) {
+				return
+			}
+		}
+
+		// 如果不在主页，先返回主页
+		if (currentMainPage != Page.Home) {
+			// 返回主页
+			(mBottomNavigation ?: return).selectedItemId = R.id.navigation_main
+			return
+		}
+
+		// 如果两次返回间隔小于 2000 毫秒，则退出应用
+		if (System.currentTimeMillis() - mExitTime < 2000) {
+			AppManager.instance.finishAllActivity()
+			ControlManager.instance.stopServer()
+			finish()
+			Process.killProcess(Process.myPid())
+			exitProcess(0)
+		} else {
+			// 否则仅提示用户，再按一次退出应用
+			mExitTime = System.currentTimeMillis()
+			Toast.makeText(mContext, "再按一次返回键退出应用", Toast.LENGTH_SHORT).show()
+		}
+	}
+
+	private inner class HomePagerAdapter(fragmentActivity: FragmentActivity) : FragmentStateAdapter(fragmentActivity) {
+		override fun createFragment(position: Int): Fragment {
+			val page: Page = Page.entries[position]
+			return when (page) {
+				Page.Home -> {
+					if (homeFragment == null) {
+						homeFragment = HomeFragment()
+					}
+					homeFragment as Fragment
+				}
+
+				Page.History -> {
+					if (historyFragment == null) {
+						historyFragment = HistoryFragment()
+					}
+					historyFragment as Fragment
+				}
+
+				Page.Search -> {
+					if (searchFragment == null) {
+						searchFragment = SearchFragment()
+					}
+					searchFragment as Fragment
+				}
+
+				Page.Collect -> {
+					if (collectFragment == null) {
+						collectFragment = CollectFragment()
+					}
+					collectFragment as Fragment
+				}
+			}
+		}
+
+		override fun getItemCount(): Int {
+			return Page.entries.size
+		}
+	}
 }
