@@ -47,7 +47,7 @@ class Movie : Serializable {
 		/**
 		 * 内容id
 		 */
-		var id: String? = null
+		var id: String = ""
 
 		/**
 		 * 父级id
@@ -103,8 +103,8 @@ class Movie : Serializable {
 		@XStreamAlias("dl")
 		var urlBean: UrlBean? = null
 
-		var des: String? = null // <![CDATA[权来]
-		var sourceKey: String? = null
+		var des: String = "" // <![CDATA[权来]
+		var sourceKey: String = ""
 		var tag: String? = null
 
 		@XStreamAlias("dl")

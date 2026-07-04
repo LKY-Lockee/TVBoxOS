@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.api
 
-import android.app.Activity
 import android.text.TextUtils
 import android.util.Base64
 import androidx.core.net.toUri
@@ -115,7 +114,7 @@ class ApiConfig private constructor() {
 		return configUrl
 	}
 
-	fun loadConfig(useCache: Boolean, callback: LoadConfigCallback, activity: Activity?) {
+	fun loadConfig(useCache: Boolean, callback: LoadConfigCallback) {
 		val apiUrl = PreferenceStore.get(ConfigKey.API_URL, "")
 		//独立加载直播配置
 		val liveApiUrl = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
@@ -744,7 +743,7 @@ class ApiConfig private constructor() {
 					url = url.replace(extUrl, extUrlFix)
 				}
 			} else {
-				val type = livesOBJ.get("type").asString
+				val type = livesOBJ.get("type")?.asString
 				if (type == "0" || type == "3") {
 					url = if (livesOBJ.has("url")) livesOBJ.get("url").asString else ""
 					if (url.isEmpty()) url = if (livesOBJ.has("api")) livesOBJ.get("api").asString else ""
@@ -829,16 +828,18 @@ class ApiConfig private constructor() {
 		currentLiveSpider = liveJar
 	}
 
-	fun getCSP(sourceBean: SourceBean): Spider? {
-		val api = sourceBean.api.orEmpty()
-		val key = sourceBean.key.orEmpty()
-		val ext = sourceBean.ext.orEmpty()
-		val jar = sourceBean.jar.orEmpty()
+	fun getCSP(sourceBean: SourceBean): Spider {
+		val api = sourceBean.api
+		val key = sourceBean.key
+		val ext = sourceBean.ext
+		val jar = sourceBean.jar
 		return if (api.endsWith(".js") || api.contains(".js?")) {
 			jsLoader.getSpider(key, api, ext, jar)
 		} else if (api.contains(".py")) {
 			pyLoader.getSpider(key, api, ext)
-		} else jarLoader.getSpider(key, api, ext, jar)
+		} else {
+			jarLoader.getSpider(key, api, ext, jar)
+		}
 	}
 
 	fun getPyCSP(url: String): Spider {
@@ -854,7 +855,7 @@ class ApiConfig private constructor() {
 			apiString = currentLiveSpider.orEmpty()
 		} else {
 			val sourceBean: SourceBean = homeSourceBean
-			apiString = sourceBean.api.orEmpty()
+			apiString = sourceBean.api
 		}
 		return if (apiString.contains(".py")) pyLoader.proxyInvoke(param) else jarLoader.proxyInvoke(param)
 	}

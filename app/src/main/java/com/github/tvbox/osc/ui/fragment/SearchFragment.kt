@@ -17,7 +17,6 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,7 +34,6 @@ import com.github.tvbox.osc.data.ConfigKey
 import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.event.ServerEvent
-import com.github.tvbox.osc.ui.activity.HomeActivity
 import com.github.tvbox.osc.ui.adapter.PinyinAdapter
 import com.github.tvbox.osc.ui.adapter.PinyinAdapter.SearchItem
 import com.github.tvbox.osc.util.FastClickCheckUtil
@@ -117,11 +115,6 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 
 		searchView?.addTransitionListener { searchView: SearchView?, previousState: SearchView.TransitionState?, newState: SearchView.TransitionState? ->
 			if (activity == null) return@addTransitionListener
-			if (newState == SearchView.TransitionState.SHOWING) {
-				(mActivity as? HomeActivity)?.collapseBottomNav()
-			} else if (newState == SearchView.TransitionState.HIDDEN) {
-				(mActivity as? HomeActivity)?.expandBottomNav()
-			}
 
 			val spacerView = searchView?.findViewById<View?>(R.id.open_search_view_status_bar_spacer)
 			if (spacerView != null) {
@@ -378,7 +371,6 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 		if (rootView == null || activity == null) return
 		rootView?.post {
 			if (activity == null || searchBarContainer == null) return@post
-			val bottomNav = requireActivity().findViewById<View?>(R.id.bottom_navigation)
 
 			searchBarContainer?.let {
 				val params = it.layoutParams as CoordinatorLayout.LayoutParams
@@ -391,37 +383,19 @@ class SearchFragment : BaseLazyFragment(), BackPressProvider, ToolbarMenuProvide
 				rootView?.viewTreeObserver?.removeOnPreDrawListener(preDrawListener)
 			}
 
-			// 使用 OnPreDrawListener 监听每一帧
+			// 使用 OnPreDrawListener 监听每一帧，将搜索框定位在屏幕底部
 			preDrawListener = ViewTreeObserver.OnPreDrawListener {
 				if (activity == null) return@OnPreDrawListener true
 				searchBarContainer?.let {
 					if (rootView != null) {
-						val targetY: Int
+						val rootLocation = IntArray(2)
+						rootView?.getLocationInWindow(rootLocation)
+						val rootTopInScreen = rootLocation[1]
 
-						if (bottomNav != null && bottomNav.isVisible) {
-							// 有底部导航栏时，定位在导航栏上方
-							val navLocation = IntArray(2)
-							bottomNav.getLocationInWindow(navLocation)
-							val navTopInScreen = navLocation[1]
+						val screenHeight = resources.displayMetrics.heightPixels
+						val searchBarHeight = it.height
+						val targetY = screenHeight - rootTopInScreen - searchBarHeight
 
-							val rootLocation = IntArray(2)
-							rootView?.getLocationInWindow(rootLocation)
-							val rootTopInScreen = rootLocation[1]
-
-							val searchBarHeight = it.height
-							targetY = navTopInScreen - rootTopInScreen - searchBarHeight
-						} else {
-							// 没有底部导航栏时，定位在屏幕底部
-							val rootLocation = IntArray(2)
-							rootView?.getLocationInWindow(rootLocation)
-							val rootTopInScreen = rootLocation[1]
-
-							val screenHeight = resources.displayMetrics.heightPixels
-							val searchBarHeight = it.height
-							targetY = screenHeight - rootTopInScreen - searchBarHeight
-						}
-
-						// 使用setY设置绝对位置
 						if (abs(it.y - targetY) > 0.5f) {
 							it.y = targetY.toFloat()
 						}

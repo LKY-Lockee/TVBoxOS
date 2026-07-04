@@ -87,7 +87,7 @@ class SourceViewModel : ViewModel() {
 		}
 
 		val sourceBean = ApiConfig.instance.getSource(sourceKey) ?: return
-		val name = sourceBean.name ?: return
+		val name = sourceBean.name
 		if (name.length <= 3 && name.endsWith("搜")) {
 			sortResult.postValue(null)
 			return
@@ -99,7 +99,7 @@ class SourceViewModel : ViewModel() {
 				val executor = Executors.newSingleThreadExecutor()
 				val future = executor.submit(Callable {
 					val sp = ApiConfig.instance.getCSP(sourceBean)
-					sp?.homeContent(true)
+					sp.homeContent(true)
 				})
 				var sortJson: String? = null
 				try {
@@ -188,7 +188,7 @@ class SourceViewModel : ViewModel() {
 				})
 		} else if (type == 4) {
 			var extend = sourceBean.ext
-			extend = getFixUrl(extend ?: return)
+			extend = getFixUrl(extend)
 			if (URLEncoder.encode(extend, "UTF-8").length < 1000) {
 				val request = OkGo.get<String?>(sourceBean.api)
 					.tag(sourceBean.key + "_sort")
@@ -242,7 +242,7 @@ class SourceViewModel : ViewModel() {
 					if (extend.isNotEmpty()) {
 						params["extend"] = extend
 					}
-					RemoteTVBox.post(sourceBean.api ?: run { sortResult.postValue(null); return }, params, object : Callback {
+					RemoteTVBox.post(sourceBean.api, params, object : Callback {
 						override fun onFailure(call: Call, e: okio.IOException) {
 							sortResult.postValue(null)
 						}
@@ -283,8 +283,8 @@ class SourceViewModel : ViewModel() {
 			3 -> {
 				spThreadPool.execute {
 					try {
-						val sp = ApiConfig.instance.getCSP(homeSourceBean) ?: return@execute
-						val json = sp.categoryContent(sortData.id, page.toString() + "", true, sortData.filterSelect)
+						val sp = ApiConfig.instance.getCSP(homeSourceBean)
+						val json = sp.categoryContent(sortData.id, page.toString(), true, sortData.filterSelect)
 						TVBoxRuntimeLog.i("echo-categoryContent:$json")
 						json(listResult, json, homeSourceBean.key)
 					} catch (th: Throwable) {
@@ -329,7 +329,7 @@ class SourceViewModel : ViewModel() {
 			4 -> {
 				val ext: String?
 				var extend = homeSourceBean.ext
-				extend = getFixUrl(extend ?: return)
+				extend = getFixUrl(extend)
 				if (sortData.filterSelect.isNotEmpty()) {
 					val selectExt = JSONObject(sortData.filterSelect).toString()
 					ext = Base64.encodeToString(selectExt.toByteArray(StandardCharsets.UTF_8), Base64.DEFAULT or Base64.NO_WRAP)
@@ -385,7 +385,7 @@ class SourceViewModel : ViewModel() {
 					val executor = Executors.newSingleThreadExecutor()
 					val future = executor.submit(Callable {
 						val sp = ApiConfig.instance.getCSP(sourceBean)
-						sp?.homeVideoContent()
+						sp.homeVideoContent()
 					})
 					var sortJson: String? = null
 					try {
@@ -485,7 +485,7 @@ class SourceViewModel : ViewModel() {
 						val ids: MutableList<String> = mutableListOf()
 						ids.add(id)
 						try {
-							return@submit sp?.detailContent(ids)
+							return@submit sp.detailContent(ids)
 						} catch (e: Exception) {
 							TVBoxRuntimeLog.i("echo--getDetail--error: " + e.message)
 							return@submit ""
@@ -510,7 +510,7 @@ class SourceViewModel : ViewModel() {
 
 			0, 1, 4 -> {
 				var extend = sourceBean.ext
-				extend = getFixUrl(extend ?: return)
+				extend = getFixUrl(extend)
 
 				val request = OkGo.get<String?>(sourceBean.api)
 					.tag("detail")
@@ -556,7 +556,7 @@ class SourceViewModel : ViewModel() {
 		when (val type = sourceBean.type) {
 			3 -> {
 				try {
-					val sp = ApiConfig.instance.getCSP(sourceBean) ?: return
+					val sp = ApiConfig.instance.getCSP(sourceBean)
 					val search = sp.searchContent(wd, false)
 					if (search.isNotEmpty()) {
 						json(searchResult, search, sourceBean.key)
@@ -598,7 +598,7 @@ class SourceViewModel : ViewModel() {
 
 			4 -> {
 				var extend = sourceBean.ext
-				extend = getFixUrl(extend ?: return)
+				extend = getFixUrl(extend)
 				try {
 					wd = URLEncoder.encode(wd, "UTF-8")
 				} catch (e: UnsupportedEncodingException) {
@@ -645,7 +645,7 @@ class SourceViewModel : ViewModel() {
 		when (val type = sourceBean.type) {
 			3 -> {
 				try {
-					val sp = ApiConfig.instance.getCSP(sourceBean) ?: return
+					val sp = ApiConfig.instance.getCSP(sourceBean)
 					json(quickSearchResult, sp.searchContent(wd, true), sourceBean.key)
 				} catch (th: Throwable) {
 					th.printStackTrace()
@@ -681,7 +681,7 @@ class SourceViewModel : ViewModel() {
 
 			4 -> {
 				var extend = sourceBean.ext
-				extend = getFixUrl(extend ?: return)
+				extend = getFixUrl(extend)
 
 				val request = OkGo.get<String?>(sourceBean.api)
 					.tag("search")
@@ -717,7 +717,7 @@ class SourceViewModel : ViewModel() {
 	}
 
 	// playerContent
-	fun getPlay(sourceKey: String?, playFlag: String?, progressKey: String?, url: String?, subtitleKey: String?) {
+	fun getPlay(sourceKey: String?, playFlag: String?, progressKey: String?, url: String, subtitleKey: String?) {
 		val sourceBean = ApiConfig.instance.getSource(sourceKey) ?: return
 		val type = sourceBean.type
 		when (type) {
@@ -726,9 +726,9 @@ class SourceViewModel : ViewModel() {
 					val executor = Executors.newSingleThreadExecutor()
 					val future = executor.submit<String?> {
 						val sp = ApiConfig.instance.getCSP(sourceBean)
-						if (url.isNullOrEmpty()) return@submit ""
+						if (url.isEmpty()) return@submit ""
 						try {
-							return@submit sp?.playerContent(playFlag, url, ApiConfig.instance.vipParseFlags)
+							return@submit sp.playerContent(playFlag, url, ApiConfig.instance.vipParseFlags)
 						} catch (e: Exception) {
 							TVBoxRuntimeLog.i("echo--getPlay--error: " + e.message)
 							return@submit ""
@@ -767,9 +767,9 @@ class SourceViewModel : ViewModel() {
 				val result = JSONObject()
 				try {
 					result.put("key", url)
-					val playerUrlNonNull = sourceBean.playerUrl ?: return
+					val playerUrlNonNull = sourceBean.playerUrl
 					val playUrl = playerUrlNonNull.trim { it <= ' ' }
-					if (DefaultConfig.isVideoFormat(url.orEmpty()) && playUrl.isEmpty()) {
+					if (DefaultConfig.isVideoFormat(url) && playUrl.isEmpty()) {
 						result.put("parse", 0)
 						result.put("url", url)
 					} else {
@@ -789,7 +789,7 @@ class SourceViewModel : ViewModel() {
 
 			4 -> {
 				var extend = sourceBean.ext
-				extend = getFixUrl(extend ?: return)
+				extend = getFixUrl(extend)
 
 				val request = OkGo.get<String?>(sourceBean.api)
 					.tag("play")
@@ -951,7 +951,7 @@ class SourceViewModel : ViewModel() {
 		}
 	}
 
-	private fun absXml(data: AbsXml, sourceKey: String?) {
+	private fun absXml(data: AbsXml, sourceKey: String) {
 		val movie = data.movie ?: return
 		val videoList = movie.videoList ?: return
 		for (video in videoList) {
@@ -1052,8 +1052,8 @@ class SourceViewModel : ViewModel() {
 									val sp = ApiConfig.instance.getCSP(sb)
 									val ids: MutableList<String> = mutableListOf()
 									ids.add(finalPushUrl)
-									val res = sp?.detailContent(ids)
-									if (!res.isNullOrEmpty()) {
+									val res = sp.detailContent(ids)
+									if (res.isNotEmpty()) {
 										try {
 											val absJson = gson.fromJson<AbsJson>(res, object : TypeToken<AbsJson?>() {
 											}.type)
@@ -1174,7 +1174,7 @@ class SourceViewModel : ViewModel() {
 		}
 	}
 
-	private fun xml(result: MutableLiveData<AbsXml?>?, xml: String, sourceKey: String?): AbsXml? {
+	private fun xml(result: MutableLiveData<AbsXml?>?, xml: String, sourceKey: String): AbsXml? {
 		var xml = xml
 		try {
 			val xstream = XStream(DomDriver()) // 创建Xstram对象
@@ -1212,7 +1212,7 @@ class SourceViewModel : ViewModel() {
 		}
 	}
 
-	private fun json(result: MutableLiveData<AbsXml?>?, json: String?, sourceKey: String?): AbsXml? {
+	private fun json(result: MutableLiveData<AbsXml?>?, json: String?, sourceKey: String): AbsXml? {
 		try {
 			val absJson = gson.fromJson<AbsJson>(json, object : TypeToken<AbsJson?>() {
 			}.type)

@@ -52,26 +52,24 @@ import kotlin.math.max
  * @date 2020/12/22
  */
 class DetailActivity : BaseActivity() {
-	var vodId: String? = null
-	var sourceKey: String? = null
+	var vodId: String = ""
+	var sourceKey: String = ""
 	var firstSourceKey: String? = null
-
-	// preview
 	var previewVodInfo: VodInfo? = null
 	private var isFullscreen = false
-	private var llPlayerFragmentContainer: FragmentContainerView? = null
-	private var topLayout: View? = null
-	private var viewPager: ViewPager2? = null
-	private var playFragment: PlayFragment? = null
+	private lateinit var llPlayerFragmentContainer: FragmentContainerView
+	private lateinit var topLayout: View
+	private lateinit var viewPager: ViewPager2
+	private lateinit var playFragment: PlayFragment
 	private var sourceViewModel: SourceViewModel? = null
 	private var mVideo: Movie.Video? = null
 	private var vodInfo: VodInfo? = null
-	private var preFlag: String? = ""
+	private var preFlag: String = ""
 	private var vodPicture = ""
-	private var tabLayout: TabLayout? = null
-	private var searchFragment: SearchFragment? = null
-	private var tabInfoFragment: DetailTabInfoFragment? = null
-	private var tabPlaylistFragment: DetailTabPlaylistFragment? = null
+	private lateinit var tabLayout: TabLayout
+	private lateinit var searchFragment: SearchFragment
+	private lateinit var tabInfoFragment: DetailTabInfoFragment
+	private lateinit var tabPlaylistFragment: DetailTabPlaylistFragment
 	private var hasSearchedOnce = false
 
 	private fun refreshFlag(itemView: View?, position: Int) {
@@ -90,29 +88,29 @@ class DetailActivity : BaseActivity() {
 			}
 			val flag = ((vodInfo ?: return).seriesFlags ?: return)[position]
 			flag.selected = true
-			if (((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return] != null &&
-				(((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return] ?: return).size > (vodInfo ?: return).playIndex
+			if (((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag] != null &&
+				(((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag] ?: return).size > (vodInfo ?: return).playIndex
 			) {
-				(((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return] ?: return)[(vodInfo ?: return).playIndex].selected = false
+				(((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag] ?: return)[(vodInfo ?: return).playIndex].selected = false
 			}
 			(vodInfo ?: return).playFlag = newFlag
-			(tabPlaylistFragment ?: return).refreshList(vodInfo)
+			tabPlaylistFragment.refreshList(vodInfo)
 		}
 	}
 
 	private fun onSeriesSelected(position: Int) {
-		if (vodInfo == null || ((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return] == null) {
+		if (vodInfo == null || ((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag] == null) {
 			return
 		}
 
 		if (position == -1) {
 			(vodInfo ?: return).reverseSort = !(vodInfo ?: return).reverseSort
 			(vodInfo ?: return).reverse()
-			(tabPlaylistFragment ?: return).refreshList(vodInfo)
+			tabPlaylistFragment.refreshList(vodInfo)
 			return
 		}
 
-		val seriesList = ((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return]
+		val seriesList = ((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag]
 		if ((seriesList ?: return).isEmpty() || position >= seriesList.size) {
 			return
 		}
@@ -126,11 +124,11 @@ class DetailActivity : BaseActivity() {
 			reload = true
 		}
 
-		if (!(preFlag ?: return).isEmpty() && (vodInfo ?: return).playFlag != preFlag) {
+		if (!preFlag.isEmpty() && (vodInfo ?: return).playFlag != preFlag) {
 			reload = true
 		}
 
-		(tabPlaylistFragment ?: return).updateSeriesSelection(oldIndex, position)
+		tabPlaylistFragment.updateSeriesSelection(oldIndex, position)
 
 		if (reload) {
 			jumpToPlay()
@@ -157,16 +155,16 @@ class DetailActivity : BaseActivity() {
 		onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
 			override fun handleOnBackPressed() {
 				if (isFullscreen) {
-					if ((playFragment ?: return).onBackPressed()) return
+					if (playFragment.onBackPressed()) return
 					requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-					val list = ((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return]
+					val list = ((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag]
 					if (list != null) {
-						(tabPlaylistFragment ?: return).setSeriesGroupVisibility(if (list.size > 1) View.VISIBLE else View.GONE)
+						tabPlaylistFragment.setSeriesGroupVisibility(if (list.size > 1) View.VISIBLE else View.GONE)
 					}
-					(tabPlaylistFragment ?: return).requestGridFocus()
+					tabPlaylistFragment.requestGridFocus()
 					return
 				}
-				if (playFragment != null) (playFragment ?: return).setPlayTitle(false)
+				playFragment.setPlayTitle(false)
 
 				isEnabled = false
 				onBackPressedDispatcher.onBackPressed()
@@ -182,8 +180,8 @@ class DetailActivity : BaseActivity() {
 
 		preFlag = ""
 		playFragment = PlayFragment()
-		supportFragmentManager.beginTransaction().add(R.id.previewPlayer, playFragment ?: return).commit()
-		supportFragmentManager.beginTransaction().show(playFragment ?: return).commitAllowingStateLoss()
+		supportFragmentManager.beginTransaction().add(R.id.previewPlayer, playFragment).commit()
+		supportFragmentManager.beginTransaction().show(playFragment).commitAllowingStateLoss()
 
 		tabLayout = findViewById(R.id.tabLayout)
 		viewPager = findViewById(R.id.viewPager)
@@ -195,42 +193,42 @@ class DetailActivity : BaseActivity() {
 		tabPlaylistFragment = DetailTabPlaylistFragment()
 		searchFragment = SearchFragment()
 
-		tabInfoFragment?.setContentView(tabInfoView)
-		tabPlaylistFragment?.setContentView(tabPlaylistView)
+		tabInfoFragment.setContentView(tabInfoView)
+		tabPlaylistFragment.setContentView(tabPlaylistView)
 
-		tabPlaylistFragment?.setOnSeriesFlagSelectedListener { flagName: String?, position: Int -> refreshFlag(null, position) }
-		tabPlaylistFragment?.setOnSeriesSelectedListener { position: Int -> this.onSeriesSelected(position) }
+		tabPlaylistFragment.setOnSeriesFlagSelectedListener { flagName: String?, position: Int -> refreshFlag(null, position) }
+		tabPlaylistFragment.setOnSeriesSelectedListener { position: Int -> this.onSeriesSelected(position) }
 
 		val adapter: FragmentStateAdapter = object : FragmentStateAdapter(this) {
 			override fun createFragment(position: Int): Fragment {
 				return when (position) {
-					0 -> tabInfoFragment ?: Fragment()
-					1 -> tabPlaylistFragment ?: Fragment()
-					2 -> searchFragment ?: Fragment()
+					0 -> tabInfoFragment
+					1 -> tabPlaylistFragment
+					2 -> searchFragment
 					else -> Fragment()
 				}
 			}
 
 			override fun getItemCount(): Int {
-				return tabLayout?.tabCount ?: 0
+				return tabLayout.tabCount
 			}
 
 			override fun getItemViewType(position: Int): Int {
 				return position
 			}
 		}
-		(viewPager ?: return).setAdapter(adapter)
-		(viewPager ?: return).setOffscreenPageLimit(adapter.itemCount)
+		viewPager.setAdapter(adapter)
+		viewPager.setOffscreenPageLimit(adapter.itemCount)
 
-		(tabLayout ?: return).addOnTabSelectedListener(object : OnTabSelectedListener {
+		tabLayout.addOnTabSelectedListener(object : OnTabSelectedListener {
 			override fun onTabSelected(tab: TabLayout.Tab) {
-				(viewPager ?: return).currentItem = tab.position
-				(viewPager ?: return).post(Runnable {
-					if (tab.position == 2 && mVideo != null && searchFragment != null && !hasSearchedOnce) {
-						searchFragment?.search(mVideo?.name.orEmpty())
+				viewPager.currentItem = tab.position
+				viewPager.post {
+					if (tab.position == 2 && mVideo != null && !hasSearchedOnce) {
+						searchFragment.search(mVideo?.name.orEmpty())
 						hasSearchedOnce = true
 					}
-				})
+				}
 			}
 
 			override fun onTabUnselected(tab: TabLayout.Tab?) {
@@ -240,9 +238,9 @@ class DetailActivity : BaseActivity() {
 			}
 		})
 
-		(viewPager ?: return).registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+		viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
 			override fun onPageSelected(position: Int) {
-				(tabLayout ?: return).selectTab((tabLayout ?: return).getTabAt(position))
+				tabLayout.selectTab(tabLayout.getTabAt(position))
 			}
 		})
 
@@ -250,10 +248,10 @@ class DetailActivity : BaseActivity() {
 	}
 
 	private fun jumpToPlay() {
-		if (vodInfo != null && !(((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return] ?: return).isEmpty()) {
+		if (vodInfo != null && !(((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag] ?: return).isEmpty()) {
 			preFlag = (vodInfo ?: return).playFlag
 			//更新播放地址
-			(tabInfoFragment ?: return).setPlayUrl((((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag ?: return] ?: return)[(vodInfo ?: return).playIndex].url)
+			tabInfoFragment.setPlayUrl((((vodInfo ?: return).seriesMap ?: return)[(vodInfo ?: return).playFlag] ?: return)[(vodInfo ?: return).playIndex].url)
 			val bundle = Bundle()
 			//保存历史
 			insertVod(firstSourceKey ?: return, vodInfo ?: return)
@@ -279,7 +277,7 @@ class DetailActivity : BaseActivity() {
 				(previewVodInfo ?: return).seriesMap = (vodInfo ?: return).seriesMap
 				instance.vodInfo = previewVodInfo
 			}
-			(playFragment ?: return).setData(bundle)
+			playFragment.setData(bundle)
 		}
 	}
 
@@ -309,10 +307,10 @@ class DetailActivity : BaseActivity() {
 				(vodInfo ?: return@Observer).sourceKey = (mVideo ?: return@Observer).sourceKey
 				sourceKey = (mVideo ?: return@Observer).sourceKey
 
-				(tabInfoFragment ?: return@Observer).setVideoInfo(mVideo, sourceKey, firstSourceKey.orEmpty(), vodId)
+				tabInfoFragment.setVideoInfo(mVideo, sourceKey, firstSourceKey.orEmpty(), vodId)
 
 				if ((vodInfo ?: return@Observer).seriesMap != null && !((vodInfo ?: return@Observer).seriesMap ?: return@Observer).isEmpty()) {
-					val vodInfoRecord = RoomDataManger.getVodInfo(sourceKey ?: return@Observer, vodId ?: return@Observer)
+					val vodInfoRecord = RoomDataManger.getVodInfo(sourceKey, vodId)
 					// 读取历史记录
 					if (vodInfoRecord != null) {
 						(vodInfo ?: return@Observer).playIndex = max(vodInfoRecord.playIndex, 0)
@@ -321,7 +319,7 @@ class DetailActivity : BaseActivity() {
 						(vodInfo ?: return@Observer).reverseSort = vodInfoRecord.reverseSort
 					} else {
 						(vodInfo ?: return@Observer).playIndex = 0
-						(vodInfo ?: return@Observer).playFlag = null
+						(vodInfo ?: return@Observer).playFlag = ""
 						(vodInfo ?: return@Observer).playerCfg = ""
 						(vodInfo ?: return@Observer).reverseSort = false
 					}
@@ -330,22 +328,22 @@ class DetailActivity : BaseActivity() {
 						(vodInfo ?: return@Observer).reverse()
 					}
 
-					if ((vodInfo ?: return@Observer).playFlag == null || !((vodInfo ?: return@Observer).seriesMap ?: return@Observer).containsKey((vodInfo ?: return@Observer).playFlag ?: return@Observer)) (vodInfo ?: return@Observer).playFlag = ((vodInfo ?: return@Observer).seriesMap ?: return@Observer).keys.toTypedArray()[0] as String?
+					if (!((vodInfo ?: return@Observer).seriesMap ?: return@Observer).containsKey((vodInfo ?: return@Observer).playFlag)) (vodInfo ?: return@Observer).playFlag = ((vodInfo ?: return@Observer).seriesMap ?: return@Observer).keys.toTypedArray()[0]
 
 					//设置播放地址
-					(tabInfoFragment ?: return@Observer).setPlayUrl((((vodInfo ?: return@Observer).seriesMap ?: return@Observer)[(vodInfo ?: return@Observer).playFlag ?: return@Observer] ?: return@Observer)[0].url)
+					tabInfoFragment.setPlayUrl((((vodInfo ?: return@Observer).seriesMap ?: return@Observer)[(vodInfo ?: return@Observer).playFlag] ?: return@Observer)[0].url)
 
-					(tabPlaylistFragment ?: return@Observer).setVodInfo(vodInfo)
+					tabPlaylistFragment.setVodInfo(vodInfo)
 
 					jumpToPlay()
-					(llPlayerFragmentContainer ?: return@Observer).visibility = View.VISIBLE
+					llPlayerFragmentContainer.visibility = View.VISIBLE
 					toggleSubtitleTextSize()
 				} else {
-					(tabPlaylistFragment ?: return@Observer).setPlaylistVisibility(View.GONE)
+					tabPlaylistFragment.setPlaylistVisibility(View.GONE)
 				}
 			} else {
 				showEmpty()
-				(llPlayerFragmentContainer ?: return@Observer).visibility = View.GONE
+				llPlayerFragmentContainer.visibility = View.GONE
 			}
 		})
 	}
@@ -365,8 +363,8 @@ class DetailActivity : BaseActivity() {
 			sourceKey = key
 			firstSourceKey = key
 			showLoading()
-			(sourceViewModel ?: return).getDetail(sourceKey, vodId ?: return)
-			(tabInfoFragment ?: return).updateCollectButton()
+			(sourceViewModel ?: return).getDetail(sourceKey, vodId)
+			tabInfoFragment.updateCollectButton()
 		}
 	}
 
@@ -379,7 +377,7 @@ class DetailActivity : BaseActivity() {
 						val index = event.obj as Int
 						val oldIndex = (vodInfo ?: return).playIndex
 						(vodInfo ?: return).playIndex = index
-						(tabPlaylistFragment ?: return).updateSeriesSelection(oldIndex, index)
+						tabPlaylistFragment.updateSeriesSelection(oldIndex, index)
 						//保存历史
 						insertVod(firstSourceKey ?: return, vodInfo ?: return)
 					}
@@ -393,21 +391,21 @@ class DetailActivity : BaseActivity() {
 					is String -> {
 						val url = event.obj.toString()
 						//设置更新播放地址
-						(tabInfoFragment ?: return).setPlayUrl(url)
+						tabInfoFragment.setPlayUrl(url)
 					}
 				}
 			}
 		} else if (event.type == RefreshEvent.TYPE_QUICK_SEARCH_SELECT) {
 			if (event.obj != null) {
 				val video = event.obj as Movie.Video?
-				loadDetail((video ?: return).id, video.sourceKey ?: return)
+				loadDetail((video ?: return).id, video.sourceKey)
 			}
 		}
 	}
 
 	private fun insertVod(sourceKey: String, vodInfo: VodInfo) {
 		try {
-			vodInfo.playNote = ((vodInfo.seriesMap ?: return)[vodInfo.playFlag ?: return] ?: return)[vodInfo.playIndex].name
+			vodInfo.playNote = ((vodInfo.seriesMap ?: return)[vodInfo.playFlag] ?: return)[vodInfo.playIndex].name
 		} catch (th: Throwable) {
 			vodInfo.playNote = ""
 		}
@@ -424,7 +422,7 @@ class DetailActivity : BaseActivity() {
 
 	override fun dispatchKeyEvent(event: KeyEvent): Boolean {
 		val fragment = playFragment
-		if (fragment != null && isFullscreen && fragment.dispatchKeyEvent(event)) {
+		if (isFullscreen && fragment.dispatchKeyEvent(event)) {
 			return true
 		}
 		return super.dispatchKeyEvent(event)
@@ -432,7 +430,7 @@ class DetailActivity : BaseActivity() {
 
 	override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
 		val fragment = playFragment
-		if (event != null && fragment != null && isFullscreen && fragment.onKeyDown(keyCode, event)) {
+		if (event != null && isFullscreen && fragment.onKeyDown(keyCode, event)) {
 			return true
 		}
 		return super.onKeyDown(keyCode, event)
@@ -440,7 +438,7 @@ class DetailActivity : BaseActivity() {
 
 	override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
 		val fragment = playFragment
-		if (event != null && fragment != null && isFullscreen && fragment.onKeyUp(keyCode, event)) {
+		if (event != null && isFullscreen && fragment.onKeyUp(keyCode, event)) {
 			return true
 		}
 		return super.onKeyUp(keyCode, event)
@@ -463,27 +461,26 @@ class DetailActivity : BaseActivity() {
 	}
 
 	private fun updatePlayerLayoutForFullscreen(fullscreen: Boolean) {
-		if (llPlayerFragmentContainer == null || topLayout == null) return
 
 		if (fullscreen) {
 			// 隐藏所有其他UI元素
-			(tabLayout ?: return).visibility = View.GONE
-			(viewPager ?: return).visibility = View.GONE
+			tabLayout.visibility = View.GONE
+			viewPager.visibility = View.GONE
 
 			// 修改topLayout的布局参数，使其填充整个屏幕
 			val topParams =
-				(topLayout ?: return).layoutParams as ConstraintLayout.LayoutParams
+				topLayout.layoutParams as ConstraintLayout.LayoutParams
 			topParams.width = ConstraintLayout.LayoutParams.MATCH_PARENT
 			topParams.height = ConstraintLayout.LayoutParams.MATCH_PARENT
 			topParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
 			topParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
 			topParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
 			topParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-			(topLayout ?: return).layoutParams = topParams
+			topLayout.layoutParams = topParams
 
 			// 修改previewPlayer的布局参数，使其填充整个topLayout
 			val playerParams =
-				(llPlayerFragmentContainer ?: return).layoutParams as ConstraintLayout.LayoutParams
+				llPlayerFragmentContainer.layoutParams as ConstraintLayout.LayoutParams
 			playerParams.width = ConstraintLayout.LayoutParams.MATCH_PARENT
 			playerParams.height = ConstraintLayout.LayoutParams.MATCH_PARENT
 			playerParams.dimensionRatio = null
@@ -491,26 +488,26 @@ class DetailActivity : BaseActivity() {
 			playerParams.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
 			playerParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
 			playerParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-			(llPlayerFragmentContainer ?: return).layoutParams = playerParams
+			llPlayerFragmentContainer.layoutParams = playerParams
 		} else {
 			// 恢复UI元素显示
-			(tabLayout ?: return).visibility = View.VISIBLE
-			(viewPager ?: return).visibility = View.VISIBLE
+			tabLayout.visibility = View.VISIBLE
+			viewPager.visibility = View.VISIBLE
 
 			// 恢复topLayout的布局参数
 			val topParams =
-				(topLayout ?: return).layoutParams as ConstraintLayout.LayoutParams
+				topLayout.layoutParams as ConstraintLayout.LayoutParams
 			topParams.width = ConstraintLayout.LayoutParams.MATCH_PARENT
 			topParams.height = ConstraintLayout.LayoutParams.WRAP_CONTENT
 			topParams.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
 			topParams.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
 			topParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
 			topParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-			(topLayout ?: return).layoutParams = topParams
+			topLayout.layoutParams = topParams
 
 			// 恢复previewPlayer的布局参数
 			val playerParams =
-				(llPlayerFragmentContainer ?: return).layoutParams as ConstraintLayout.LayoutParams
+				llPlayerFragmentContainer.layoutParams as ConstraintLayout.LayoutParams
 			playerParams.width = 0
 			playerParams.height = 0
 			playerParams.dimensionRatio = "H,16:9"
@@ -518,11 +515,11 @@ class DetailActivity : BaseActivity() {
 			playerParams.bottomToBottom = ConstraintLayout.LayoutParams.UNSET
 			playerParams.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
 			playerParams.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-			(llPlayerFragmentContainer ?: return).layoutParams = playerParams
+			llPlayerFragmentContainer.layoutParams = playerParams
 		}
 
-		(topLayout ?: return).requestLayout()
-		(llPlayerFragmentContainer ?: return).requestLayout()
+		topLayout.requestLayout()
+		llPlayerFragmentContainer.requestLayout()
 	}
 
 	private fun hideSystemUI() {

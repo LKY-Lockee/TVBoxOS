@@ -51,7 +51,7 @@ import xyz.doikki.videoplayer.player.AbstractPlayer
 class SimpleSubtitleView : TextView, SubtitleEngine, OnSubtitleChangeListener, OnSubtitlePreparedListener {
 	var isInternal: Boolean = false
 	var hasInternal: Boolean = false
-	private val backGroundText: TextView //用于描边的TextView
+	private val backGroundText: TextView? //用于描边的TextView
 	private val mSubtitleEngine: SubtitleEngine = DefaultSubtitleEngine()
 
 	constructor(context: Context?) : super(context) {
@@ -158,52 +158,52 @@ class SimpleSubtitleView : TextView, SubtitleEngine, OnSubtitleChangeListener, O
 
 	override fun setLayoutParams(params: ViewGroup.LayoutParams?) {
 		// 同步布局参数
-		backGroundText.layoutParams = params
+		backGroundText?.layoutParams = params
 		super.setLayoutParams(params)
 	}
 
 	override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-		val tt = backGroundText.text
+		val tt = backGroundText?.text
 		// 两个TextView上的文字必须一致
 		if (TextUtils.isEmpty(tt) || tt != this.text) {
-			backGroundText.text = text
+			backGroundText?.text = text
 			this.postInvalidate()
 		}
-		backGroundText.measure(widthMeasureSpec, heightMeasureSpec)
+		backGroundText?.measure(widthMeasureSpec, heightMeasureSpec)
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 	}
 
 	override fun setTextSize(size: Float) {
 		super.setTextSize(size)
-		backGroundText.textSize = size
+		backGroundText?.textSize = size
 	}
 
 	override fun onTextChanged(text: CharSequence?, start: Int, lengthBefore: Int, lengthAfter: Int) {
-		backGroundText.text = text
+		backGroundText?.text = text
 		super.onTextChanged(text, start, lengthBefore, lengthAfter)
 	}
 
 	override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-		backGroundText.layout(left, top, right, bottom)
+		backGroundText?.layout(left, top, right, bottom)
 		super.onLayout(changed, left, top, right, bottom)
 	}
 
 	override fun onDraw(canvas: Canvas) {
 		// 其他地方，backGroundText和super的先后顺序影响不会很大，但是此处必须要先绘制backGroundText，
 		drawBackGroundText()
-		backGroundText.draw(canvas)
+		backGroundText?.draw(canvas)
 		super.onDraw(canvas)
 	}
 
 	private fun drawBackGroundText() {
-		val tp = backGroundText.paint
+		val tp = backGroundText?.paint
 		// 设置描边宽度
-		tp.strokeWidth = 10f
+		tp?.strokeWidth = 10f
 		// 背景描边并填充全部
-		tp.style = Paint.Style.FILL_AND_STROKE
+		tp?.style = Paint.Style.FILL_AND_STROKE
 		// 设置描边颜色
-		backGroundText.setTextColor(Color.BLACK)
+		backGroundText?.setTextColor(Color.BLACK)
 		// 将背景的文字对齐方式做同步
-		backGroundText.gravity = gravity
+		backGroundText?.gravity = gravity
 	}
 }

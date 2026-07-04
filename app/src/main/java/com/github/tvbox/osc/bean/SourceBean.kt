@@ -1,9 +1,9 @@
 package com.github.tvbox.osc.bean
 
 class SourceBean {
-	var key: String? = null
-	var name: String? = null
-	var api: String? = null
+	var key: String = ""
+	var name: String = ""
+	var api: String = ""
 
 	/**
 	 * 0 xml
@@ -22,22 +22,22 @@ class SourceBean {
 	/**
 	 * 站点解析Url
 	 */
-	var playerUrl: String? = null
+	var playerUrl: String = ""
 
 	/**
 	 * 扩展数据
 	 */
-	var ext: String? = null
+	var ext: String = ""
 
 	/**
 	 * 自定义jar
 	 */
-	var jar: String? = null
+	var jar: String = ""
 
 	/**
 	 * 分类&排序
 	 */
-	var categories: List<String>? = null
+	var categories: List<String> = listOf()
 
 	/**
 	 * 0 system
@@ -57,12 +57,12 @@ class SourceBean {
 	 * 
 	 * ddrk.me;#id
 	 */
-	var clickSelector: String? = null
+	var clickSelector: String = ""
 
 	/**
 	 * 展示风格
 	 */
-	var style: String? = null
+	var style: String = ""
 
 	/**
 	 * 是否可搜索

@@ -23,10 +23,10 @@ class JsLoader {
 		classes.clear()
 	}
 
-	fun getSpider(key: String, api: String, ext: String?, jar: String): Spider? {
+	fun getSpider(key: String, api: String, ext: String?, jar: String): Spider {
 		if (spiders.containsKey(key)) {
 			Log.i("JSLoader", "echo-getSpider cached")
-			return spiders[key]
+			return spiders[key] ?: SpiderNull()
 		}
 		var classLoader: Class<*>? = null
 		if (jar.isNotEmpty()) {
@@ -49,7 +49,7 @@ class JsLoader {
 		return SpiderNull()
 	}
 
-	fun proxyInvoke(params: Map<String, List<String>>?): Array<Any?>? {
+	fun proxyInvoke(params: Map<String, List<String>>): Array<Any?>? {
 		try {
 			val proxyFun = spiders[recentKey] ?: return null
 			return proxyFun.proxyLocal(params)

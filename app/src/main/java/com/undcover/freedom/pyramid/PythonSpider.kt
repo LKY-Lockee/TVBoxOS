@@ -125,7 +125,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 	/**
 	 * 分类数据
 	 */
-	override fun categoryContent(tid: String?, pg: String?, filter: Boolean, extend: Map<String, String>?): String {
+	override fun categoryContent(tid: String, pg: String, filter: Boolean, extend: HashMap<String, String>?): String {
 		PyLog.nw("categoryContent-$name", paramLog(tid, pg, filter, map2json(extend).toString()))
 		val po = app.callAttr("categoryContent", pySpider, tid, pg, filter, map2json(extend).toString())
 		val rsp = po.toString()
@@ -158,7 +158,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 	/**
 	 * 播放信息
 	 */
-	override fun playerContent(flag: String?, id: String?, vipFlags: List<String>?): String {
+	override fun playerContent(flag: String?, id: String, vipFlags: List<String>): String {
 		PyLog.nw("playerContent-$name", paramLog(flag, id, list2json(vipFlags).toString()))
 		val po = app.callAttr("playerContent", pySpider, flag, id, list2json(vipFlags).toString())
 		val rsp = replaceLocalUrl(po.toString())
@@ -169,7 +169,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 	/**
 	 * 直播列表数据
 	 */
-	override fun liveContent(url: String?): String {
+	override fun liveContent(url: String): String {
 		PyLog.nw("liveContent-$name", "")
 		val po = app.callAttr("liveContent", pySpider, url)
 		val rsp = po.toString()
@@ -180,7 +180,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 	/**
 	 * webview解析时使用 可自定义判断当前加载的 url 是否是视频
 	 */
-	override fun isVideoFormat(url: String?): Boolean {
+	override fun isVideoFormat(url: String): Boolean {
 		return false
 	}
 
@@ -191,7 +191,7 @@ class PythonSpider(private val name: String, private val cachePath: String?) : S
 		return false
 	}
 
-	override fun proxyLocal(params: Map<String, List<String>>?): Array<Any?> {
+	override fun proxyLocal(params: Map<String, List<String>>): Array<Any?> {
 		Log.i("PyLoader", "echo-proxyLocal:param$params")
 		val list = app.callAttr("localProxy", pySpider, map2json(params).toString()).asList()
 		val base64 = list.size > 4 && list[4].toInt() == 1

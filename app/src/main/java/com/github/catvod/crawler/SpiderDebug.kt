@@ -12,8 +12,4 @@ object SpiderDebug {
 	fun log(msg: String) {
 		Log.d("SpiderLog", msg)
 	}
-
-	fun ec(i: Int): String {
-		return ""
-	}
 }

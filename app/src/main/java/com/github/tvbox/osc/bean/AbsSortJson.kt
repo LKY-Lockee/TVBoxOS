@@ -33,12 +33,12 @@ class AbsSortJson : Serializable {
 
 	class AbsJsonClass : Serializable {
 		@SerializedName("type_id")
-		var typeId: String? = null
+		var typeId: String = ""
 
 		@SerializedName("type_name")
-		var typeName: String? = null
+		var typeName: String = ""
 
 		@SerializedName("type_flag")
-		var typeFlag: String? = null
+		var typeFlag: String = ""
 	}
 }

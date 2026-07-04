@@ -83,7 +83,7 @@ object Thunder {
 				val beanList = urlInfo.beanList ?: continue
 				for (infoBean in beanList) {
 					var isParse = false
-					var url = infoBean.url.orEmpty()
+					var url = infoBean.url
 					if (isMagnet(url) || isThunder(url) || isTorrent(url)) {
 						if (isThunder(url)) url = XLDownloadManager.getInstance().parserThunderUrl(url)
 						val link = if (isThunder(url)) XLDownloadManager.getInstance().parserThunderUrl(url) else url
@@ -156,7 +156,7 @@ object Thunder {
 							}
 						}
 					} else {
-						url = infoBean.url.orEmpty()
+						url = infoBean.url
 						if (isThunder(url)) url = XLDownloadManager.getInstance().parserThunderUrl(url)
 						if (isNetworkDownloadTask(url)) {
 							task_url = url

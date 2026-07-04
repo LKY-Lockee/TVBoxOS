@@ -44,7 +44,6 @@ import com.github.tvbox.osc.util.ScreenUtils
 import com.github.tvbox.osc.util.SubtitleHelper
 import com.github.tvbox.osc.util.TVBoxRuntimeLog
 import com.github.tvbox.osc.util.VideoParseRuler
-import com.github.tvbox.osc.util.thunder.JianPian.finish
 import com.github.tvbox.osc.util.thunder.Thunder.stop
 import com.lzy.okgo.OkGo
 import com.lzy.okgo.callback.AbsCallback
@@ -1306,7 +1305,6 @@ class VodController(context: Context) : BaseController(context) {
 
 	fun stopOther() {
 		stop(false) //停止磁力下载
-		finish() //停止p2p下载
 		App.dashData = null
 	}
 

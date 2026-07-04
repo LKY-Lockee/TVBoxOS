@@ -94,10 +94,9 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 		}
 	}
 
-	override fun categoryContent(tid: String?, pg: String?, filter: Boolean, extend: Map<String, String>?): String {
+	override fun categoryContent(tid: String, pg: String, filter: Boolean, extend: HashMap<String, String>?): String {
 		try {
-			val c = ctx
-			val obj = (submit<JSObject> { JSUtils<String>().toObj(c, extend) } ?: return "").get()
+			val obj = (submit<JSObject> { JSUtils<String>().toObj(ctx, extend) } ?: return "").get()
 			return call("category", tid, pg, filter, obj) as String
 		} catch (e: Exception) {
 			return ""
@@ -120,7 +119,7 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 		}
 	}
 
-	override fun playerContent(flag: String?, id: String?, vipFlags: List<String>?): String {
+	override fun playerContent(flag: String?, id: String, vipFlags: List<String>): String {
 		try {
 			val c = ctx
 			val future = submit<JSArray?> { JSUtils<String>().toArray(c, vipFlags) } ?: return ""
@@ -139,7 +138,7 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 		}
 	}
 
-	override fun isVideoFormat(url: String?): Boolean {
+	override fun isVideoFormat(url: String): Boolean {
 		return try {
 			(call("isVideo", url) as? Boolean) ?: false
 		} catch (e: Exception) {
@@ -147,7 +146,7 @@ class JsSpider(key: String, private val api: String, private val dex: Class<*>?)
 		}
 	}
 
-	override fun proxyLocal(params: Map<String, List<String>>?): Array<Any?> {
+	override fun proxyLocal(params: Map<String, List<String>>): Array<Any?> {
 		return try {
 			(submit<Array<Any?>?> { proxy1(params) } ?: return arrayOfNulls(0)).get() ?: arrayOfNulls(0)
 		} catch (e: Exception) {

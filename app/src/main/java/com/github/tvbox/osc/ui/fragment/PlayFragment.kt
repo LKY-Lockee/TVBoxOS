@@ -74,7 +74,6 @@ import com.github.tvbox.osc.util.VideoParseRuler.checkIsVideoForParse
 import com.github.tvbox.osc.util.VideoParseRuler.isFilter
 import com.github.tvbox.osc.util.parser.SuperParse
 import com.github.tvbox.osc.util.parser.SuperParse.stopJsonJx
-import com.github.tvbox.osc.util.thunder.JianPian
 import com.github.tvbox.osc.util.thunder.Thunder
 import com.github.tvbox.osc.util.thunder.Thunder.ThunderCallback
 import com.github.tvbox.osc.viewmodel.SourceViewModel
@@ -942,17 +941,6 @@ class PlayFragment : BaseLazyFragment() {
 				e.printStackTrace()
 			}
 		}
-
-		if (JianPian.isJpUrl(vs.url)) { //荐片地址特殊判断
-			val jpUrl = vs.url
-			mController?.showParse(false)
-			if (vs.url.startsWith("tvbox-xg:")) {
-				playUrl(JianPian.jpUrlDec(jpUrl.substring(9)), null)
-			} else {
-				playUrl(JianPian.jpUrlDec(jpUrl), null)
-			}
-			return
-		}
 		if (Thunder.play(vs.url, object : ThunderCallback {
 				override fun status(code: Int, info: String) {
 					if (code < 0) {
@@ -1358,7 +1346,7 @@ class PlayFragment : BaseLazyFragment() {
 			}
 			sourceBean?.let {
 				if (it.type == 3) {
-					val sp: Spider? = ApiConfig.instance.getCSP(it)
+					val sp: Spider = ApiConfig.instance.getCSP(it)
 					if (sp != null && sp.manualVideoCheck()) {
 						return sp.isVideoFormat(url)
 					}

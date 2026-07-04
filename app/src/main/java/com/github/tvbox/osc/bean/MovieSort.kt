@@ -24,18 +24,18 @@ class MovieSort : Serializable {
 		val filterSelect: HashMap<String, String> = HashMap()
 
 		@XStreamAsAttribute
-		var id: String? = null
-		var name: String? = null
+		var id: String = ""
+		var name: String = ""
 		var filters: MutableList<SortFilter> = mutableListOf()
 
 		/**
 		 * 类型
 		 */
-		var flag: String? = null
+		var flag: String = ""
 
 		constructor()
 
-		constructor(id: String?, name: String?) {
+		constructor(id: String, name: String) {
 			this.id = id
 			this.name = name
 		}

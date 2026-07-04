@@ -57,9 +57,9 @@ class JarLoader {
 		val jarMd5: String
 		val jarKey: String
 		if (jar.isEmpty()) {
-			jarKey = "main"
-			jarMd5 = ""
 			jarUrl = null
+			jarMd5 = ""
+			jarKey = "main"
 		} else {
 			val urls = jar.split(";md5;").filter { it.isNotEmpty() }
 			jarUrl = urls.firstOrNull()

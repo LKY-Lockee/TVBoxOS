@@ -17,7 +17,7 @@ class VodInfo : Serializable {
 	/**
 	 * 内容id
 	 */
-	var id: String? = null
+	var id: String = ""
 
 	/**
 	 * 父级id
@@ -76,11 +76,11 @@ class VodInfo : Serializable {
 	var director: String? = null // <![CDATA[陈国星]]>
 	var seriesFlags: List<VodSeriesFlag>? = null
 	var seriesMap: LinkedHashMap<String, MutableList<VodSeries>>? = null
-	var des: String? = null // <![CDATA[权来]
-	var playFlag: String? = null
+	var des: String = "" // <![CDATA[权来]
+	var playFlag: String = ""
 	var playIndex: Int = 0
 	var playNote: String = ""
-	var sourceKey: String? = null
+	var sourceKey: String = ""
 	var playerCfg: String = ""
 	var reverseSort: Boolean = false
 
@@ -167,12 +167,12 @@ class VodInfo : Serializable {
 	}
 
 	class VodSeriesFlag : Serializable {
-		var name: String? = null
+		var name: String = ""
 		var selected: Boolean = false
 
 		constructor()
 
-		constructor(name: String?) {
+		constructor(name: String) {
 			this.name = name
 		}
 	}
