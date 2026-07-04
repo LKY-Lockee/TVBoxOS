@@ -1,9 +1,33 @@
+//noinspection ChromeOsAbiSupport
+
 plugins {
-	id("com.android.application")
+	id("androidx.room")
 	id("com.chaquo.python")
-	id("org.jetbrains.kotlin.plugin.compose")
+	id("com.android.application")
 	id("com.google.devtools.ksp")
+	id("org.jetbrains.kotlin.plugin.compose")
 	id("com.autonomousapps.dependency-analysis")
+}
+
+val appVersionName = "1.0.0"
+val appVersionCode = 1
+
+val abiVersionCodes = mapOf(
+	"armeabi-v7a" to 1,
+	"arm64-v8a" to 2,
+	"x86" to 3,
+	"x86_64" to 4
+)
+
+@Suppress("UnstableApiUsage")
+androidComponents {
+	onVariants(selector().all()) { variant ->
+		val abiCode = abiVersionCodes[variant.flavorName] ?: 0
+		variant.outputs.forEach { output ->
+			output.versionCode.set(appVersionCode * 10 + abiCode)
+			output.outputFileName.set("TVBoxOS_${appVersionName}_${variant.flavorName}.apk")
+		}
+	}
 }
 
 android {
@@ -14,18 +38,33 @@ android {
 		applicationId = "com.github.tvbox.osc"
 		minSdk = 28
 		targetSdk = 37
-		versionName = "1.0.0"
-		versionCode = 1
+		versionName = appVersionName
+		versionCode = appVersionCode
 		multiDexEnabled = true
+	}
 
-		ndk {
-			abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+	flavorDimensions += "abi"
+
+	productFlavors {
+		create("armeabi-v7a") {
+			dimension = "abi"
+			ndk { abiFilters += listOf("armeabi-v7a") }
 		}
-
-		javaCompileOptions {
-			annotationProcessorOptions {
-				arguments.putAll(mapOf("room.schemaLocation" to "$projectDir/schemas"))
-			}
+		create("arm64-v8a") {
+			dimension = "abi"
+			ndk { abiFilters += listOf("arm64-v8a") }
+		}
+		create("x86") {
+			dimension = "abi"
+			ndk { abiFilters += listOf("x86") }
+		}
+		create("x86_64") {
+			dimension = "abi"
+			ndk { abiFilters += listOf("x86_64") }
+		}
+		create("universal") {
+			dimension = "abi"
+			ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64") }
 		}
 	}
 
@@ -66,6 +105,10 @@ android {
 	sourceSets.getByName("main") {
 		setRoot("src/main")
 	}
+}
+
+room {
+	schemaDirectory("$projectDir/schemas")
 }
 
 chaquopy {
