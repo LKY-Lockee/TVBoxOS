@@ -30,7 +30,6 @@ import kotlinx.coroutines.launch
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
-import java.util.Objects
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -62,12 +61,12 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 	private val _suggestions = MutableStateFlow<List<SearchWordItem>>(emptyList())
 	val suggestions: StateFlow<List<SearchWordItem>> = _suggestions.asStateFlow()
 
-	private val searchResults = HashMap<String, ArrayList<Movie.Video?>>()
+	private val searchResults = LinkedHashMap<String, ArrayList<Movie.Video?>>()
 	private val allRunCount = AtomicInteger(0)
 	private var totalSourceCount = 0
 	private var searchExecutor: ExecutorService? = null
 
-	private var hots: ArrayList<String?>? = null
+	private var hots = ArrayList<String>()
 
 	private val _toast = MutableStateFlow<String?>(null)
 	val toast: StateFlow<String?> = _toast.asStateFlow()
@@ -77,7 +76,6 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 	}
 
 	override fun onCleared() {
-		super.onCleared()
 		cancel()
 		EventBus.getDefault().unregister(this)
 		searchExecutor?.shutdownNow()
@@ -178,7 +176,7 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 		var hasNew = false
 		if (absXml?.movie?.videoList?.isNotEmpty() == true) {
 			val videos = absXml.movie!!.videoList!!
-			val sourceKey = videos[0].sourceKey ?: return
+			val sourceKey = videos[0].sourceKey
 			val list = searchResults.getOrPut(sourceKey) { ArrayList() }
 			val oldSize = list.size
 			for (v in videos) {
@@ -228,8 +226,8 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 			val historyList = PreferenceStore.getObj(ConfigKey.SEARCH_HISTORY, ArrayList<String?>())
 			val combined = ArrayList<SearchWordItem>()
 			historyList.forEach { combined.add(SearchWordItem(it.orEmpty(), 0)) }
-			if (!hots.isNullOrEmpty()) {
-				hots!!.forEach { combined.add(SearchWordItem(it.orEmpty(), 1)) }
+			if (hots.isNotEmpty()) {
+				hots.forEach { combined.add(SearchWordItem(it, 1)) }
 				_suggestions.value = combined
 				return@launch
 			}
@@ -239,30 +237,30 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 	}
 
 	private fun fetchHotWords(historyList: ArrayList<String?>) {
-		OkGo.get<String?>("https://node.video.qq.com/x/api/hot_search")
-			.params("channdlId", "0")
-			.params("_", System.currentTimeMillis())
-			.execute(object : AbsCallback<String?>() {
-				override fun onSuccess(response: Response<String?>) {
+		OkGo.get<String>("https://movie.douban.com/j/search_subjects?type=tv&tag=%E7%83%AD%E9%97%A8&sort=recommend&page_limit=20&page_start=0")
+			.headers("User-Agent", "Mozilla/5.0")
+			.execute(object : AbsCallback<String>() {
+				override fun onSuccess(response: Response<String>) {
 					try {
-						hots = ArrayList()
-						val itemList = JsonParser.parseString(response.body())
-							.asJsonObject.get("data").asJsonObject
-							.get("mapResult").asJsonObject
-							.get("0").asJsonObject
-							.get("listInfo").asJsonArray
+						val data = ArrayList<String>()
+						val itemList = JsonParser.parseString(response.body()).asJsonObject
+							.get("subjects").asJsonArray
 						for (ele in itemList) {
 							val obj = ele as JsonObject
-							hots!!.add(
-								obj.get("title").asString.trim()
+							if (obj.has("title")) {
+								val title = obj.get("title").asString.trim()
 									.replace("[<>《》\\-]".toRegex(), "")
 									.split(" ".toRegex()).first()
-							)
+								if (title.isNotEmpty() && !data.contains(title)) {
+									data.add(title)
+								}
+							}
 						}
 						val updated = ArrayList<SearchWordItem>()
 						historyList.forEach { updated.add(SearchWordItem(it.orEmpty(), 0)) }
-						hots!!.forEach { updated.add(SearchWordItem(it.orEmpty(), 1)) }
+						data.forEach { updated.add(SearchWordItem(it, 1)) }
 						_suggestions.value = updated
+						hots = data
 					} catch (t: Throwable) {
 						t.printStackTrace()
 					}
@@ -275,13 +273,13 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 	}
 
 	fun loadSearchSuggestions(key: String) {
-		OkGo.get<Any?>("https://tv.aiseet.atianqi.com/i-tvbin/qtv_video/search/get_search_smart_box")
+		OkGo.get<Any>("https://tv.aiseet.atianqi.com/i-tvbin/qtv_video/search/get_search_smart_box")
 			.params("format", "json")
 			.params("page_num", 0)
 			.params("page_size", 20)
 			.params("key", key)
-			.execute(object : AbsCallback<Any?>() {
-				override fun onSuccess(response: Response<Any?>) {
+			.execute(object : AbsCallback<Any>() {
+				override fun onSuccess(response: Response<Any>) {
 					try {
 						val result = response.body() as String?
 						val json = Gson().fromJson(result, JsonElement::class.java)
@@ -304,14 +302,14 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
 				}
 
 				override fun convertResponse(response: okhttp3.Response): String =
-					Objects.requireNonNull(response.body).string()
+					response.body.string()
 			})
 	}
 
 	fun clearSearchHistory() {
 		PreferenceStore.delete(ConfigKey.SEARCH_HISTORY)
 		val list = ArrayList<SearchWordItem>()
-		hots?.forEach { list.add(SearchWordItem(it.orEmpty(), 1)) }
+		hots.forEach { list.add(SearchWordItem(it, 1)) }
 		_suggestions.value = list
 	}
 

@@ -4,10 +4,8 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,11 +21,9 @@ import com.github.tvbox.osc.cache.RoomDataManger
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
-import com.github.tvbox.osc.ui.compose.component.ContentState
-import com.github.tvbox.osc.ui.compose.component.StateBox
+import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.util.rememberEventBusCallback
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
 	isCurrent: Boolean,
@@ -37,8 +33,7 @@ fun HistoryScreen(
 ) {
 	val context = LocalContext.current
 	var list by remember { mutableStateOf<List<VodInfo>>(emptyList()) }
-	var state by remember { mutableStateOf<ContentState>(ContentState.Loading) }
-	var refreshing by remember { mutableStateOf(false) }
+	var refreshing by remember { mutableStateOf(true) }
 	var showClearDialog by remember { mutableStateOf(false) }
 	var deleteTarget by remember { mutableStateOf<Pair<VodInfo, Int>?>(null) }
 
@@ -48,7 +43,6 @@ fun HistoryScreen(
 			info
 		}
 		list = all
-		state = if (all.isEmpty()) ContentState.Empty else ContentState.Content("history")
 		refreshing = false
 	}
 
@@ -80,23 +74,22 @@ fun HistoryScreen(
 		}
 	}
 
-	PullToRefreshBox(
+	RefreshContentBox(
 		isRefreshing = refreshing,
+		isEmpty = list.isEmpty(),
 		onRefresh = { refreshing = true; loadData() },
 		modifier = modifier.fillMaxSize()
 	) {
-		StateBox(state = state, modifier = Modifier.fillMaxSize()) {
-			AdaptiveVodGrid(
-				items = list,
-				name = { it.name },
-				pic = { it.pic },
-				year = { it.year },
-				note = { it.note },
-				onClick = ::openVod,
-				onLongClick = { info -> deleteTarget = info to list.indexOf(info) },
-				modifier = Modifier.fillMaxSize()
-			)
-		}
+		AdaptiveVodGrid(
+			items = list,
+			name = { it.name },
+			pic = { it.pic },
+			year = { it.year },
+			note = { it.note },
+			onClick = ::openVod,
+			onLongClick = { info -> deleteTarget = info to list.indexOf(info) },
+			modifier = Modifier.fillMaxSize()
+		)
 	}
 
 	if (showClearDialog) {
@@ -109,7 +102,6 @@ fun HistoryScreen(
 					showClearDialog = false
 					RoomDataManger.deleteVodRecordAll()
 					list = emptyList()
-					state = ContentState.Empty
 					Toast.makeText(context, "已清空历史记录", Toast.LENGTH_SHORT).show()
 				}) { Text("清空") }
 			},
@@ -125,9 +117,8 @@ fun HistoryScreen(
 			confirmButton = {
 				TextButton(onClick = {
 					deleteTarget = null
-					RoomDataManger.deleteVodRecord(info.sourceKey ?: return@TextButton, info)
+					RoomDataManger.deleteVodRecord(info.sourceKey, info)
 					list = list.filterNot { it.id == info.id && it.sourceKey == info.sourceKey }
-					if (list.isEmpty()) state = ContentState.Empty
 					Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
 				}) { Text("删除") }
 			},

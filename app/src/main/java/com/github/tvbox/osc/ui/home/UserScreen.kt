@@ -18,8 +18,7 @@ import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
 import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
-import com.github.tvbox.osc.ui.compose.component.ContentState
-import com.github.tvbox.osc.ui.compose.component.StateBox
+import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.util.rememberEventBusCallback
 import com.github.tvbox.osc.util.UA
 import com.google.gson.Gson
@@ -54,7 +53,7 @@ private fun RecommendGrid(
 ) {
 	val context = LocalContext.current
 	var videos by remember { mutableStateOf<List<Movie.Video>>(emptyList()) }
-	var state by remember { mutableStateOf<ContentState>(ContentState.Loading) }
+	var refreshing by remember { mutableStateOf(true) }
 
 	fun openVideo(video: Movie.Video) {
 		val id = video.id
@@ -73,7 +72,7 @@ private fun RecommendGrid(
 	}
 
 	fun loadHistory() {
-		val list = RoomDataManger.getAllVodRecord(20).map { info ->
+		videos = RoomDataManger.getAllVodRecord(20).map { info ->
 			Movie.Video().apply {
 				id = info.id
 				sourceKey = info.sourceKey
@@ -82,21 +81,19 @@ private fun RecommendGrid(
 				if (info.playNote.isNotEmpty()) note = "上次看到" + info.playNote
 			}
 		}
-		videos = list
-		state = if (list.isEmpty()) ContentState.Empty else ContentState.Content("history")
+		refreshing = false
 	}
 
-	fun loadDouban() {
+	fun loadDouban(forceRefresh: Boolean = false) {
 		val cal = Calendar.getInstance()
 		val year = cal.get(Calendar.YEAR)
 		val today = String.format(Locale.getDefault(), "%d%d%d", year, cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DATE))
 		val requestDay = PreferenceStore.get("home_hot_day", "")
-		if (requestDay == today) {
+		if (!forceRefresh && requestDay == today) {
 			val json = PreferenceStore.get("home_hot", "")
 			if (json.isNotEmpty()) {
-				val hots = loadHots(json)
-				videos = hots
-				state = if (hots.isEmpty()) ContentState.Empty else ContentState.Content("douban")
+				videos = loadHots(json)
+				refreshing = false
 				return
 			}
 		}
@@ -108,31 +105,38 @@ private fun RecommendGrid(
 					val netJson = response.body().orEmpty()
 					PreferenceStore.put("home_hot_day", today)
 					PreferenceStore.put("home_hot", netJson)
-					val hots = loadHots(netJson)
-					videos = hots
-					state = if (hots.isEmpty()) ContentState.Empty else ContentState.Content("douban")
+					videos = loadHots(netJson)
+					refreshing = false
 				}
 
 				override fun onError(response: Response<String?>?) {
 					super.onError(response)
 					videos = emptyList()
-					state = ContentState.Empty
+					refreshing = false
 				}
 
 				override fun convertResponse(response: okhttp3.Response): String = response.body.string()
 			})
 	}
 
-	LaunchedEffect(rec) {
-		if (rec == 2) loadHistory() else {
-			state = ContentState.Loading; loadDouban()
-		}
-	}
-	rememberEventBusCallback<RefreshEvent> { e ->
-		if (e.type == RefreshEvent.TYPE_HISTORY_REFRESH && rec == 2) loadHistory()
+	fun refresh(forceRefresh: Boolean = true) {
+		refreshing = true
+		if (rec == 2) loadHistory() else loadDouban(forceRefresh)
 	}
 
-	StateBox(state = state, modifier = modifier.fillMaxSize()) {
+	LaunchedEffect(rec) {
+		refresh(forceRefresh = false)
+	}
+	rememberEventBusCallback<RefreshEvent> { e ->
+		if (e.type == RefreshEvent.TYPE_HISTORY_REFRESH && rec == 2) refresh()
+	}
+
+	RefreshContentBox(
+		isRefreshing = refreshing,
+		isEmpty = videos.isEmpty(),
+		onRefresh = { refresh() },
+		modifier = modifier.fillMaxSize()
+	) {
 		AdaptiveVodGrid(
 			items = videos,
 			name = { it.name },

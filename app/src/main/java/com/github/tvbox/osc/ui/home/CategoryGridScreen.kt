@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,9 +27,8 @@ import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort.SortData
 import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
-import com.github.tvbox.osc.ui.compose.component.ContentState
 import com.github.tvbox.osc.ui.compose.component.FilterChipRow
-import com.github.tvbox.osc.ui.compose.component.StateBox
+import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.component.VodListRow
 import com.github.tvbox.osc.viewmodel.SourceViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -47,7 +44,7 @@ private class GridFrame(
 	val loaded: Boolean = false
 )
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CategoryGridScreen(
 	sortData: SortData,
@@ -129,66 +126,60 @@ fun CategoryGridScreen(
 		}
 	}
 
-	val contentState = when {
-		current.loaded && current.videos.isEmpty() -> ContentState.Empty
-		current.loaded -> ContentState.Content(current.id)
-		else -> ContentState.Loading
-	}
-
-	PullToRefreshBox(
-		isRefreshing = refreshing,
-		onRefresh = {
-			refreshing = true
-			frames = frames.dropLast(1) + GridFrame(id = current.id, flag = current.flag, page = 1)
-			reload(1)
-		},
-		modifier = modifier.fillMaxSize()
-	) {
-		Column(Modifier.fillMaxSize()) {
-			if (sortData.filters.isNotEmpty()) {
-				FilterChipRow(
-					filters = sortData.filters,
-					filterSelect = sortData.filterSelect,
-					onSelect = { key, value ->
-						if (value == null) sortData.filterSelect.remove(key)
-						else sortData.filterSelect[key] = value
-						frames = frames.dropLast(1) + GridFrame(id = current.id, flag = current.flag, page = 1)
-						reload(1)
-					}
-				)
-			}
-			Box(
-				Modifier
-					.fillMaxWidth()
-					.weight(1f)
+	Column(modifier.fillMaxSize()) {
+		if (sortData.filters.isNotEmpty()) {
+			FilterChipRow(
+				filters = sortData.filters,
+				filterSelect = sortData.filterSelect,
+				onSelect = { key, value ->
+					if (value == null) sortData.filterSelect.remove(key)
+					else sortData.filterSelect[key] = value
+					refreshing = true
+					frames = frames.dropLast(1) + GridFrame(id = current.id, flag = current.flag, page = 1)
+					reload(1)
+				}
+			)
+		}
+		Box(
+			Modifier
+				.fillMaxWidth()
+				.weight(1f)
+		) {
+			RefreshContentBox(
+				isRefreshing = refreshing,
+				isEmpty = current.loaded && current.videos.isEmpty(),
+				onRefresh = {
+					refreshing = true
+					frames = frames.dropLast(1) + GridFrame(id = current.id, flag = current.flag, page = 1)
+					reload(1)
+				},
+				modifier = Modifier.fillMaxSize()
 			) {
-				StateBox(state = contentState, modifier = Modifier.fillMaxSize()) {
-					if (isFolderMode) {
-						LazyColumn(
-							modifier = Modifier.fillMaxSize(),
-							contentPadding = PaddingValues(4.dp)
-						) {
-							items(current.videos) { video ->
-								VodListRow(
-									name = video.name,
-									pic = video.pic,
-									note = video.note,
-									onClick = { openVideo(video) }
-								)
-							}
+				if (isFolderMode) {
+					LazyColumn(
+						modifier = Modifier.fillMaxSize(),
+						contentPadding = PaddingValues(4.dp)
+					) {
+						items(current.videos) { video ->
+							VodListRow(
+								name = video.name,
+								pic = video.pic,
+								note = video.note,
+								onClick = { openVideo(video) }
+							)
 						}
-					} else {
-						AdaptiveVodGrid(
-							items = current.videos,
-							name = { it.name },
-							pic = { it.pic },
-							year = { it.year },
-							note = { it.note },
-							onClick = ::openVideo,
-							state = gridState,
-							modifier = Modifier.fillMaxSize()
-						)
 					}
+				} else {
+					AdaptiveVodGrid(
+						items = current.videos,
+						name = { it.name },
+						pic = { it.pic },
+						year = { it.year },
+						note = { it.note },
+						onClick = ::openVideo,
+						state = gridState,
+						modifier = Modifier.fillMaxSize()
+					)
 				}
 			}
 		}

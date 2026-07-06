@@ -2,6 +2,7 @@ package com.github.tvbox.osc.ui.home
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
@@ -17,7 +19,11 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -28,7 +34,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,10 +43,9 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -53,7 +57,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
 import com.github.tvbox.osc.R
-import com.github.tvbox.osc.ui.compose.component.LoadingState
 
 /** 顶部工具栏动作。 */
 data class ToolbarAction(val icon: Int, val contentDescription: String, val onClick: () -> Unit)
@@ -142,7 +145,6 @@ fun HomeScreen(
 	val backStackEntry by navController.currentBackStackEntryAsState()
 	val currentTab = routeToHomeTab(backStackEntry?.destination?.route)
 	val toolbarState = remember { HomeToolbarState() }
-	val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
 	LaunchedEffect(Unit) {
 		homeViewModel.toast.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
@@ -175,8 +177,10 @@ fun HomeScreen(
 	}
 
 	when (val state = uiState) {
-		HomeUiState.Loading -> {
-			LoadingState(Modifier.fillMaxSize())
+		is HomeUiState.Loading -> {
+			Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+				CircularWavyProgressIndicator()
+			}
 			return
 		}
 
@@ -201,29 +205,16 @@ fun HomeScreen(
 	val showBottomBar = adaptiveInfo.showBottomBar
 
 	Scaffold(
-		modifier = Modifier
-			.fillMaxSize()
-			.nestedScroll(scrollBehavior.nestedScrollConnection),
+		modifier = Modifier.fillMaxSize(),
 		topBar = {
 			TopAppBar(
 				title = { Text(toolbarState.title.ifEmpty { stringResource(R.string.app_name) }) },
 				actions = {
-					toolbarState.actions.forEach { action ->
-						IconButton(onClick = action.onClick) {
-							Icon(painter = painterResource(action.icon), contentDescription = action.contentDescription)
-						}
-					}
-					IconButton(onClick = onOpenSettings) {
-						Icon(
-							painter = painterResource(R.drawable.icon_settings),
-							contentDescription = stringResource(R.string.action_settings)
-						)
-					}
+					HomeOverflowMenu(
+						actions = toolbarState.actions,
+						onOpenSettings = onOpenSettings
+					)
 				},
-				scrollBehavior = scrollBehavior,
-				modifier = Modifier.graphicsLayer {
-					alpha = 1f - scrollBehavior.state.collapsedFraction
-				}
 			)
 		},
 		bottomBar = {
@@ -281,6 +272,48 @@ private data class HomeNavHostState(
 	val pendingSearch: String?,
 	val onConsumePendingSearch: () -> Unit
 )
+
+@Composable
+private fun HomeOverflowMenu(
+	actions: List<ToolbarAction>,
+	onOpenSettings: () -> Unit
+) {
+	var expanded by remember { mutableStateOf(false) }
+
+	IconButton(onClick = { expanded = true }) {
+		Icon(Icons.Filled.MoreVert, contentDescription = "更多选项")
+	}
+	DropdownMenu(
+		expanded = expanded,
+		onDismissRequest = { expanded = false }
+	) {
+		actions.forEach { action ->
+			DropdownMenuItem(
+				text = { Text(action.contentDescription) },
+				leadingIcon = {
+					Icon(painter = painterResource(action.icon), contentDescription = null)
+				},
+				onClick = {
+					expanded = false
+					action.onClick()
+				}
+			)
+		}
+		if (actions.isNotEmpty()) {
+			HorizontalDivider()
+		}
+		DropdownMenuItem(
+			text = { Text(stringResource(R.string.action_settings)) },
+			leadingIcon = {
+				Icon(painter = painterResource(R.drawable.icon_settings), contentDescription = null)
+			},
+			onClick = {
+				expanded = false
+				onOpenSettings()
+			}
+		)
+	}
+}
 
 @Composable
 private fun HomeNavHost(

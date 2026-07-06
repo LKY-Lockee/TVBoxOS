@@ -24,7 +24,8 @@ fun <T> AdaptiveVodGrid(
 	modifier: Modifier = Modifier,
 	state: LazyGridState = rememberLazyGridState(),
 	contentPadding: PaddingValues = PaddingValues(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 120.dp),
-	onLongClick: ((T) -> Unit)? = null
+	onLongClick: ((T) -> Unit)? = null,
+	key: ((T) -> Any)? = null
 ) {
 	BoxWithConstraints(modifier) {
 		val columns = if (maxWidth < maxHeight && maxWidth < 600.dp) {
@@ -40,7 +41,7 @@ fun <T> AdaptiveVodGrid(
 			contentPadding = contentPadding,
 			horizontalArrangement = Arrangement.spacedBy(4.dp)
 		) {
-			items(items) { item ->
+			items(items, key = key) { item ->
 				VodCard(
 					name = name(item),
 					pic = pic(item),

@@ -955,6 +955,7 @@ class SourceViewModel : ViewModel() {
 		val movie = data.movie ?: return
 		val videoList = movie.videoList ?: return
 		for (video in videoList) {
+			video.sourceKey = sourceKey
 			val urlBean = video.urlBean ?: continue
 			val infoList = urlBean.infoList ?: continue
 			for (urlInfo in infoList) {
@@ -977,7 +978,6 @@ class SourceViewModel : ViewModel() {
 				}
 				urlInfo.beanList = infoBeanList
 			}
-			video.sourceKey = sourceKey
 		}
 	}
 
@@ -1111,62 +1111,63 @@ class SourceViewModel : ViewModel() {
 
 	fun checkThunder(data: AbsXml, index: Int) {
 		var thunderParse = false
-		val movie = data.movie ?: return
-		val videoList = movie.videoList ?: return
-		if (videoList.size == 1) {
+		val movie = data.movie
+		val videoList = movie?.videoList
+		if (videoList != null && videoList.size == 1) {
 			val video = videoList[0]
-			val urlBean = video.urlBean ?: return
-			val infoList = urlBean.infoList ?: return
-
-			var hasThunder = false
-			thunderLoop@ for (idx in infoList.indices) {
-				val urlInfo = infoList[idx]
-				for (infoBean in urlInfo.beanList ?: continue) {
-					if (Thunder.isSupportUrl(infoBean.url)) {
-						hasThunder = true
-						break@thunderLoop
-					}
-				}
-			}
-			if (hasThunder) {
-				thunderParse = true
-				Thunder.parse(App.instance, urlBean, object : ThunderCallback {
-					override fun status(code: Int, info: String) {
-						if (code >= 0) {
-							TVBoxRuntimeLog.i(info)
-						} else {
-							(infoList[0].beanList ?: return)[0].name = info
-							detailResult.postValue(data)
+			val urlBean = video.urlBean
+			val infoList = urlBean?.infoList
+			if (urlBean != null && infoList != null) {
+				var hasThunder = false
+				thunderLoop@ for (idx in infoList.indices) {
+					val urlInfo = infoList[idx]
+					for (infoBean in urlInfo.beanList ?: continue) {
+						if (Thunder.isSupportUrl(infoBean.url)) {
+							hasThunder = true
+							break@thunderLoop
 						}
 					}
+				}
+				if (hasThunder) {
+					thunderParse = true
+					Thunder.parse(App.instance, urlBean, object : ThunderCallback {
+						override fun status(code: Int, info: String) {
+							if (code >= 0) {
+								TVBoxRuntimeLog.i(info)
+							} else {
+								(infoList[0].beanList ?: return)[0].name = info
+								detailResult.postValue(data)
+							}
+						}
 
-					override fun list(urlMap: Map<Int, String>) {
-						for (key in urlMap.keys) {
-							val playList = urlMap[key]
-							infoList[key].urls = playList
-							val str = (playList ?: return).split("#".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-							val infoBeanList: MutableList<InfoBean> = mutableListOf()
-							for (s in str) {
-								if (s.contains("$")) {
-									val ss = s.split("\\$".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+						override fun list(urlMap: Map<Int, String>) {
+							for (key in urlMap.keys) {
+								val playList = urlMap[key]
+								infoList[key].urls = playList
+								val str = (playList ?: return).split("#".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+								val infoBeanList: MutableList<InfoBean> = mutableListOf()
+								for (s in str) {
+									if (s.contains("$")) {
+										val ss = s.split("\\$".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
-									if (ss.isNotEmpty()) {
-										if (ss.size >= 2) {
-											infoBeanList.add(InfoBean(ss[0], ss[1]))
-										} else {
-											infoBeanList.add(InfoBean((infoBeanList.size + 1).toString() + "", ss[0]))
+										if (ss.isNotEmpty()) {
+											if (ss.size >= 2) {
+												infoBeanList.add(InfoBean(ss[0], ss[1]))
+											} else {
+												infoBeanList.add(InfoBean((infoBeanList.size + 1).toString() + "", ss[0]))
+											}
 										}
 									}
 								}
+								infoList[key].beanList = infoBeanList
 							}
-							infoList[key].beanList = infoBeanList
+							detailResult.postValue(data)
 						}
-						detailResult.postValue(data)
-					}
 
-					override fun play(url: String) {
-					}
-				})
+						override fun play(url: String) {
+						}
+					})
+				}
 			}
 		}
 		if (!thunderParse && index == 0) {

@@ -21,7 +21,6 @@ import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
@@ -47,9 +46,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
-import com.github.tvbox.osc.ui.compose.component.ContentState
+import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.component.SearchWordRow
-import com.github.tvbox.osc.ui.compose.component.StateBox
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -66,7 +64,6 @@ fun SearchScreen(
 	val searchVm: SearchViewModel = viewModel()
 
 	val isSearching by searchVm.isSearching.collectAsState()
-	val progress by searchVm.progress.collectAsState()
 	val tabs by searchVm.tabs.collectAsState()
 	val currentFilter by searchVm.currentFilter.collectAsState()
 	val results by searchVm.results.collectAsState()
@@ -122,6 +119,12 @@ fun SearchScreen(
 		searchVm.search(keyword)
 	}
 
+	fun refreshSearch() {
+		val keyword = textFieldState.text.toString().trim()
+		if (keyword.isNotEmpty()) searchVm.search(keyword)
+		else searchVm.loadHistoryAndHotWords()
+	}
+
 	val inputField: @Composable () -> Unit = {
 		SearchBarDefaults.InputField(
 			textFieldState = textFieldState,
@@ -142,11 +145,7 @@ fun SearchScreen(
 	}
 
 	Box(modifier.fillMaxSize()) {
-		Column(
-			Modifier
-				.fillMaxSize()
-				.padding(bottom = 72.dp)
-		) {
+		Column(Modifier.fillMaxSize()) {
 			if (tabs.isNotEmpty()) {
 				PrimaryScrollableTabRow(selectedTabIndex = tabs.indexOfFirst { it.key == currentFilter }.coerceAtLeast(0)) {
 					tabs.forEach { tab ->
@@ -158,12 +157,12 @@ fun SearchScreen(
 					}
 				}
 			}
-			val state = when {
-				results.isEmpty() && !isSearching -> ContentState.Empty
-				results.isEmpty() -> ContentState.Loading
-				else -> ContentState.Content("search")
-			}
-			StateBox(state = state, modifier = Modifier.fillMaxSize()) {
+			RefreshContentBox(
+				isRefreshing = isSearching,
+				isEmpty = results.isEmpty(),
+				onRefresh = ::refreshSearch,
+				modifier = Modifier.fillMaxSize()
+			) {
 				AdaptiveVodGrid(
 					items = results.filterNotNull(),
 					name = { it.name },
@@ -179,18 +178,10 @@ fun SearchScreen(
 						)
 					},
 					modifier = Modifier.fillMaxSize(),
-					contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 10.dp)
+					contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 96.dp),
+					key = { video -> video.sourceKey + "_" + video.id }
 				)
 			}
-		}
-
-		if (isSearching) {
-			LinearProgressIndicator(
-				progress = { if (progress.second > 0) progress.first.toFloat() / progress.second else 0f },
-				modifier = Modifier
-					.align(Alignment.TopCenter)
-					.fillMaxWidth()
-			)
 		}
 
 		SearchBar(
