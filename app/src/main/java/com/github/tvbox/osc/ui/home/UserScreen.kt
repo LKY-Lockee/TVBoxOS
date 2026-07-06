@@ -41,12 +41,11 @@ fun UserScreen(
 		CategoryGridScreen(sortData, onSwitchToSearchAndSearch, modifier)
 		return
 	}
-	RecommendGrid(sortData, rec, onSwitchToSearchAndSearch, modifier)
+	RecommendGrid(rec, onSwitchToSearchAndSearch, modifier)
 }
 
 @Composable
 private fun RecommendGrid(
-	sortData: SortData,
 	rec: Int,
 	onSwitchToSearchAndSearch: (String?) -> Unit,
 	modifier: Modifier
@@ -163,7 +162,7 @@ private fun loadHots(json: String): ArrayList<Movie.Video> {
 			vod.pic = obj.get("cover").asString + "@User-Agent=" + UA.randomOne() + "@Referer=https://www.douban.com/"
 			result.add(vod)
 		}
-	} catch (ignored: Throwable) {
+	} catch (_: Throwable) {
 	}
 	return result
 }
