@@ -33,6 +33,7 @@ import com.github.tvbox.osc.player.thirdparty.RemoteTVBox
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 private enum class SearchState { Loading, Empty, Found, Failed }
 
@@ -56,7 +57,7 @@ fun SearchRemoteTvDialog(
 
 	LaunchedEffect(Unit) {
 		val scope = this
-		delay(500)
+		delay(500.milliseconds)
 		scope.launch(Dispatchers.IO) {
 			RemoteTVBox.searchAvailable(object : RemoteTVBox.Callback() {
 				override fun found(viewHost: String?, end: Boolean) {

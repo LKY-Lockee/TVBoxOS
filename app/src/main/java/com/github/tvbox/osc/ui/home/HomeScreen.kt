@@ -13,11 +13,13 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -46,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -58,7 +59,7 @@ import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOW
 import com.github.tvbox.osc.R
 
 /** 顶部工具栏动作。 */
-data class ToolbarAction(val icon: Int, val contentDescription: String, val onClick: () -> Unit)
+data class ToolbarAction(val icon: ImageVector, val contentDescription: String, val onClick: () -> Unit)
 
 /** 由当前页面持有的工具栏状态（标题 + 动作），供 HomeScreen 顶部栏渲染。 */
 class HomeToolbarState {
@@ -135,6 +136,7 @@ fun HomeScreen(
 	onSearchRequestConsumed: () -> Unit,
 	onLaunchLive: () -> Unit,
 	onOpenSettings: () -> Unit,
+	onOpenPush: () -> Unit,
 	onSwitchToSearchAndSearch: (String?) -> Unit = { homeViewModel.requestSearch(it) }
 ) {
 	val context = LocalContext.current
@@ -207,7 +209,8 @@ fun HomeScreen(
 				actions = {
 					HomeOverflowMenu(
 						actions = toolbarState.actions,
-						onOpenSettings = onOpenSettings
+						onOpenSettings = onOpenSettings,
+						onOpenPush = onOpenPush
 					)
 				},
 			)
@@ -271,7 +274,8 @@ private data class HomeNavHostState(
 @Composable
 private fun HomeOverflowMenu(
 	actions: List<ToolbarAction>,
-	onOpenSettings: () -> Unit
+	onOpenSettings: () -> Unit,
+	onOpenPush: () -> Unit
 ) {
 	var expanded by remember { mutableStateOf(false) }
 
@@ -286,7 +290,7 @@ private fun HomeOverflowMenu(
 			DropdownMenuItem(
 				text = { Text(action.contentDescription) },
 				leadingIcon = {
-					Icon(painter = painterResource(action.icon), contentDescription = null)
+					Icon(action.icon, contentDescription = null)
 				},
 				onClick = {
 					expanded = false
@@ -298,9 +302,19 @@ private fun HomeOverflowMenu(
 			HorizontalDivider()
 		}
 		DropdownMenuItem(
+			text = { Text("推送") },
+			leadingIcon = {
+				Icon(Icons.Outlined.CloudUpload, contentDescription = null)
+			},
+			onClick = {
+				expanded = false
+				onOpenPush()
+			}
+		)
+		DropdownMenuItem(
 			text = { Text(stringResource(R.string.action_settings)) },
 			leadingIcon = {
-				Icon(painter = painterResource(R.drawable.icon_settings), contentDescription = null)
+				Icon(Icons.Outlined.Settings, contentDescription = null)
 			},
 			onClick = {
 				expanded = false

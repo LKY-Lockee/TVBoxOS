@@ -153,8 +153,7 @@
 
                 <TextView
                         android:id="@+id/tv_play_load_net_speed_right_top"
-                        android:layout_width="0dp
-"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_gravity="right"
                         android:ellipsize="end"

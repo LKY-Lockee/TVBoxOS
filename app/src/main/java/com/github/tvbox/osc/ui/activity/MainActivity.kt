@@ -15,6 +15,7 @@ import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.ui.compose.theme.TVBoxTheme
 import com.github.tvbox.osc.ui.home.HomeScreen
 import com.github.tvbox.osc.ui.home.HomeViewModel
+import com.github.tvbox.osc.ui.push.PushScreen
 import com.github.tvbox.osc.ui.setting.SettingsScreen
 import com.github.tvbox.osc.ui.setting.SettingsViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +41,8 @@ class MainActivity : ComponentActivity() {
 							searchRequest = searchRequest,
 							onSearchRequestConsumed = { pendingSearch.value = null },
 							onLaunchLive = { startActivity(Intent(this@MainActivity, LivePlayActivity::class.java)) },
-							onOpenSettings = { navController.navigate("settings") }
+							onOpenSettings = { navController.navigate("settings") },
+							onOpenPush = { navController.navigate("push") }
 						)
 					}
 					composable("settings") {
@@ -49,6 +51,9 @@ class MainActivity : ComponentActivity() {
 							viewModel = settingsViewModel,
 							onBack = { navController.popBackStack() }
 						)
+					}
+					composable("push") {
+						PushScreen(onBack = { navController.popBackStack() })
 					}
 				}
 			}

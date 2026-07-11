@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.RadioButton
@@ -48,7 +51,7 @@ fun HomeTabScreen(
 	val sortResult by sortVm.sortResult.observeAsState()
 	var showSwitchDialog by remember { mutableStateOf(false) }
 
-	val pageActions = remember { listOf(ToolbarAction(R.drawable.icon_switch, "切换首页源") { showSwitchDialog = true }) }
+	val pageActions = remember { listOf(ToolbarAction(Icons.Outlined.SwapHoriz, "切换首页源") { showSwitchDialog = true }) }
 	SideEffect {
 		toolbarState.title = ""
 		toolbarState.actions = pageActions

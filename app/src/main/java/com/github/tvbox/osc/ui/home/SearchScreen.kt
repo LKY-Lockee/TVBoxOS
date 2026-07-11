@@ -18,6 +18,7 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -80,7 +81,7 @@ fun SearchScreen(
 	var showClearDialog by remember { mutableStateOf(false) }
 	var deleteWord by remember { mutableStateOf<String?>(null) }
 
-	val pageActions = remember { listOf(ToolbarAction(R.drawable.icon_delete, "清空搜索记录") { showClearDialog = true }) }
+	val pageActions = remember { listOf(ToolbarAction(Icons.Outlined.ClearAll, "清空搜索记录") { showClearDialog = true }) }
 	SideEffect {
 		toolbarState.title = "搜索"
 		toolbarState.actions = pageActions

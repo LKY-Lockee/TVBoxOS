@@ -3,6 +3,8 @@ package com.github.tvbox.osc.ui.home
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,7 +50,7 @@ fun HistoryScreen(
 		refreshing = false
 	}
 
-	val pageActions = remember { listOf(ToolbarAction(R.drawable.icon_clear, "清空历史记录") { showClearDialog = true }) }
+	val pageActions = remember { listOf(ToolbarAction(Icons.Outlined.ClearAll, "清空历史记录") { showClearDialog = true }) }
 	SideEffect {
 		toolbarState.title = "历史记录"
 		toolbarState.actions = pageActions
