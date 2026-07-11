@@ -5,8 +5,10 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +23,7 @@ import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
@@ -30,6 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,7 +58,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-	isCurrent: Boolean,
 	toolbarState: HomeToolbarState,
 	pendingSearch: String?,
 	onConsumePendingSearch: () -> Unit,
@@ -64,6 +67,7 @@ fun SearchScreen(
 	val searchVm: SearchViewModel = viewModel()
 
 	val isSearching by searchVm.isSearching.collectAsState()
+	val progress by searchVm.progress.collectAsState()
 	val tabs by searchVm.tabs.collectAsState()
 	val currentFilter by searchVm.currentFilter.collectAsState()
 	val results by searchVm.results.collectAsState()
@@ -76,13 +80,10 @@ fun SearchScreen(
 	var showClearDialog by remember { mutableStateOf(false) }
 	var deleteWord by remember { mutableStateOf<String?>(null) }
 
-	LaunchedEffect(isCurrent) {
-		if (isCurrent) {
-			toolbarState.title = "搜索"
-			toolbarState.actions = listOf(
-				ToolbarAction(R.drawable.icon_delete, "清空搜索记录") { showClearDialog = true }
-			)
-		}
+	val pageActions = remember { listOf(ToolbarAction(R.drawable.icon_delete, "清空搜索记录") { showClearDialog = true }) }
+	SideEffect {
+		toolbarState.title = "搜索"
+		toolbarState.actions = pageActions
 	}
 
 	LaunchedEffect(toast) {
@@ -146,6 +147,12 @@ fun SearchScreen(
 
 	Box(modifier.fillMaxSize()) {
 		Column(Modifier.fillMaxSize()) {
+			if (isSearching && progress.second > 0) {
+				LinearWavyProgressIndicator(
+					progress = { progress.first.toFloat() / progress.second },
+					modifier = Modifier.fillMaxWidth()
+				)
+			}
 			if (tabs.isNotEmpty()) {
 				PrimaryScrollableTabRow(selectedTabIndex = tabs.indexOfFirst { it.key == currentFilter }.coerceAtLeast(0)) {
 					tabs.forEach { tab ->
@@ -191,11 +198,12 @@ fun SearchScreen(
 				.align(Alignment.BottomCenter)
 				.fillMaxWidth()
 				.imePadding()
-				.padding(horizontal = 12.dp, vertical = 8.dp)
+				.padding(horizontal = 12.dp, vertical = 12.dp)
 		)
 
 		ExpandedFullScreenSearchBar(
 			state = searchBarState,
+			windowInsets = { SearchBarDefaults.windowInsets },
 			inputField = inputField
 		) {
 			LazyColumn(Modifier.fillMaxSize()) {
@@ -209,6 +217,8 @@ fun SearchScreen(
 						onLongClick = if (item.type == 0) ({ deleteWord = item.title }) else null
 					)
 				}
+
+				item { Spacer(Modifier.height(96.dp)) }
 			}
 		}
 	}

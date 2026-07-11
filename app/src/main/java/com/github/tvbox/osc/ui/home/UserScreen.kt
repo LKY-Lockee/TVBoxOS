@@ -52,7 +52,8 @@ private fun RecommendGrid(
 ) {
 	val context = LocalContext.current
 	var videos by remember { mutableStateOf<List<Movie.Video>>(emptyList()) }
-	var refreshing by remember { mutableStateOf(true) }
+	var refreshing by remember { mutableStateOf(false) }
+	var loaded by remember { mutableStateOf(false) }
 
 	fun openVideo(video: Movie.Video) {
 		val id = video.id
@@ -80,6 +81,7 @@ private fun RecommendGrid(
 				if (info.playNote.isNotEmpty()) note = "上次看到" + info.playNote
 			}
 		}
+		loaded = true
 		refreshing = false
 	}
 
@@ -92,10 +94,12 @@ private fun RecommendGrid(
 			val json = PreferenceStore.get("home_hot", "")
 			if (json.isNotEmpty()) {
 				videos = loadHots(json)
+				loaded = true
 				refreshing = false
 				return
 			}
 		}
+		refreshing = true
 		val url = "https://movie.douban.com/j/new_search_subjects?sort=U&range=0,10&tags=&playable=1&start=0&year_range=$year,$year"
 		OkGo.get<String?>(url)
 			.headers("User-Agent", UA.randomOne())
@@ -105,12 +109,14 @@ private fun RecommendGrid(
 					PreferenceStore.put("home_hot_day", today)
 					PreferenceStore.put("home_hot", netJson)
 					videos = loadHots(netJson)
+					loaded = true
 					refreshing = false
 				}
 
 				override fun onError(response: Response<String?>?) {
 					super.onError(response)
 					videos = emptyList()
+					loaded = true
 					refreshing = false
 				}
 
@@ -119,7 +125,6 @@ private fun RecommendGrid(
 	}
 
 	fun refresh(forceRefresh: Boolean = true) {
-		refreshing = true
 		if (rec == 2) loadHistory() else loadDouban(forceRefresh)
 	}
 
@@ -132,8 +137,8 @@ private fun RecommendGrid(
 
 	RefreshContentBox(
 		isRefreshing = refreshing,
-		isEmpty = videos.isEmpty(),
-		onRefresh = { refresh() },
+		isEmpty = loaded && videos.isEmpty(),
+		onRefresh = { refreshing = true; refresh() },
 		modifier = modifier.fillMaxSize()
 	) {
 		AdaptiveVodGrid(

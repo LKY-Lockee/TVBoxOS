@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,14 +27,14 @@ import com.github.tvbox.osc.ui.compose.util.rememberEventBusCallback
 
 @Composable
 fun HistoryScreen(
-	isCurrent: Boolean,
 	toolbarState: HomeToolbarState,
 	onSwitchToSearchAndSearch: (String?) -> Unit,
 	modifier: Modifier = Modifier
 ) {
 	val context = LocalContext.current
 	var list by remember { mutableStateOf<List<VodInfo>>(emptyList()) }
-	var refreshing by remember { mutableStateOf(true) }
+	var refreshing by remember { mutableStateOf(false) }
+	var loaded by remember { mutableStateOf(false) }
 	var showClearDialog by remember { mutableStateOf(false) }
 	var deleteTarget by remember { mutableStateOf<Pair<VodInfo, Int>?>(null) }
 
@@ -43,16 +44,14 @@ fun HistoryScreen(
 			info
 		}
 		list = all
+		loaded = true
 		refreshing = false
 	}
 
-	LaunchedEffect(isCurrent) {
-		if (isCurrent) {
-			toolbarState.title = "历史记录"
-			toolbarState.actions = listOf(
-				ToolbarAction(R.drawable.icon_clear, "清空历史记录") { showClearDialog = true }
-			)
-		}
+	val pageActions = remember { listOf(ToolbarAction(R.drawable.icon_clear, "清空历史记录") { showClearDialog = true }) }
+	SideEffect {
+		toolbarState.title = "历史记录"
+		toolbarState.actions = pageActions
 	}
 
 	LaunchedEffect(Unit) { loadData() }
@@ -76,7 +75,7 @@ fun HistoryScreen(
 
 	RefreshContentBox(
 		isRefreshing = refreshing,
-		isEmpty = list.isEmpty(),
+		isEmpty = loaded && list.isEmpty(),
 		onRefresh = { refreshing = true; loadData() },
 		modifier = modifier.fillMaxSize()
 	) {

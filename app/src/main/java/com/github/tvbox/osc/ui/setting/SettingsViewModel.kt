@@ -21,13 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-sealed interface SettingsExitAction {
-	data object ReloadFull : SettingsExitAction
-	data object ReloadCache : SettingsExitAction
-	data object ReloadLive : SettingsExitAction
-	data object JustFinish : SettingsExitAction
-}
-
 data class SettingsUiState(
 	val apiUrl: String = "",
 	val liveApiUrl: String = "",
@@ -49,9 +42,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
 	private val _uiState = MutableStateFlow(SettingsUiState())
 	val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-
-	private val _exitAction = MutableSharedFlow<SettingsExitAction>(extraBufferCapacity = 1)
-	val exitAction: SharedFlow<SettingsExitAction> = _exitAction.asSharedFlow()
 
 	private val _toast = MutableSharedFlow<String>(extraBufferCapacity = 1)
 	val toast: SharedFlow<String> = _toast.asSharedFlow()
@@ -190,23 +180,17 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 		viewModelScope.launch { _toast.emit(msg) }
 	}
 
-	fun onBack() {
-		viewModelScope.launch {
-			val currentApi = PreferenceStore.get(ConfigKey.API_URL, "")
-			val currentLiveApi = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
-			val currentHomeKey = ApiConfig.instance.homeSourceBean.key
-			val currentHomeRec = PreferenceStore.get(ConfigKey.HOME_REC, 0)
-			val currentDns = PreferenceStore.get(ConfigKey.DOH_URL, 0)
-
-			val action = when {
-				currentApi != entryApiUrl -> SettingsExitAction.ReloadFull
-				currentDns != entryDnsOpt -> SettingsExitAction.ReloadFull
-				currentHomeKey != entryHomeSourceKey || currentHomeRec != entryHomeRec -> SettingsExitAction.ReloadCache
-				currentLiveApi != entryLiveApiUrl -> SettingsExitAction.ReloadLive
-				else -> SettingsExitAction.JustFinish
-			}
-			_exitAction.emit(action)
-		}
+	fun needsRestart(): Boolean {
+		val currentApi = PreferenceStore.get(ConfigKey.API_URL, "")
+		val currentLiveApi = PreferenceStore.get(ConfigKey.LIVE_API_URL, "")
+		val currentHomeKey = ApiConfig.instance.homeSourceBean.key
+		val currentHomeRec = PreferenceStore.get(ConfigKey.HOME_REC, 0)
+		val currentDns = PreferenceStore.get(ConfigKey.DOH_URL, 0)
+		return currentApi != entryApiUrl ||
+				currentDns != entryDnsOpt ||
+				currentHomeKey != entryHomeSourceKey ||
+				currentHomeRec != entryHomeRec ||
+				currentLiveApi != entryLiveApiUrl
 	}
 
 	fun createCacheBundle(): Bundle = Bundle().apply { putBoolean("useCache", true) }

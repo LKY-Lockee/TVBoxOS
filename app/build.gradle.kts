@@ -85,6 +85,11 @@ android {
 			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 		}
+
+		create("debugRelease") {
+			initWith(getByName("release"))
+			signingConfig = signingConfigs.getByName("debug")
+		}
 	}
 
 	buildFeatures {

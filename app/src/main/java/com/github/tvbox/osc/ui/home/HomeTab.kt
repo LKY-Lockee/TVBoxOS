@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,7 +41,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeTabScreen(
-	isCurrent: Boolean,
 	toolbarState: HomeToolbarState,
 	onSwitchToSearchAndSearch: (String?) -> Unit
 ) {
@@ -48,13 +48,10 @@ fun HomeTabScreen(
 	val sortResult by sortVm.sortResult.observeAsState()
 	var showSwitchDialog by remember { mutableStateOf(false) }
 
-	LaunchedEffect(isCurrent) {
-		if (isCurrent) {
-			toolbarState.title = ""
-			toolbarState.actions = listOf(
-				ToolbarAction(R.drawable.icon_switch, "切换首页源") { showSwitchDialog = true }
-			)
-		}
+	val pageActions = remember { listOf(ToolbarAction(R.drawable.icon_switch, "切换首页源") { showSwitchDialog = true }) }
+	SideEffect {
+		toolbarState.title = ""
+		toolbarState.actions = pageActions
 	}
 
 	val sortDataList: List<SortData> = remember(sortResult) {
@@ -67,7 +64,7 @@ fun HomeTabScreen(
 
 	LaunchedEffect(Unit) { sortVm.getSort(ApiConfig.instance.homeSourceBean.key) }
 
-	BackHandler(enabled = isCurrent && pagerState.currentPage != 0) {
+	BackHandler(enabled = pagerState.currentPage != 0) {
 		scope.launch { pagerState.animateScrollToPage(0) }
 	}
 

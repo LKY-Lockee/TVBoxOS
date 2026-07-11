@@ -1,9 +1,9 @@
 package com.github.tvbox.osc.ui.home
 
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -39,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -132,9 +131,10 @@ private fun NavHostController.navigateToHomeTab(tab: HomeTab) {
 @Composable
 fun HomeScreen(
 	homeViewModel: HomeViewModel,
+	searchRequest: String?,
+	onSearchRequestConsumed: () -> Unit,
 	onLaunchLive: () -> Unit,
 	onOpenSettings: () -> Unit,
-	onExit: () -> Unit,
 	onSwitchToSearchAndSearch: (String?) -> Unit = { homeViewModel.requestSearch(it) }
 ) {
 	val context = LocalContext.current
@@ -158,16 +158,10 @@ fun HomeScreen(
 			homeViewModel.consumeRequestedPage()
 		}
 	}
-
-	var exitTime by remember { mutableLongStateOf(0L) }
-	BackHandler {
-		if (currentTab != HomeTab.Home) {
-			navController.navigateToHomeTab(HomeTab.Home)
-		} else if (System.currentTimeMillis() - exitTime < 2000) {
-			onExit()
-		} else {
-			exitTime = System.currentTimeMillis()
-			Toast.makeText(context, "再按一次返回键退出应用", Toast.LENGTH_SHORT).show()
+	LaunchedEffect(searchRequest) {
+		searchRequest?.let {
+			onSearchRequestConsumed()
+			homeViewModel.requestSearch(it)
 		}
 	}
 
@@ -206,6 +200,7 @@ fun HomeScreen(
 
 	Scaffold(
 		modifier = Modifier.fillMaxSize(),
+		contentWindowInsets = WindowInsets(),
 		topBar = {
 			TopAppBar(
 				title = { Text(toolbarState.title.ifEmpty { stringResource(R.string.app_name) }) },
@@ -327,16 +322,16 @@ private fun HomeNavHost(
 		modifier = modifier
 	) {
 		composable(HomeTab.Home.route) {
-			HomePagerPage(tab = HomeTab.Home, isCurrent = true, state = navHostState)
+			HomePagerPage(tab = HomeTab.Home, state = navHostState)
 		}
 		composable(HomeTab.History.route) {
-			HomePagerPage(tab = HomeTab.History, isCurrent = true, state = navHostState)
+			HomePagerPage(tab = HomeTab.History, state = navHostState)
 		}
 		composable(HomeTab.Search.route) {
-			HomePagerPage(tab = HomeTab.Search, isCurrent = true, state = navHostState)
+			HomePagerPage(tab = HomeTab.Search, state = navHostState)
 		}
 		composable(HomeTab.Collect.route) {
-			HomePagerPage(tab = HomeTab.Collect, isCurrent = true, state = navHostState)
+			HomePagerPage(tab = HomeTab.Collect, state = navHostState)
 		}
 	}
 }
@@ -390,42 +385,26 @@ private fun HomeNavigationIcon(
 @Composable
 private fun HomePagerPage(
 	tab: HomeTab,
-	isCurrent: Boolean,
 	state: HomeNavHostState
 ) {
-	LaunchedEffect(isCurrent) {
-		if (isCurrent) {
-			state.toolbarState.title = when (tab) {
-				HomeTab.Home -> ""
-				HomeTab.History -> "历史记录"
-				HomeTab.Search -> "搜索"
-				HomeTab.Collect -> "收藏"
-			}
-			state.toolbarState.actions = emptyList()
-		}
-	}
 	when (tab) {
 		HomeTab.Home -> HomeTabScreen(
-			isCurrent = isCurrent,
 			toolbarState = state.toolbarState,
 			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch
 		)
 
 		HomeTab.History -> HistoryScreen(
-			isCurrent = isCurrent,
 			toolbarState = state.toolbarState,
 			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch
 		)
 
 		HomeTab.Search -> SearchScreen(
-			isCurrent = isCurrent,
 			toolbarState = state.toolbarState,
 			pendingSearch = state.pendingSearch,
 			onConsumePendingSearch = state.onConsumePendingSearch
 		)
 
 		HomeTab.Collect -> CollectScreen(
-			isCurrent = isCurrent,
 			toolbarState = state.toolbarState,
 			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch
 		)

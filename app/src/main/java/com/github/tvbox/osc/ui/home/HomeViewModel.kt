@@ -48,6 +48,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 	private var dataInitOk = false
 	private var jarInitOk = false
 
+	init {
+		initData(false)
+	}
+
 	fun consumeRequestedPage() {
 		_requestedPage.value = null
 	}

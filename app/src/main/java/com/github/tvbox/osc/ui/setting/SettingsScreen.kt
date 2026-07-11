@@ -1,6 +1,8 @@
 package com.github.tvbox.osc.ui.setting
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
@@ -8,7 +10,12 @@ import android.os.Looper
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -41,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.data.AppDataManager
@@ -70,15 +78,28 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
 	viewModel: SettingsViewModel,
-	onBack: () -> Unit,
-	onRequestStoragePermission: () -> Unit,
-	onOpenSystemStorageSettings: (Intent) -> Unit
+	onBack: () -> Unit
 ) {
 	val context = LocalContext.current
 	val uiState by viewModel.uiState.collectAsState()
 
 	LaunchedEffect(Unit) {
 		viewModel.toast.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+	}
+
+	val storagePermissionLauncher = rememberLauncherForActivityResult(
+		ActivityResultContracts.RequestMultiplePermissions()
+	) { result ->
+		val allGranted = result.values.all { it }
+		Toast.makeText(context, if (allGranted) "已获得存储权限" else "存储权限被拒绝", Toast.LENGTH_SHORT).show()
+	}
+
+	val settingsLauncher = rememberLauncherForActivityResult(
+		ActivityResultContracts.StartActivityForResult()
+	) {
+		if (checkStoragePermission(context)) {
+			Toast.makeText(context, "已获得存储权限", Toast.LENGTH_SHORT).show()
+		}
 	}
 
 	// 对话框状态
@@ -98,6 +119,7 @@ fun SettingsScreen(
 	var showBackupDialog by remember { mutableStateOf(false) }
 	var showAboutDialog by remember { mutableStateOf(false) }
 	var showStoragePermissionRationale by remember { mutableStateOf(false) }
+	var showRestartDialog by remember { mutableStateOf(false) }
 
 	// 备份子对话框
 	var backupList by remember { mutableStateOf(emptyList<String>()) }
@@ -105,16 +127,24 @@ fun SettingsScreen(
 	var restoreTarget by remember { mutableStateOf<String?>(null) }
 	var deleteTarget by remember { mutableStateOf<String?>(null) }
 
-	BackHandler { onBack() }
+	val needRestart = viewModel.needsRestart()
+
+	BackHandler(enabled = needRestart) { showRestartDialog = true }
+
+	val handleBack = {
+		if (needRestart) showRestartDialog = true
+		else onBack()
+	}
 
 	Scaffold(
 		modifier = Modifier.fillMaxSize(),
+		contentWindowInsets = WindowInsets(),
 		containerColor = MaterialTheme.colorScheme.surfaceContainer,
 		topBar = {
 			TopAppBar(
 				title = { Text("设置") },
 				navigationIcon = {
-					IconButton(onClick = onBack) {
+					IconButton(onClick = { handleBack() }) {
 						Icon(
 							imageVector = Icons.AutoMirrored.Filled.ArrowBack,
 							contentDescription = "返回"
@@ -139,7 +169,7 @@ fun SettingsScreen(
 							title = "配置点播地址",
 							description = uiState.apiUrl.ifBlank { "设置应用点播数据源配置地址" },
 							onClick = { showVodInputDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -147,7 +177,7 @@ fun SettingsScreen(
 							title = "配置直播地址",
 							description = uiState.liveApiUrl.ifBlank { "设置应用直播数据源配置地址" },
 							onClick = { showLiveInputDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -155,7 +185,7 @@ fun SettingsScreen(
 							title = "扫码配置",
 							description = "扫描二维码访问本机 Web 配置页",
 							onClick = { showQrCodeDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -163,7 +193,7 @@ fun SettingsScreen(
 							title = "首页站源",
 							description = "选择默认首页数据源",
 							onClick = { showHomeSourceDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -171,7 +201,7 @@ fun SettingsScreen(
 							title = "安全DNS",
 							description = "选择DNS解析服务",
 							onClick = { showDnsDialog = true }
-						) {}
+						)
 					}
 				}
 			}
@@ -184,28 +214,28 @@ fun SettingsScreen(
 							title = "默认播放器",
 							description = "选择视频播放器",
 							onClick = { showPlayerDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
 							title = "IJK解码方式",
 							description = "IJK播放器解码方式",
 							onClick = { showCodecDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
 							title = "渲染方式",
 							description = "视频画面渲染方式",
 							onClick = { showRenderDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
 							title = "画面缩放",
 							description = "默认画面缩放比例",
 							onClick = { showScaleDialog = true }
-						) {}
+						)
 					}
 					item {
 						SwitchWidget(
@@ -234,21 +264,21 @@ fun SettingsScreen(
 							title = "首页推荐",
 							description = "设置首页推荐内容",
 							onClick = { showHomeRecDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
 							title = "启动方式",
 							description = "设置启动后默认页面",
 							onClick = { showDefaultLoadDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
 							title = "保留历史记录",
 							description = "保留历史记录的数量",
 							onClick = { showHistoryNumDialog = true }
-						) {}
+						)
 					}
 				}
 			}
@@ -269,10 +299,15 @@ fun SettingsScreen(
 										showStoragePermissionRationale = true
 									}
 								} else {
-									onRequestStoragePermission()
+									storagePermissionLauncher.launch(
+										arrayOf(
+											Manifest.permission.READ_EXTERNAL_STORAGE,
+											Manifest.permission.WRITE_EXTERNAL_STORAGE
+										)
+									)
 								}
 							}
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -280,7 +315,7 @@ fun SettingsScreen(
 							title = "搜索附近TVBox",
 							description = "搜索局域网内的其他TVBox设备",
 							onClick = { showSearchRemoteTvDialog = true }
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -288,7 +323,7 @@ fun SettingsScreen(
 							title = "清空缓存",
 							description = "清空播放缓存和JAR缓存",
 							onClick = { clearCache(viewModel) }
-						) {}
+						)
 					}
 					item {
 						SwitchWidget(
@@ -314,7 +349,7 @@ fun SettingsScreen(
 								backupList = allBackups()
 								showBackupDialog = true
 							}
-						) {}
+						)
 					}
 					item {
 						BaseWidget(
@@ -322,10 +357,12 @@ fun SettingsScreen(
 							title = "关于",
 							description = "应用版本和信息",
 							onClick = { showAboutDialog = true }
-						) {}
+						)
 					}
 				}
 			}
+
+			item { Spacer(Modifier.height(96.dp)) }
 		}
 	}
 
@@ -590,12 +627,22 @@ fun SettingsScreen(
 				try {
 					val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
 					intent.data = "package:${context.packageName}".toUri()
-					onOpenSystemStorageSettings(intent)
+					settingsLauncher.launch(intent)
 				} catch (_: Exception) {
-					onOpenSystemStorageSettings(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+					settingsLauncher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
 				}
 			},
 			onDismiss = { showStoragePermissionRationale = false }
+		)
+	}
+
+	if (showRestartDialog) {
+		ConfirmDialog(
+			title = "需要重启",
+			message = "已修改的设置项需要重启应用后生效，是否立即重启？",
+			confirmText = "重启",
+			onConfirm = { restartApp(context) },
+			onDismiss = { showRestartDialog = false }
 		)
 	}
 
@@ -723,5 +770,15 @@ private fun restartApp(context: android.content.Context) {
 		i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
 		context.startActivity(i)
 		kotlin.system.exitProcess(0)
+	}
+}
+
+private fun checkStoragePermission(context: android.content.Context): Boolean {
+	return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+		Environment.isExternalStorageManager()
+	} else {
+		val readPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE)
+		val writePermission = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+		readPermission == PackageManager.PERMISSION_GRANTED && writePermission == PackageManager.PERMISSION_GRANTED
 	}
 }

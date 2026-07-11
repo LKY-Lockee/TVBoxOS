@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.base
 
-import android.app.Activity
 import android.app.Application
 import androidx.media3.common.util.UnstableApi
 import coil.ImageLoader
@@ -13,7 +12,6 @@ import com.github.tvbox.osc.data.ConfigKey
 import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.ui.compose.util.buildCoilImageLoader
-import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.EpgUtil
 import com.github.tvbox.osc.util.FileUtils
 import com.github.tvbox.osc.util.OkGoHelper
@@ -30,9 +28,6 @@ import me.jessyan.autosize.unit.Subunits
  */
 class App : Application(), ImageLoaderFactory {
 	var vodInfo: VodInfo? = null
-
-	val currentActivity: Activity?
-		get() = AppManager.instance.currentActivity()
 
 	@UnstableApi
 	override fun onCreate() {
@@ -74,7 +69,6 @@ class App : Application(), ImageLoaderFactory {
 	}
 
 	companion object {
-		var burl: String? = null
 		var dashData: String? = null
 		lateinit var instance: App
 			private set
