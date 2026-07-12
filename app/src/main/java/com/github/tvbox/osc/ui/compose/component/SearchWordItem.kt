@@ -32,7 +32,7 @@ private fun iconRes(type: Int) = when (type) {
 }
 
 /**
- * 搜索词项（对应 item_search_word.xml + PinyinAdapter）。
+ * 搜索词项。
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

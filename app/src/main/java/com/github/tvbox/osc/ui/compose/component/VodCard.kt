@@ -122,7 +122,7 @@ private fun Badge(text: String, color: Color) {
 }
 
 /**
- * 影片卡片（对应 item_grid.xml + Grid/History/Collect/SearchAdapter 的渲染逻辑）。
+ * 影片卡片。
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

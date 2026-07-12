@@ -137,6 +137,7 @@ fun HomeScreen(
 	onLaunchLive: () -> Unit,
 	onOpenSettings: () -> Unit,
 	onOpenPush: () -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit,
 	onSwitchToSearchAndSearch: (String?) -> Unit = { homeViewModel.requestSearch(it) }
 ) {
 	val context = LocalContext.current
@@ -230,6 +231,7 @@ fun HomeScreen(
 				navHostState = HomeNavHostState(
 					toolbarState = toolbarState,
 					onSwitchToSearchAndSearch = onSwitchToSearchAndSearch,
+					onNavigateToDetail = onNavigateToDetail,
 					pendingSearch = pendingSearch,
 					onConsumePendingSearch = { homeViewModel.consumePendingSearch() }
 				),
@@ -252,6 +254,7 @@ fun HomeScreen(
 					navHostState = HomeNavHostState(
 						toolbarState = toolbarState,
 						onSwitchToSearchAndSearch = onSwitchToSearchAndSearch,
+						onNavigateToDetail = onNavigateToDetail,
 						pendingSearch = pendingSearch,
 						onConsumePendingSearch = { homeViewModel.consumePendingSearch() }
 					),
@@ -267,6 +270,7 @@ fun HomeScreen(
 private data class HomeNavHostState(
 	val toolbarState: HomeToolbarState,
 	val onSwitchToSearchAndSearch: (String?) -> Unit,
+	val onNavigateToDetail: (String, String, String?) -> Unit,
 	val pendingSearch: String?,
 	val onConsumePendingSearch: () -> Unit
 )
@@ -404,23 +408,27 @@ private fun HomePagerPage(
 	when (tab) {
 		HomeTab.Home -> HomeTabScreen(
 			toolbarState = state.toolbarState,
-			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch
+			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch,
+			onNavigateToDetail = state.onNavigateToDetail
 		)
 
 		HomeTab.History -> HistoryScreen(
 			toolbarState = state.toolbarState,
-			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch
+			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch,
+			onNavigateToDetail = state.onNavigateToDetail
 		)
 
 		HomeTab.Search -> SearchScreen(
 			toolbarState = state.toolbarState,
 			pendingSearch = state.pendingSearch,
-			onConsumePendingSearch = state.onConsumePendingSearch
+			onConsumePendingSearch = state.onConsumePendingSearch,
+			onNavigateToDetail = state.onNavigateToDetail
 		)
 
 		HomeTab.Collect -> CollectScreen(
 			toolbarState = state.toolbarState,
-			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch
+			onSwitchToSearchAndSearch = state.onSwitchToSearchAndSearch,
+			onNavigateToDetail = state.onNavigateToDetail
 		)
 	}
 }

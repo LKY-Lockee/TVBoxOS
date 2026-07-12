@@ -2,7 +2,6 @@ package com.github.tvbox.osc.ui.push
 
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -32,12 +31,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.tvbox.osc.server.ControlManager
-import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.tv.QRCodeGen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PushScreen(onBack: () -> Unit) {
+fun PushScreen(
+	onBack: () -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit
+) {
 	val context = LocalContext.current
 	val address = remember { ControlManager.instance.getAddress(false) ?: "" }
 	val qrBitmap = remember(address) {
@@ -61,46 +62,50 @@ fun PushScreen(onBack: () -> Unit) {
 		Column(
 			modifier = Modifier
 				.fillMaxSize()
-				.padding(padding),
+				.padding(padding)
+				.padding(24.dp),
 			horizontalAlignment = Alignment.CenterHorizontally,
 			verticalArrangement = Arrangement.Center
 		) {
-			qrBitmap?.let { bmp ->
+			if (qrBitmap != null) {
 				Image(
-					bitmap = bmp.asImageBitmap(),
-					contentDescription = null,
-					modifier = Modifier.size(220.dp)
+					bitmap = qrBitmap.asImageBitmap(),
+					contentDescription = "推送二维码",
+					modifier = Modifier.size(280.dp)
 				)
+				Spacer(Modifier.height(16.dp))
+				Text(
+					text = address,
+					style = MaterialTheme.typography.bodySmall,
+					textAlign = TextAlign.Center
+				)
+			} else {
+				Text("推送服务未启动")
 			}
-			Spacer(Modifier.height(16.dp))
-			Text(
-				text = "扫描上方二维码或访问地址\n$address",
-				style = MaterialTheme.typography.bodyMedium,
-				color = MaterialTheme.colorScheme.onSurfaceVariant,
-				textAlign = TextAlign.Center,
-				modifier = Modifier.fillMaxWidth()
-			)
+
 			Spacer(Modifier.height(24.dp))
-			Button(onClick = { pushClipboard(context) }) {
+
+			Button(
+				onClick = { pushClipboard(context, onNavigateToDetail) },
+				modifier = Modifier.fillMaxWidth()
+			) {
 				Text("推送剪贴板内容")
 			}
 		}
 	}
 }
 
-private fun pushClipboard(context: Context) {
+private fun pushClipboard(
+	context: Context,
+	onNavigateToDetail: (String, String, String?) -> Unit
+) {
 	try {
 		val manager = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
 		val clip = manager?.primaryClip
 		if (clip != null && manager.hasPrimaryClip() && clip.itemCount > 0) {
 			val clipText = clip.getItemAt(0).text?.toString()?.trim() ?: ""
 			if (clipText.isNotEmpty()) {
-				val intent = Intent(context, DetailActivity::class.java).apply {
-					putExtra("id", clipText)
-					putExtra("sourceKey", "push_agent")
-					flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-				}
-				context.startActivity(intent)
+				onNavigateToDetail("push_agent", clipText, null)
 				return
 			}
 		}

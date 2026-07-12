@@ -1,18 +1,21 @@
 package com.github.tvbox.osc.ui.activity
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.github.tvbox.osc.server.ControlManager
 import com.github.tvbox.osc.ui.compose.theme.TVBoxTheme
+import com.github.tvbox.osc.ui.home.DetailScreen
 import com.github.tvbox.osc.ui.home.HomeScreen
 import com.github.tvbox.osc.ui.home.HomeViewModel
 import com.github.tvbox.osc.ui.push.PushScreen
@@ -25,7 +28,6 @@ class MainActivity : ComponentActivity() {
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
-		enableEdgeToEdge()
 		ControlManager.instance.startServer()
 
 		setContent {
@@ -42,7 +44,13 @@ class MainActivity : ComponentActivity() {
 							onSearchRequestConsumed = { pendingSearch.value = null },
 							onLaunchLive = { startActivity(Intent(this@MainActivity, LivePlayActivity::class.java)) },
 							onOpenSettings = { navController.navigate("settings") },
-							onOpenPush = { navController.navigate("push") }
+							onOpenPush = { navController.navigate("push") },
+							onNavigateToDetail = { sourceKey, id, picture ->
+								val encodedKey = Uri.encode(sourceKey)
+								val encodedId = Uri.encode(id)
+								val encodedPic = Uri.encode(picture ?: "")
+								navController.navigate("detail/$encodedKey/$encodedId?picture=$encodedPic")
+							}
 						)
 					}
 					composable("settings") {
@@ -53,7 +61,42 @@ class MainActivity : ComponentActivity() {
 						)
 					}
 					composable("push") {
-						PushScreen(onBack = { navController.popBackStack() })
+						PushScreen(
+							onBack = { navController.popBackStack() },
+							onNavigateToDetail = { sourceKey, id, picture ->
+								val encodedKey = Uri.encode(sourceKey)
+								val encodedId = Uri.encode(id)
+								val encodedPic = Uri.encode(picture ?: "")
+								navController.navigate("detail/$encodedKey/$encodedId?picture=$encodedPic")
+							}
+						)
+					}
+					composable(
+						route = "detail/{sourceKey}/{id}?picture={picture}",
+						arguments = listOf(
+							navArgument("sourceKey") { type = NavType.StringType },
+							navArgument("id") { type = NavType.StringType },
+							navArgument("picture") {
+								type = NavType.StringType
+								defaultValue = ""
+							}
+						)
+					) { backStackEntry ->
+						val args = backStackEntry.arguments!!
+						val detailViewModel: com.github.tvbox.osc.ui.home.DetailViewModel = viewModel()
+						DetailScreen(
+							sourceKey = args.getString("sourceKey")!!,
+							id = args.getString("id")!!,
+							picture = args.getString("picture") ?: "",
+							onBack = { navController.popBackStack() },
+							onNavigateToDetail = { sourceKey, id, picture ->
+								val encodedKey = Uri.encode(sourceKey)
+								val encodedId = Uri.encode(id)
+								val encodedPic = Uri.encode(picture ?: "")
+								navController.navigate("detail/$encodedKey/$encodedId?picture=$encodedPic")
+							},
+							viewModel = detailViewModel
+						)
 					}
 				}
 			}

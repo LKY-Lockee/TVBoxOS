@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.ui.home
 
-import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Box
@@ -20,12 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort.SortData
-import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
 import com.github.tvbox.osc.ui.compose.component.FilterChipRow
 import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
@@ -49,9 +46,9 @@ private class GridFrame(
 fun CategoryGridScreen(
 	sortData: SortData,
 	onSwitchToSearchAndSearch: (String?) -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit,
 	modifier: Modifier = Modifier
 ) {
-	val context = LocalContext.current
 	val gridVm: SourceViewModel = viewModel(key = "grid_${sortData.id}")
 	val listResult by gridVm.listResult.observeAsState()
 
@@ -115,14 +112,7 @@ fun CategoryGridScreen(
 		if (id.isEmpty() || id.startsWith("msearch:")) {
 			onSwitchToSearchAndSearch(video.name)
 		} else {
-			context.startActivity(
-				Intent(context, DetailActivity::class.java).apply {
-					putExtra("id", id)
-					putExtra("sourceKey", video.sourceKey)
-					putExtra("title", video.name)
-					putExtra("picture", video.pic)
-				}
-			)
+			onNavigateToDetail(video.sourceKey, id, video.pic)
 		}
 	}
 

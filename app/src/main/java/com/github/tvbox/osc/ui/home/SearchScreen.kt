@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.ui.home
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,8 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.tvbox.osc.R
-import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
 import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.component.SearchWordRow
@@ -62,33 +59,65 @@ fun SearchScreen(
 	toolbarState: HomeToolbarState,
 	pendingSearch: String?,
 	onConsumePendingSearch: () -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit,
 	modifier: Modifier = Modifier
 ) {
-	val context = LocalContext.current
 	val searchVm: SearchViewModel = viewModel()
-
-	val isSearching by searchVm.isSearching.collectAsState()
-	val progress by searchVm.progress.collectAsState()
-	val tabs by searchVm.tabs.collectAsState()
-	val currentFilter by searchVm.currentFilter.collectAsState()
-	val results by searchVm.results.collectAsState()
-	val suggestions by searchVm.suggestions.collectAsState()
-	val toast by searchVm.toast.collectAsState()
-
-	val textFieldState = rememberTextFieldState()
-	val searchBarState = rememberSearchBarState()
-	val scope = rememberCoroutineScope()
 	var showClearDialog by remember { mutableStateOf(false) }
-	var deleteWord by remember { mutableStateOf<String?>(null) }
 
-	val pageActions = remember { listOf(ToolbarAction(Icons.Outlined.ClearAll, "清空搜索记录") { showClearDialog = true }) }
+	val pageActions = remember(showClearDialog) {
+		listOf(ToolbarAction(Icons.Outlined.ClearAll, "清空搜索记录") { showClearDialog = true })
+	}
 	SideEffect {
 		toolbarState.title = "搜索"
 		toolbarState.actions = pageActions
 	}
 
+	SearchContent(
+		vm = searchVm,
+		onNavigateToDetail = { video ->
+			onNavigateToDetail(video.sourceKey, video.id, video.pic)
+		},
+		pendingSearch = pendingSearch,
+		onConsumePendingSearch = onConsumePendingSearch,
+		showClearDialog = showClearDialog,
+		onClearDialogDismiss = { showClearDialog = false },
+		modifier = modifier
+	)
+}
+
+/**
+ * 可复用的搜索内容组件。不依赖 toolbarState，可嵌入任意页面。
+ * 调用方负责创建 [SearchViewModel] 实例并传入。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchContent(
+	vm: SearchViewModel,
+	onNavigateToDetail: (com.github.tvbox.osc.bean.Movie.Video) -> Unit,
+	modifier: Modifier = Modifier,
+	pendingSearch: String? = null,
+	onConsumePendingSearch: () -> Unit = {},
+	showClearDialog: Boolean = false,
+	onClearDialogDismiss: () -> Unit = {}
+) {
+	val context = LocalContext.current
+
+	val isSearching by vm.isSearching.collectAsState()
+	val progress by vm.progress.collectAsState()
+	val tabs by vm.tabs.collectAsState()
+	val currentFilter by vm.currentFilter.collectAsState()
+	val results by vm.results.collectAsState()
+	val suggestions by vm.suggestions.collectAsState()
+	val toast by vm.toast.collectAsState()
+
+	val textFieldState = rememberTextFieldState()
+	val searchBarState = rememberSearchBarState()
+	val scope = rememberCoroutineScope()
+	var deleteWord by remember { mutableStateOf<String?>(null) }
+
 	LaunchedEffect(toast) {
-		toast?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show(); searchVm.consumeToast() }
+		toast?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show(); vm.consumeToast() }
 	}
 
 	LaunchedEffect(textFieldState) {
@@ -96,8 +125,8 @@ fun SearchScreen(
 			.distinctUntilChanged()
 			.collect { value ->
 				val keyword = value.trim()
-				if (keyword.isNotEmpty()) searchVm.loadSearchSuggestions(keyword)
-				else searchVm.loadHistoryAndHotWords()
+				if (keyword.isNotEmpty()) vm.loadSearchSuggestions(keyword)
+				else vm.loadHistoryAndHotWords()
 			}
 	}
 
@@ -106,7 +135,7 @@ fun SearchScreen(
 			if (it.isNotEmpty()) {
 				textFieldState.setTextAndPlaceCursorAtEnd(it)
 				searchBarState.animateToCollapsed()
-				searchVm.search(it)
+				vm.search(it)
 			}
 			onConsumePendingSearch()
 		}
@@ -118,13 +147,13 @@ fun SearchScreen(
 		val keyword = textFieldState.text.toString().trim()
 		keyboard?.hide()
 		scope.launch { searchBarState.animateToCollapsed() }
-		searchVm.search(keyword)
+		vm.search(keyword)
 	}
 
 	fun refreshSearch() {
 		val keyword = textFieldState.text.toString().trim()
-		if (keyword.isNotEmpty()) searchVm.search(keyword)
-		else searchVm.loadHistoryAndHotWords()
+		if (keyword.isNotEmpty()) vm.search(keyword)
+		else vm.loadHistoryAndHotWords()
 	}
 
 	val inputField: @Composable () -> Unit = {
@@ -138,7 +167,7 @@ fun SearchScreen(
 			},
 			trailingIcon = {
 				if (isSearching) {
-					IconButton(onClick = { searchVm.cancel() }) {
+					IconButton(onClick = { vm.cancel() }) {
 						Icon(Icons.Default.Close, contentDescription = "停止")
 					}
 				}
@@ -159,7 +188,7 @@ fun SearchScreen(
 					tabs.forEach { tab ->
 						Tab(
 							selected = tab.key == currentFilter,
-							onClick = { searchVm.selectFilter(tab.key) },
+							onClick = { vm.selectFilter(tab.key) },
 							text = { Text("${tab.name} (${tab.count})") }
 						)
 					}
@@ -177,14 +206,7 @@ fun SearchScreen(
 					pic = { it.pic },
 					year = { it.year },
 					note = { it.note },
-					onClick = { video ->
-						context.startActivity(
-							Intent(context, DetailActivity::class.java).apply {
-								putExtra("id", video.id)
-								putExtra("sourceKey", video.sourceKey)
-							}
-						)
-					},
+					onClick = onNavigateToDetail,
 					modifier = Modifier.fillMaxSize(),
 					contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 96.dp),
 					key = { video -> video.sourceKey + "_" + video.id }
@@ -226,17 +248,17 @@ fun SearchScreen(
 
 	if (showClearDialog) {
 		AlertDialog(
-			onDismissRequest = { showClearDialog = false },
+			onDismissRequest = onClearDialogDismiss,
 			title = { Text("清空搜索记录") },
 			text = { Text("确定要清空所有搜索记录吗？") },
 			confirmButton = {
 				TextButton(onClick = {
-					showClearDialog = false
-					searchVm.clearSearchHistory()
+					onClearDialogDismiss()
+					vm.clearSearchHistory()
 					Toast.makeText(context, "已清空搜索记录", Toast.LENGTH_SHORT).show()
 				}) { Text("清空") }
 			},
-			dismissButton = { TextButton(onClick = { showClearDialog = false }) { Text("取消") } }
+			dismissButton = { TextButton(onClick = onClearDialogDismiss) { Text("取消") } }
 		)
 	}
 
@@ -246,7 +268,7 @@ fun SearchScreen(
 			title = { Text("删除搜索记录") },
 			text = { Text("确定要删除「$word」吗？") },
 			confirmButton = {
-				TextButton(onClick = { deleteWord = null; searchVm.deleteSearchWord(word) }) { Text("删除") }
+				TextButton(onClick = { deleteWord = null; vm.deleteSearchWord(word) }) { Text("删除") }
 			},
 			dismissButton = { TextButton(onClick = { deleteWord = null }) { Text("取消") } }
 		)

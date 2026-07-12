@@ -12,7 +12,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SwapHoriz
-import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.RadioButton
@@ -33,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.bean.MovieSort.SortData
 import com.github.tvbox.osc.ui.compose.theme.Ts20
@@ -45,7 +43,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeTabScreen(
 	toolbarState: HomeToolbarState,
-	onSwitchToSearchAndSearch: (String?) -> Unit
+	onSwitchToSearchAndSearch: (String?) -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit
 ) {
 	val sortVm: SourceViewModel = viewModel()
 	val sortResult by sortVm.sortResult.observeAsState()
@@ -91,9 +90,9 @@ fun HomeTabScreen(
 		) { pageIndex ->
 			val data = sortDataList[pageIndex]
 			if (data.id == "my0") {
-				UserScreen(data, onSwitchToSearchAndSearch)
+				UserScreen(data, onSwitchToSearchAndSearch, onNavigateToDetail)
 			} else {
-				CategoryGridScreen(data, onSwitchToSearchAndSearch)
+				CategoryGridScreen(data, onSwitchToSearchAndSearch, onNavigateToDetail)
 			}
 		}
 	}

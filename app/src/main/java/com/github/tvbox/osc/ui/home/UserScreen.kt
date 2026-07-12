@@ -1,6 +1,5 @@
 package com.github.tvbox.osc.ui.home
 
-import android.content.Intent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -9,14 +8,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort.SortData
 import com.github.tvbox.osc.cache.RoomDataManger
 import com.github.tvbox.osc.data.ConfigKey
 import com.github.tvbox.osc.data.PreferenceStore
 import com.github.tvbox.osc.event.RefreshEvent
-import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
 import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.util.rememberEventBusCallback
@@ -34,23 +31,24 @@ import kotlin.math.min
 fun UserScreen(
 	sortData: SortData,
 	onSwitchToSearchAndSearch: (String?) -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit,
 	modifier: Modifier = Modifier
 ) {
 	val rec = PreferenceStore.get(ConfigKey.HOME_REC, 0)
 	if (rec == 1) {
-		CategoryGridScreen(sortData, onSwitchToSearchAndSearch, modifier)
+		CategoryGridScreen(sortData, onSwitchToSearchAndSearch, onNavigateToDetail, modifier)
 		return
 	}
-	RecommendGrid(rec, onSwitchToSearchAndSearch, modifier)
+	RecommendGrid(rec, onSwitchToSearchAndSearch, onNavigateToDetail, modifier)
 }
 
 @Composable
 private fun RecommendGrid(
 	rec: Int,
 	onSwitchToSearchAndSearch: (String?) -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit,
 	modifier: Modifier
 ) {
-	val context = LocalContext.current
 	var videos by remember { mutableStateOf<List<Movie.Video>>(emptyList()) }
 	var refreshing by remember { mutableStateOf(false) }
 	var loaded by remember { mutableStateOf(false) }
@@ -60,14 +58,7 @@ private fun RecommendGrid(
 		if (id.isEmpty() || id.startsWith("msearch:")) {
 			onSwitchToSearchAndSearch(video.name)
 		} else {
-			context.startActivity(
-				Intent(context, DetailActivity::class.java).apply {
-					putExtra("id", id)
-					putExtra("sourceKey", video.sourceKey)
-					putExtra("title", video.name)
-					putExtra("picture", video.pic)
-				}
-			)
+			onNavigateToDetail(video.sourceKey, id, video.pic)
 		}
 	}
 

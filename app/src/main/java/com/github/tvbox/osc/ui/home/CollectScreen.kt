@@ -1,9 +1,7 @@
 package com.github.tvbox.osc.ui.home
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material3.AlertDialog
@@ -18,12 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import com.github.tvbox.osc.R
 import com.github.tvbox.osc.api.ApiConfig
 import com.github.tvbox.osc.cache.RoomDataManger
 import com.github.tvbox.osc.cache.VodCollect
 import com.github.tvbox.osc.event.RefreshEvent
-import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.ui.compose.component.AdaptiveVodGrid
 import com.github.tvbox.osc.ui.compose.component.RefreshContentBox
 import com.github.tvbox.osc.ui.compose.util.rememberEventBusCallback
@@ -32,6 +28,7 @@ import com.github.tvbox.osc.ui.compose.util.rememberEventBusCallback
 fun CollectScreen(
 	toolbarState: HomeToolbarState,
 	onSwitchToSearchAndSearch: (String?) -> Unit,
+	onNavigateToDetail: (String, String, String?) -> Unit,
 	modifier: Modifier = Modifier
 ) {
 	val context = LocalContext.current
@@ -60,13 +57,7 @@ fun CollectScreen(
 
 	fun openVod(item: VodCollect) {
 		if (ApiConfig.instance.getSource(item.sourceKey) != null) {
-			context.startActivity(
-				Intent(context, DetailActivity::class.java).apply {
-					putExtra("id", item.vodId)
-					putExtra("sourceKey", item.sourceKey)
-					putExtra("picture", item.pic)
-				}
-			)
+			onNavigateToDetail(item.sourceKey, item.vodId, item.pic)
 		} else {
 			onSwitchToSearchAndSearch(item.name)
 		}
